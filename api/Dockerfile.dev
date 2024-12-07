@@ -1,0 +1,18 @@
+FROM golang:1.21-alpine
+
+WORKDIR /app/api
+
+# Install air for hot reload
+RUN go install github.com/cosmtrek/air@latest
+
+# Install dependencies
+COPY api/go.mod api/go.sum ./
+RUN go mod download
+
+# Copy the api directory
+COPY api/ .
+
+EXPOSE 8000
+
+# Run air for hot reload
+CMD ["air"] 

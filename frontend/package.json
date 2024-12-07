@@ -1,5 +1,5 @@
 {
-  "name": "tournois-tt",
+  "name": "frontend",
   "version": "1.0.0",
   "description": "A React application with Kepler.gl map showing places in Paris",
   "main": "index.js",

@@ -1,6 +1,6 @@
 import React from 'react';
 import KeplerGl from '@kepler.gl/components';
-import { MAPBOX_TOKEN } from '../lib/map-config/constants';
+import { MAPBOX_TOKEN } from '../lib/map/constants';
 
 interface MapProps {
   id: string;

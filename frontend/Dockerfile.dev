@@ -1,0 +1,15 @@
+FROM node:20-slim
+
+WORKDIR /app/frontend
+
+# Install dependencies first (utilizing Docker cache)
+COPY frontend/package*.json ./
+RUN npm install
+
+# Copy the frontend directory
+COPY frontend/ .
+
+# Expose port for webpack dev server
+EXPOSE 8080
+
+CMD ["npm", "run", "start"] 

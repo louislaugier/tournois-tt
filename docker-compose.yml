@@ -1,0 +1,28 @@
+version: '3.8'
+
+services:
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile.dev
+    volumes:
+      - ./frontend:/app/frontend
+      - /app/frontend/node_modules
+    ports:
+      - "8080:8080"
+    environment:
+      - NODE_ENV=development
+      - CHOKIDAR_USEPOLLING=true
+    depends_on:
+      - api
+
+  api:
+    build:
+      context: .
+      dockerfile: api/Dockerfile.dev
+    volumes:
+      - ./api:/app/api
+    ports:
+      - "8000:8000"
+    environment:
+      - GIN_MODE=debug
