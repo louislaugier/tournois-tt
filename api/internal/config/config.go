@@ -22,18 +22,26 @@ func LoadConfig() *Config {
 		log.Printf("Warning: .env file not found or error loading it: %v", err)
 	}
 
-	environment := getEnv("GIN_MODE", "debug")
 	domain := getEnv("DOMAIN", "localhost:3000") // default value to local frontend
+	isLocal := domain == "localhost:3000"
+
+	// Infer environment based on domain
+	environment := "debug"
+	if !isLocal {
+		environment = "release"
+	}
+
+	isRelease := environment == "release"
 
 	// Construct frontend URL
 	FrontendURL = fmt.Sprintf("http://%s", domain)
-	if environment != "debug" {
+	if isRelease {
 		FrontendURL = fmt.Sprintf("https://%s", domain)
 	}
 
 	// Infer server address
 	serverAddress := ":80"
-	if environment != "debug" && domain != "localhost:3000" {
+	if isRelease && !isLocal {
 		cleanDomain := strings.Split(domain, ":")[0]
 		serverAddress = fmt.Sprintf("https://api.%s", cleanDomain)
 	}
