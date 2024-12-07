@@ -1,32 +1,35 @@
 package middleware
 
 import (
-	"strconv"
+	"api/pkg/utils"
+	"log"
 	"time"
 
 	"github.com/gin-gonic/gin"
 )
 
-// Logger middleware logs request details
+// Logger returns a middleware that logs request details including IPs and User-Agent
 func Logger() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Start timer
 		start := time.Now()
 
+		// Get IPs before request is processed
+		ips := utils.GetIPsFromRequest(c.Request)
+
 		// Process request
 		c.Next()
 
-		// Calculate latency
+		// Log request details after completion
 		latency := time.Since(start)
-
-		// Log request details
-		gin.DefaultWriter.Write([]byte(
-			"[GIN] " + time.Now().Format("2006/01/02 - 15:04:05") + " | " +
-				c.Request.Method + " | " +
-				c.Request.URL.Path + " | " +
-				c.ClientIP() + " | " +
-				latency.String() + " | " +
-				strconv.Itoa(c.Writer.Status()) + "\n",
-		))
+		log.Printf("[%s] %s %s | Status: %d | Latency: %v | IPs: %s | User-Agent: %s",
+			c.Request.Method,
+			c.Request.URL.Path,
+			c.Request.URL.RawQuery,
+			c.Writer.Status(),
+			latency,
+			ips,
+			c.Request.UserAgent(),
+		)
 	}
 }

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { Provider } from 'react-redux';
 import { addDataToMap } from '@kepler.gl/actions';
 import '@kepler.gl/styles';
@@ -6,26 +6,19 @@ import { store } from './lib/store';
 import { Map } from './components/Map';
 import { INITIAL_MAP_DATA } from './lib/map/constants';
 import { DEFAULT_MAP_CONFIG } from './lib/map/config';
-import { fetchAllTournaments } from './lib/fftt-api/client';
-import type { Tournament } from './lib/fftt-api/types';
+import { TournamentQueryBuilder } from './lib/api/tournaments';
 
 const App = () => {
-  const [tournaments, setTournaments] = useState<Tournament[]>([]);
-
   useEffect(() => {
     const loadTournaments = async () => {
       try {
-        const tournaments = await fetchAllTournaments({
-          'order[startDate]': 'asc',
-          'endDate[before]': '2024-12-31T23:59:59'
-        });
-        setTournaments(tournaments);
-        console.log(`Loaded ${tournaments.length} tournaments`);
-        tournaments.forEach(t => {
-          if (t.address?.streetAddress) {
-            console.log('Street Address:', t.address.streetAddress);
-          }
-        });
+        const today = new Date();
+        const query = new TournamentQueryBuilder()
+          .startDateRange(today)
+          .orderByStartDate('asc')
+          .itemsPerPage(100);
+
+        await query.executeAndLogAll();
       } catch (error) {
         console.error('Failed to load tournaments:', error);
       }

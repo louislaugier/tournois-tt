@@ -6,8 +6,8 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// HealthCheck handles the health check endpoint
-func HealthCheck(c *gin.Context) {
+// HealthzHandler handles the health check endpoint
+func HealthzHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"status": "healthy",
 	})
