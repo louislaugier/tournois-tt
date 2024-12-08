@@ -50,5 +50,11 @@ module.exports = {
     compress: true,
     port: 3000,
     hot: true,
+    host: 'localhost',
+    historyApiFallback: true,
+    client: {
+      webSocketURL: 'auto://0.0.0.0:0/ws',
+      overlay: true,
+    },
   },
 }; 
