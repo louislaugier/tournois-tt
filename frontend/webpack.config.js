@@ -29,6 +29,11 @@ module.exports = {
       stream: require.resolve('stream-browserify'),
       util: require.resolve('util/'),
     },
+    alias: {
+      'styled-components': path.resolve(__dirname, 'node_modules/styled-components'),
+      'react': path.resolve(__dirname, 'node_modules/react'),
+      'react-dom': path.resolve(__dirname, 'node_modules/react-dom')
+    }
   },
   plugins: [
     new HtmlWebpackPlugin({
@@ -45,7 +50,21 @@ module.exports = {
       process: 'process/browser',
       Buffer: ['buffer', 'Buffer'],
     }),
+    new webpack.optimize.ModuleConcatenationPlugin(),
   ],
+  optimization: {
+    moduleIds: 'deterministic',
+    runtimeChunk: 'single',
+    splitChunks: {
+      cacheGroups: {
+        vendor: {
+          test: /[\\/]node_modules[\\/]/,
+          name: 'vendors',
+          chunks: 'all',
+        },
+      },
+    },
+  },
   devServer: {
     static: {
       directory: path.join(__dirname, 'dist'),

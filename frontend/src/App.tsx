@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { Provider } from 'react-redux';
 import { addDataToMap } from '@kepler.gl/actions';
 import '@kepler.gl/styles';
