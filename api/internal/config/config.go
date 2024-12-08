@@ -18,8 +18,10 @@ type Config struct {
 var FrontendURL string
 
 func LoadConfig() *Config {
-	if err := godotenv.Load(); err != nil {
-		log.Printf("Warning: .env file not found or error loading it: %v", err)
+	if err := godotenv.Load("../.env"); err != nil {
+		if err = godotenv.Load("./.env"); err != nil {
+			log.Fatal("godotenv.Load: ", err)
+		}
 	}
 
 	domain := getEnv("DOMAIN", "localhost:3000") // default value to local frontend

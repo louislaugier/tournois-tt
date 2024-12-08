@@ -1,13 +1,16 @@
-FROM --platform=linux/amd64 node:20-slim
+FROM --platform=linux/amd64 node:20.18.1-alpine
 
-WORKDIR /app/frontend
+WORKDIR /tournois-tt/frontend
 
-# Install dependencies first (utilizing Docker cache)
-COPY frontend/package*.json ./
-RUN npm install
+COPY package*.json ./
+RUN npm i
 
-# Copy the frontend directory
-COPY frontend/ .
+# Create a backup of node_modules that will be used by entrypoint script
+RUN cp -r node_modules node_modules.container
 
+COPY . .
 
-CMD ["npm", "run", "start"] 
+# Make entrypoint script executable
+RUN chmod +x docker-entrypoint.sh
+
+CMD ["npm", "start"]

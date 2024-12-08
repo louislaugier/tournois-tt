@@ -16,7 +16,7 @@ const App = () => {
         const query = new TournamentQueryBuilder()
           .startDateRange(today)
           .orderByStartDate('asc')
-          .itemsPerPage(100);
+          .itemsPerPage(999999);
 
         await query.executeAndLogAll();
       } catch (error) {

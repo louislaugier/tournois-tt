@@ -10,13 +10,11 @@ type Client struct {
 	httpClient *http.Client
 }
 
-var (
-	FFTTClient *Client
-	once       sync.Once
-)
+var FFTTClient *Client
 
 func GetClient() *Client {
-	once.Do(func() {
+	initOnce := sync.Once{}
+	initOnce.Do(func() {
 		FFTTClient = &Client{
 			httpClient: &http.Client{},
 		}
@@ -30,10 +28,8 @@ func (c *Client) GetTournaments(params url.Values) (*http.Response, error) {
 		return nil, err
 	}
 
-	// Add query parameters
 	req.URL.RawQuery = params.Encode()
 
-	// Add required headers
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("Referer", "https://monclub.fftt.com/")
 

@@ -1,7 +1,7 @@
 {
-  "name": "frontend",
+  "name": "tournois-tt-frontend",
   "version": "1.0.0",
-  "description": "A React application with Kepler.gl map showing places in Paris",
+  "description": "Tournois FFTT",
   "main": "index.js",
   "scripts": {
     "start": "webpack serve --mode development --open",

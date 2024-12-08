@@ -1,15 +1,19 @@
 package router
 
 import (
-	"api/internal/config"
-	"api/internal/handlers"
-	"api/internal/middleware"
+	"tournois-tt/api/internal/config"
+	"tournois-tt/api/internal/handlers"
+	"tournois-tt/api/internal/middleware"
 
 	"github.com/gin-gonic/gin"
 )
 
 func NewRouter() *gin.Engine {
-	router := gin.New()
+	router := gin.Default()
+	router.ForwardedByClientIP = true
+
+	// Trust Docker's default bridge network (172.17.0.0/16) and localhost
+	router.SetTrustedProxies([]string{"172.0.0.0/8", "127.0.0.1", "::1"})
 
 	router.Use(middleware.Logger())
 	router.Use(gin.Recovery())

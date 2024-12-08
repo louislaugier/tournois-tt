@@ -1,7 +1,7 @@
 import React from 'react';
 import KeplerGl from '@kepler.gl/components';
 import { MAPBOX_TOKEN } from '../lib/map/constants';
-import fr from 'src/locales/fr';
+import fr from '../locales/fr';
 
 interface MapProps {
   id: string;

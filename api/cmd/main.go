@@ -3,8 +3,8 @@ package main
 import (
 	"log"
 
-	"api/internal/config"
-	"api/internal/router"
+	"tournois-tt/api/internal/config"
+	"tournois-tt/api/internal/router"
 
 	"github.com/gin-gonic/gin"
 )

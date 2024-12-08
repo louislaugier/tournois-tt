@@ -1,8 +1,8 @@
 package handlers
 
 import (
-	"api/pkg/fftt"
 	"net/http"
+	"tournois-tt/api/pkg/fftt"
 
 	"github.com/gin-gonic/gin"
 )

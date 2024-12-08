@@ -1,6 +1,6 @@
 import { FFTTResponse } from './types';
 
-const API_BASE_URL = 'http://api/v1'; // local url in the cluster
+const API_BASE_URL = 'http://localhost/v1'; // local url in the cluster
 
 export class APIError extends Error {
     constructor(message: string) {
@@ -23,9 +23,9 @@ export interface TournamentQueryParams {
     type?: string;
 }
 
-export async function fetchTournaments(params: TournamentQueryParams = {}): Promise<FFTTResponse> {
+export async function fetchTournaments(params: TournamentQueryParams = {}): Promise<any[]> {
     const queryParams = new URLSearchParams();
-    
+
     Object.entries(params).forEach(([key, value]) => {
         if (value !== undefined && value !== null) {
             queryParams.append(key, value.toString());
@@ -46,7 +46,7 @@ export async function fetchTournaments(params: TournamentQueryParams = {}): Prom
         }
 
         const data = await response.json();
-        return data as FFTTResponse;
+        return data;
     } catch (error) {
         if (error instanceof APIError) {
             throw error;
@@ -61,48 +61,20 @@ export function formatDateParam(date: Date): string {
     return date.toISOString().split('.')[0];
 }
 
-export async function fetchAllTournaments(params: TournamentQueryParams = {}): Promise<void> {
+export async function fetchAllTournaments(params: TournamentQueryParams = {}): Promise<any[]> {
     const defaultParams: TournamentQueryParams = {
         itemsPerPage: 100,
         page: 1,
         ...params
     };
 
-    let hasMorePages = true;
-    let currentPage = 1;
-
-    while (hasMorePages) {
-        const response = await fetchTournaments({
-            ...defaultParams,
-            page: currentPage
-        });
-
-        if (!response['hydra:member'] || response['hydra:member'].length === 0) {
-            break;
-        }
-
-        // Log address information for each tournament
-        response['hydra:member'].forEach(tournament => {
-            if (tournament.address) {
-                console.log('Tournament Address:', {
-                    name: tournament.name,
-                    postalCode: tournament.address.postalCode,
-                    streetAddress: tournament.address.streetAddress,
-                    addressLocality: tournament.address.addressLocality,
-                    latitude: tournament.address.latitude,
-                    longitude: tournament.address.longitude
-                });
-            }
-        });
-
-        // Check if we have more pages
-        const totalItems = response['hydra:totalItems'] || 0;
-        const itemsFetched = currentPage * defaultParams.itemsPerPage!;
-        hasMorePages = itemsFetched < totalItems;
-        currentPage++;
-
-        // Optional: Add a small delay to avoid rate limiting
-        await new Promise(resolve => setTimeout(resolve, 100));
+    try {
+        const tournaments = await fetchTournaments(defaultParams);
+        console.log(`Fetched ${tournaments.length} tournaments`);
+        return tournaments;
+    } catch (error) {
+        console.error('Error fetching tournaments:', error);
+        return [];
     }
 }
 
@@ -165,11 +137,13 @@ export class TournamentQueryBuilder {
         return this;
     }
 
-    async execute(): Promise<FFTTResponse> {
+    async execute(): Promise<any[]> {
         return fetchTournaments(this.params);
     }
 
-    async executeAndLogAll(): Promise<void> {
-        return fetchAllTournaments(this.params);
+    async executeAndLogAll(): Promise<any[]> {
+        const tournaments = await fetchAllTournaments(this.params);
+        console.log('All tournaments:', tournaments);
+        return tournaments;
     }
 } 

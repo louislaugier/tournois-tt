@@ -1,13 +1,16 @@
-version: '3.8'
-
 services:
+
   frontend:
     build:
-      context: .
-      dockerfile: frontend/Dockerfile.dev
+      context: ./frontend
+      dockerfile: Dockerfile.dev
     volumes:
-      - ./frontend:/app/frontend
-      - /app/frontend/node_modules
+      - ./frontend/src/:/tournois-tt/frontend/src
+      - ./frontend/public/:/tournois-tt/frontend/public
+      - ./frontend/package.json/:/tournois-tt/frontend/package.json
+      - ./frontend/package-lock.json/:/tournois-tt/frontend/package-lock.json
+      - ./frontend/tsconfig.json/:/tournois-tt/frontend/tsconfig.json
+      - ./frontend/webpack.config.js/:/tournois-tt/frontend/webpack.config.js
     ports:
       - "3000:3000"
     environment:
@@ -15,12 +18,21 @@ services:
       - CHOKIDAR_USEPOLLING=true
     depends_on:
       - api
+    networks:
+      - vpc_local
 
   api:
     build:
-      context: .
-      dockerfile: api/Dockerfile.dev
+      context: ./api
+      dockerfile: Dockerfile.dev
     volumes:
-      - ./api:/app/api
+      - ./api:/go/src/tournois-tt/api
     ports:
       - "80:80"
+    networks:
+      - vpc_local
+
+networks:
+  vpc_local:
+    # driver: overlay
+    driver: bridge

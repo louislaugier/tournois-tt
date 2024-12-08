@@ -1,9 +1,9 @@
 package middleware
 
 import (
-	"api/pkg/utils"
 	"log"
 	"time"
+	"tournois-tt/api/pkg/utils"
 
 	"github.com/gin-gonic/gin"
 )
