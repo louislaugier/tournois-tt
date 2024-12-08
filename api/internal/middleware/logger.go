@@ -15,7 +15,7 @@ func Logger() gin.HandlerFunc {
 		start := time.Now()
 
 		// Get IPs before request is processed
-		ips := utils.GetIPsFromRequest(c.Request)
+		ips := utils.GetIPsFromRequest(c)
 
 		// Process request
 		c.Next()

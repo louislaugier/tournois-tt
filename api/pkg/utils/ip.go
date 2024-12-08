@@ -2,28 +2,32 @@ package utils
 
 import (
 	"net"
-	"net/http"
 	"regexp"
 	"strings"
+
+	"github.com/gin-gonic/gin"
 )
 
-// GetIPsFromRequest retrieves all IPs from various headers in the request
-func GetIPsFromRequest(r *http.Request) string {
+// GetIPsFromRequest retrieves all IPs from various headers in the Gin context
+func GetIPsFromRequest(c *gin.Context) string {
 	IPsMap := make(map[string]struct{})
 
 	// Get IP from RemoteAddr
-	addIP(strings.Split(r.RemoteAddr, ":")[0], IPsMap)
+	addIP(strings.Split(c.Request.RemoteAddr, ":")[0], IPsMap)
+
+	// Get ClientIP from Gin's built-in method
+	addIP(c.ClientIP(), IPsMap)
 
 	// Get IPs from X-Forwarded-For and add them to the map
-	for _, IP := range strings.Split(r.Header.Get("X-Forwarded-For"), ",") {
+	for _, IP := range strings.Split(c.GetHeader("X-Forwarded-For"), ",") {
 		addIP(IP, IPsMap)
 	}
 
 	// Get IP from X-Real-IP and add to map
-	addIP(r.Header.Get("X-Real-IP"), IPsMap)
+	addIP(c.GetHeader("X-Real-IP"), IPsMap)
 
 	// Get IP from Forwarded header
-	forwardedHeader := r.Header.Get("Forwarded")
+	forwardedHeader := c.GetHeader("Forwarded")
 	for _, match := range regexp.MustCompile(`for=("[^"]*"|[^;,\s]+)`).FindAllStringSubmatch(forwardedHeader, -1) {
 		if len(match) > 1 {
 			// Remove potential double-quotes around the IP

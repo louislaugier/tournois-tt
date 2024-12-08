@@ -1,4 +1,4 @@
-import { API_BASE_URL } from './config';
+import { API_BASE_URL, getDefaultHeaders } from './config';
 
 export class APIError extends Error {
     constructor(message: string) {
@@ -34,9 +34,7 @@ export async function fetchTournaments(params: TournamentQueryParams = {}): Prom
 
     try {
         const response = await fetch(url, {
-            headers: {
-                'Accept': 'application/json'
-            }
+            headers: getDefaultHeaders()
         });
 
         if (!response.ok) {

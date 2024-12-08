@@ -35,7 +35,10 @@ module.exports = {
       template: './public/index.html',
     }),
     new webpack.DefinePlugin({
-      'process.env': JSON.stringify(process.env),
+      'process.env': {
+        NODE_ENV: JSON.stringify(process.env.NODE_ENV),
+        REACT_APP_API_KEY: JSON.stringify(process.env.REACT_APP_API_KEY),
+      },
       'process.browser': true,
     }),
     new webpack.ProvidePlugin({
@@ -50,11 +53,25 @@ module.exports = {
     compress: true,
     port: 3000,
     hot: true,
-    host: 'localhost',
+    host: '0.0.0.0',
+    allowedHosts: 'all',
     historyApiFallback: true,
     client: {
-      webSocketURL: 'auto://0.0.0.0:0/ws',
-      overlay: true,
+      webSocketURL: 'ws://localhost/ws',
+      progress: true,
+    },
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+    },
+    watchFiles: {
+      paths: ['src/**/*', 'public/**/*'],
+      options: {
+        usePolling: true,
+        poll: 1000,
+      },
+    },
+    devMiddleware: {
+      writeToDisk: true,
     },
   },
 }; 

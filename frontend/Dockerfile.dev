@@ -10,7 +10,4 @@ RUN cp -r node_modules node_modules.container
 
 COPY . .
 
-# Make entrypoint script executable
-RUN chmod +x docker-entrypoint.sh
-
 CMD ["npm", "start"]
