@@ -40,6 +40,6 @@ func setupRoutes(router *gin.Engine) {
 	v1 := router.Group("/v1")
 	{
 		v1.GET("/healthz", handlers.HealthzHandler)
-		v1.GET("/tournaments", handlers.GetTournaments)
+		v1.GET("/tournaments", handlers.TournamentsHandler)
 	}
 }

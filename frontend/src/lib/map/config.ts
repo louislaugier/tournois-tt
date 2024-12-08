@@ -6,7 +6,11 @@ export const DEFAULT_MAP_CONFIG = {
                 enabled: true,
                 fieldsToShow: {
                     tournament_data: [
-                        { name: 'name', format: null }
+                        { name: 'name', format: null },
+                        { name: 'club', format: null },
+                        { name: 'startDate', format: null },
+                        { name: 'endDate', format: null },
+                        { name: 'address', format: null }
                     ]
                 },
                 compareMode: false,

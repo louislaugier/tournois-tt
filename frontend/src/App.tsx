@@ -1,14 +1,16 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Provider } from 'react-redux';
 import { addDataToMap } from '@kepler.gl/actions';
 import '@kepler.gl/styles';
 import { store } from './lib/store';
 import { Map } from './components/Map';
-import { INITIAL_MAP_DATA } from './lib/map/constants';
 import { DEFAULT_MAP_CONFIG } from './lib/map/config';
 import { TournamentQueryBuilder } from './lib/api/tournaments';
+import { Tournament } from './lib/api/types';
 
 const App = () => {
+  const [tournaments, setTournaments] = useState<Tournament[]>([]);
+
   useEffect(() => {
     const loadTournaments = async () => {
       try {
@@ -18,7 +20,9 @@ const App = () => {
           .orderByStartDate('asc')
           .itemsPerPage(999999);
 
-        await query.executeAndLogAll();
+        const tournamentData = await query.executeAndLogAll();
+        console.log('Tournament data length:', tournamentData?.length ?? 0);
+        setTournaments(tournamentData || []);
       } catch (error) {
         console.error('Failed to load tournaments:', error);
       }
@@ -28,23 +32,55 @@ const App = () => {
   }, []);
 
   useEffect(() => {
-    store.dispatch(
-      addDataToMap({
-        datasets: [{
-          info: {
-            label: 'Tournois FFTT',
-            id: 'tournament_data'
-          },
-          data: INITIAL_MAP_DATA
-        }],
-        options: {
-          centerMap: false,
-          readOnly: false
-        },
-        config: DEFAULT_MAP_CONFIG
-      })
-    );
-  }, []);
+    if (tournaments.length > 0) {
+      const tournamentsWithCoordinates = tournaments.filter(
+        t => t.address?.latitude && t.address?.longitude
+      );
+      console.log('Tournaments with coordinates:', tournamentsWithCoordinates.length);
+      
+      if (tournamentsWithCoordinates.length > 0) {
+        const mapData = {
+          fields: [
+            { name: 'name', type: 'string' },
+            { name: 'latitude', type: 'real' },
+            { name: 'longitude', type: 'real' },
+            { name: 'startDate', type: 'string' },
+            { name: 'endDate', type: 'string' },
+            { name: 'club', type: 'string' },
+            { name: 'address', type: 'string' },
+          ],
+          rows: tournamentsWithCoordinates.map(t => [
+            t.name,
+            t.address.latitude,
+            t.address.longitude,
+            t.startDate,
+            t.endDate,
+            t.club.name,
+            `${t.address.streetAddress}, ${t.address.postalCode} ${t.address.addressLocality}`
+          ])
+        };
+
+        console.log('Final mapData:', mapData);
+
+        store.dispatch(
+          addDataToMap({
+            datasets: [{
+              info: {
+                label: 'Tournois FFTT',
+                id: 'tournament_data'
+              },
+              data: mapData
+            }],
+            options: {
+              centerMap: false,
+              readOnly: false
+            },
+            config: DEFAULT_MAP_CONFIG
+          })
+        );
+      }
+    }
+  }, [tournaments]);
 
   return (
     <Provider store={store}>
