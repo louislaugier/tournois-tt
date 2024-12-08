@@ -1,6 +1,4 @@
-import { FFTTResponse } from './types';
-
-const API_BASE_URL = 'http://localhost/v1'; // local url in the cluster
+import { API_BASE_URL } from './config';
 
 export class APIError extends Error {
     constructor(message: string) {

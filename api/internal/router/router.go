@@ -12,8 +12,8 @@ func NewRouter() *gin.Engine {
 	router := gin.Default()
 	router.ForwardedByClientIP = true
 
-	// Trust Docker's default bridge network (172.17.0.0/16) and localhost
-	router.SetTrustedProxies([]string{"172.0.0.0/8", "127.0.0.1", "::1"})
+	// Only trust nginx reverse proxy
+	router.SetTrustedProxies([]string{"nginx"})
 
 	router.Use(middleware.Logger())
 	router.Use(gin.Recovery())
@@ -27,6 +27,14 @@ func NewRouter() *gin.Engine {
 
 func corsMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
+		origin := c.Request.Header.Get("Origin")
+
+		// Require requests to come from the frontend
+		if origin != config.FrontendURL {
+			c.AbortWithStatus(403)
+			return
+		}
+
 		c.Writer.Header().Set("Access-Control-Allow-Origin", config.FrontendURL)
 		c.Writer.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
 		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Accept, Origin")

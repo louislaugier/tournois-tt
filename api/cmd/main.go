@@ -3,21 +3,14 @@ package main
 import (
 	"log"
 
-	"tournois-tt/api/internal/config"
 	"tournois-tt/api/internal/router"
-
-	"github.com/gin-gonic/gin"
 )
 
 func main() {
-	cfg := config.LoadConfig()
-
-	gin.SetMode(cfg.Environment)
-
 	r := router.NewRouter()
 
-	log.Printf("Server starting on %s", cfg.ServerAddress)
-	if err := r.Run(cfg.ServerAddress); err != nil {
+	log.Printf("Server starting...")
+	if err := r.Run(":8080"); err != nil {
 		log.Fatalf("Error starting server: %v", err)
 	}
 }

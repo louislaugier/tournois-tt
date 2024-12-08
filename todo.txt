@@ -1,0 +1,4 @@
+for prod make ssl renew cron job run in a container, ideally same as certbot (don't keep all sh files related to ssl if not needed)
+browser console errors/warnings
+
+consistent packages between containers and IDE's host machine
