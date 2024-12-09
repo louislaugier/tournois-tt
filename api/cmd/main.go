@@ -8,11 +8,12 @@ import (
 )
 
 func main() {
-	log.Printf("Preloading tournament geocoding data...")
-	if err := geocoding.PreloadTournaments(); err != nil {
-		log.Printf("Warning: Failed to preload tournament data: %v", err)
-		// Continue anyway since we can still geocode on-demand
-	}
+	go func() {
+		log.Printf("Preloading tournament geocoding data...")
+		if err := geocoding.PreloadTournaments(); err != nil {
+			log.Printf("Warning: Failed to preload tournament data: %v", err)
+		}
+	}()
 
 	r := router.NewRouter()
 

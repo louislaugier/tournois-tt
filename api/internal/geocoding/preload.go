@@ -7,8 +7,10 @@ import (
 	"net/http"
 	"net/url"
 	"time"
-
 	"tournois-tt/api/pkg/fftt"
+	"tournois-tt/api/pkg/geocoding/address"
+	gcache "tournois-tt/api/pkg/geocoding/cache"
+	"tournois-tt/api/pkg/geocoding/nominatim"
 )
 
 func PreloadTournaments() error {
@@ -32,7 +34,7 @@ func PreloadTournaments() error {
 	}
 
 	var tournaments []struct {
-		Address Address `json:"address"`
+		Address address.AddressInput `json:"address"`
 	}
 
 	if err := json.NewDecoder(resp.Body).Decode(&tournaments); err != nil {
@@ -42,11 +44,13 @@ func PreloadTournaments() error {
 	log.Printf("Found %d tournaments to geocode", len(tournaments))
 
 	// Process each unique address
-	uniqueAddresses := make(map[string]struct{})
+	uniqueAddresses := make(map[string]address.AddressInput)
 	for _, t := range tournaments {
-		variants := generateAddressVariants(t.Address)
+		variants := address.GenerateVariants(&t.Address)
+		log.Printf("Generated %d variants for address: %s, %s %s",
+			len(variants), t.Address.StreetAddress, t.Address.PostalCode, t.Address.AddressLocality)
 		for _, variant := range variants {
-			uniqueAddresses[variant] = struct{}{}
+			uniqueAddresses[variant] = t.Address
 		}
 	}
 
@@ -55,44 +59,66 @@ func PreloadTournaments() error {
 	// Check which addresses need geocoding
 	var toGeocode []string
 	for addr := range uniqueAddresses {
-		if _, exists := cache.Get(addr); !exists {
-			toGeocode = append(toGeocode, addr)
+		if loc, exists := gcache.DefaultCache.Get(addr); exists && !loc.Failed {
+			continue // Skip if we have a successful geocoding result
 		}
+		toGeocode = append(toGeocode, addr)
 	}
 
 	log.Printf("%d addresses need geocoding", len(toGeocode))
 
-	// Geocode missing addresses
-	for i, addr := range toGeocode {
-		if i > 0 && i%10 == 0 {
-			log.Printf("Progress: geocoded %d/%d addresses", i, len(toGeocode))
-		}
+	// Create Nominatim client
+	client := nominatim.NewClient()
 
-		coords, err := geocodeAddressWithRetry(addr)
+	// Geocode missing addresses
+	successCount := 0
+	failureCount := 0
+	for i, addr := range toGeocode {
+		log.Printf("Geocoding address (%d/%d): %s", i+1, len(toGeocode), addr)
+
+		coords, err := client.Geocode(addr)
 		if err != nil {
-			log.Printf("Warning: Failed to geocode address: %s", addr)
-			cache.Set(addr, 0, 0, true, false)
+			log.Printf("Warning: Failed to geocode address: %s: %v", addr, err)
+			failureCount++
+			gcache.DefaultCache.Set(addr, 0, 0, true, false)
 			continue
 		}
 
-		cache.Set(addr, coords.Lat, coords.Lon, coords.Failed, coords.Approximate)
+		if !coords.Failed {
+			successCount++
+			gcache.DefaultCache.Set(addr, coords.Lat, coords.Lon, false, coords.Approximate)
+			// Add aliases for all variants of this address
+			originalAddr := uniqueAddresses[addr]
+			variants := address.GenerateVariants(&originalAddr)
+			for _, variant := range variants {
+				if variant != addr {
+					gcache.DefaultCache.AddAlias(variant, addr)
+				}
+			}
+			log.Printf("Successfully geocoded: %s (%.6f, %.6f) approximate: %v",
+				addr, coords.Lat, coords.Lon, coords.Approximate)
+		} else {
+			failureCount++
+			gcache.DefaultCache.Set(addr, 0, 0, true, false)
+			log.Printf("Failed to find coordinates for: %s", addr)
+		}
 
 		// Save cache periodically
-		if time.Since(cache.LastSave) > 5*time.Minute {
-			if err := cache.SaveToFile(); err != nil {
+		if time.Since(gcache.DefaultCache.LastSaveTime()) > 5*time.Minute {
+			if err := gcache.DefaultCache.SaveToFile(); err != nil {
 				log.Printf("Error saving cache: %v", err)
 			}
 		}
 
-		// Rate limiting
-		time.Sleep(time.Second)
+		time.Sleep(time.Second) // Rate limiting
 	}
 
 	// Final cache save
-	if err := cache.SaveToFile(); err != nil {
+	if err := gcache.DefaultCache.SaveToFile(); err != nil {
 		return fmt.Errorf("failed to save cache after preloading: %v", err)
 	}
 
+	log.Printf("Geocoding completed: %d successful, %d failed", successCount, failureCount)
 	log.Printf("Successfully completed tournament preloading")
 	return nil
 }

@@ -41,23 +41,37 @@ const App = () => {
       if (tournamentsWithCoordinates.length > 0) {
         const mapData = {
           fields: [
-            { name: 'Tournoi', type: 'string' },
+            { name: 'Nom du tournoi', type: 'string' },
             { name: 'latitude', type: 'real' },
             { name: 'longitude', type: 'real' },
+            { name: 'Type', type: 'string' },
             { name: 'Date de début', type: 'string' },
             { name: 'Date de fin', type: 'string' },
             { name: 'Club', type: 'string' },
             { name: 'Adresse', type: 'string' },
+            { name: 'Règlement', type: 'string' },
             { name: 'approximate', type: 'boolean' },
           ],
           rows: tournamentsWithCoordinates.map(t => [
             t.name,
             t.address.latitude,
             t.address.longitude,
-            t.startDate,
-            t.endDate,
+            t.type,
+            new Date(t.startDate).toLocaleDateString('fr-FR', {
+              weekday: 'long',
+              day: 'numeric',
+              month: 'long',
+              year: 'numeric'
+            }),
+            new Date(t.endDate).toLocaleDateString('fr-FR', {
+              weekday: 'long',
+              day: 'numeric',
+              month: 'long',
+              year: 'numeric'
+            }),
             `${t.club.name}${t.club.identifier ? ` (${t.club.identifier})` : ''}`,
             `${t.address.streetAddress}, ${t.address.postalCode} ${t.address.addressLocality}`,
+            t['@id'] ? t['@id'].replace('/api/tournaments/', 'https://www.fftt.com/monclub/spid_consultation/consultation_tournoi.php?valid_tour=') + '&pdf=1' : '#',
             t.address.approximate || false,
           ])
         };

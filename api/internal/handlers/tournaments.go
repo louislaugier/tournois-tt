@@ -7,33 +7,30 @@ import (
 	"net/http"
 	"time"
 	"tournois-tt/api/internal/geocoding"
+	"tournois-tt/api/internal/types"
 	"tournois-tt/api/pkg/fftt"
 
 	"github.com/gin-gonic/gin"
 )
 
-type Tournament struct {
-	ID        int     `json:"id"`
-	Name      string  `json:"name"`
-	Type      string  `json:"type"`
-	StartDate string  `json:"startDate"`
-	EndDate   string  `json:"endDate"`
-	Address   Address `json:"address"`
-	Club      Club    `json:"club"`
-}
-
-type Address struct {
-	PostalCode      string  `json:"postalCode"`
-	StreetAddress   string  `json:"streetAddress"`
-	AddressLocality string  `json:"addressLocality"`
-	AddressCountry  *string `json:"addressCountry"`
-	Latitude        float64 `json:"latitude"`
-	Longitude       float64 `json:"longitude"`
-}
-
-type Club struct {
-	Name       string `json:"name"`
-	Identifier string `json:"identifier"`
+// mapTournamentType converts single letter type to full name
+func mapTournamentType(t string) string {
+	switch t {
+	case "I":
+		return "International"
+	case "A":
+		return "National A"
+	case "B":
+		return "National B"
+	case "R":
+		return "Régional"
+	case "D":
+		return "Départemental"
+	case "P":
+		return "Promotionnel"
+	default:
+		return t
+	}
 }
 
 func TournamentsHandler(c *gin.Context) {
@@ -71,7 +68,7 @@ func TournamentsHandler(c *gin.Context) {
 	}
 
 	log.Printf("Parsing tournaments data")
-	var tournaments []Tournament
+	var tournaments []types.Tournament
 	if err := json.Unmarshal(body, &tournaments); err != nil {
 		log.Printf("Error parsing tournaments data: %v", err)
 		log.Printf("Raw response body: %s", string(body))
@@ -83,14 +80,7 @@ func TournamentsHandler(c *gin.Context) {
 	// Add coordinates from cache or geocode new addresses
 	log.Printf("Adding coordinates to tournaments")
 	for i := range tournaments {
-		addr := geocoding.Address{
-			StreetAddress:   tournaments[i].Address.StreetAddress,
-			PostalCode:      tournaments[i].Address.PostalCode,
-			AddressLocality: tournaments[i].Address.AddressLocality,
-			AddressCountry:  tournaments[i].Address.AddressCountry,
-		}
-
-		coords, err := geocoding.GetCoordinates(addr)
+		coords, err := geocoding.GetCoordinates(tournaments[i].Address)
 		if err != nil {
 			log.Printf("Warning: Failed to get coordinates for tournament %s: %v", tournaments[i].Name, err)
 			continue
@@ -98,6 +88,8 @@ func TournamentsHandler(c *gin.Context) {
 
 		tournaments[i].Address.Latitude = coords.Lat
 		tournaments[i].Address.Longitude = coords.Lon
+		tournaments[i].Address.Approximate = coords.Approximate
+		tournaments[i].Type = mapTournamentType(tournaments[i].Type)
 	}
 
 	elapsed := time.Since(start)

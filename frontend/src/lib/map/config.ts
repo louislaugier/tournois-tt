@@ -11,11 +11,17 @@ export const DEFAULT_MAP_CONFIG = {
                             format: 'Localisation approximative',
                             hidden: (value: boolean) => !value 
                         },
-                        { name: 'Tournoi', format: null },
+                        { name: 'Nom du tournoi', format: null },
+                        { name: 'Type', format: null },
                         { name: 'Club', format: null },
                         { name: 'Date de début', format: null },
                         { name: 'Date de fin', format: null },
-                        { name: 'Adresse', format: null }
+                        { name: 'Adresse', format: null },
+                        { 
+                            name: 'Règlement',
+                            format: 'Voir le règlement',
+                            type: 'link'
+                        }
                     ]
                 },
                 compareMode: false,
@@ -42,7 +48,6 @@ export const DEFAULT_MAP_CONFIG = {
             type: 'point',
             config: {
                 dataId: 'tournament_data',
-                label: 'Nom du tournoi',
                 color: [18, 147, 154] as [number, number, number],
                 columns: {
                     lat: 'latitude',
