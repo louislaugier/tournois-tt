@@ -11,6 +11,16 @@ type Rules struct {
 	URL string `json:"url"`
 }
 
+// Table represents a tournament table (category)
+type Table struct {
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	Date        string `json:"date"`
+	Time        string `json:"time"`
+	Fee         int    `json:"fee"`       // in cents
+	Endowment   int    `json:"endowment"` // in cents
+}
+
 // Tournament represents a table tennis tournament
 type Tournament struct {
 	ID        int     `json:"id"`
@@ -21,5 +31,6 @@ type Tournament struct {
 	Address   Address `json:"address"`
 	Club      Club    `json:"club"`
 	Rules     *Rules  `json:"rules,omitempty"`
+	Tables    []Table `json:"tables"`
 	Status    int     `json:"status"`
 }

@@ -37,6 +37,15 @@ export interface Contact {
   id: number;
 }
 
+export interface Table {
+  name: string;
+  description: string;
+  date: string;
+  time: string;
+  fee: number;
+  endowment: number;
+}
+
 export interface Tournament {
   '@id': string;
   '@type': string;
@@ -51,6 +60,7 @@ export interface Tournament {
   rules?: {
     url: string;
   };
+  tables?: Table[];
   endowment: number;
   status: number;
   id: number;

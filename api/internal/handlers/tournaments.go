@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -51,7 +52,23 @@ type FFTTTournament struct {
 	Address   types.Address `json:"address"`
 	Club      types.Club    `json:"club"`
 	Rules     *types.Rules  `json:"rules"`
+	Tables    []types.Table `json:"tables"`
 	Status    int           `json:"status"`
+}
+
+func formatTableInfo(tables []types.Table) string {
+	if len(tables) == 0 {
+		return ""
+	}
+
+	var result strings.Builder
+	for _, t := range tables {
+		fee := float64(t.Fee) / 100.0
+		endowment := float64(t.Endowment) / 100.0
+		result.WriteString(fmt.Sprintf("%s - %s (%s %s) : %.2f€ / %.2f€\n",
+			t.Name, t.Description, t.Date[0:10], t.Time, fee, endowment))
+	}
+	return result.String()
 }
 
 func TournamentsHandler(c *gin.Context) {
@@ -109,6 +126,7 @@ func TournamentsHandler(c *gin.Context) {
 			Address:   t.Address,
 			Club:      t.Club,
 			Rules:     t.Rules,
+			Tables:    t.Tables,
 			Status:    t.Status,
 		}
 	}

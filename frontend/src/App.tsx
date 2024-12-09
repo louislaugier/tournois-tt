@@ -50,6 +50,7 @@ const App = () => {
             { name: 'Club', type: 'string' },
             { name: 'Adresse', type: 'string' },
             { name: 'Règlement', type: 'string' },
+            { name: 'Tableaux', type: 'string' },
             { name: 'approximate', type: 'boolean' },
           ],
           rows: tournamentsWithCoordinates.map(t => [
@@ -72,6 +73,11 @@ const App = () => {
             `${t.club.name}${t.club.identifier ? ` (${t.club.identifier})` : ''}`,
             `${t.address.streetAddress}, ${t.address.postalCode} ${t.address.addressLocality}`,
             t.rules?.url || '#',
+            t.tables?.length ? 
+              t.tables.map(table => 
+                `${table.name} - ${table.description}\n` +
+                `${table.time} | ${(table.fee/100).toFixed(2)}€ | ${(table.endowment/100).toFixed(2)}€`
+              ).join('\n\n') : '',
             t.address.approximate || false,
           ])
         };

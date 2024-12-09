@@ -21,6 +21,10 @@ export const DEFAULT_MAP_CONFIG = {
                             name: 'Règlement',
                             format: 'Voir le règlement',
                             type: 'link'
+                        },
+                        {
+                            name: 'Tableaux',
+                            format: null
                         }
                     ]
                 },
