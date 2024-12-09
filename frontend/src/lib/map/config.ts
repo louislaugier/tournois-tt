@@ -22,10 +22,10 @@ export const DEFAULT_MAP_CONFIG = {
                             format: 'Voir le règlement',
                             type: 'link'
                         },
-                        {
-                            name: 'Tableaux',
-                            format: null
-                        }
+                        // {
+                        //     name: 'Tableaux',
+                        //     format: null
+                        // }
                     ]
                 },
                 compareMode: false,
@@ -52,7 +52,7 @@ export const DEFAULT_MAP_CONFIG = {
             type: 'point',
             config: {
                 dataId: 'tournament_data',
-                label: 'Tournois',
+                label: 'Tournoi',
                 color: [18, 147, 154] as [number, number, number],
                 columns: {
                     lat: 'latitude',
