@@ -71,7 +71,7 @@ const App = () => {
             }),
             `${t.club.name}${t.club.identifier ? ` (${t.club.identifier})` : ''}`,
             `${t.address.streetAddress}, ${t.address.postalCode} ${t.address.addressLocality}`,
-            t['@id'] ? t['@id'].replace('/api/tournaments/', 'https://www.fftt.com/monclub/spid_consultation/consultation_tournoi.php?valid_tour=') + '&pdf=1' : '#',
+            t.rules?.url || '#',
             t.address.approximate || false,
           ])
         };

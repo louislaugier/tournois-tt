@@ -2,80 +2,76 @@ package geocoding
 
 import (
 	"fmt"
-	"time"
+	"log"
+	"strings"
 	"tournois-tt/api/internal/types"
 	"tournois-tt/api/pkg/geocoding/address"
 	"tournois-tt/api/pkg/geocoding/cache"
 	"tournois-tt/api/pkg/geocoding/nominatim"
 )
 
-var client *types.NominatimClient
-
-func init() {
-	client = nominatim.NewClient()
-}
-
-// GetCoordinates returns the coordinates for a given address, using cache if available
-func GetCoordinates(addr types.Address) (types.Location, error) {
+// GetCoordinates returns the coordinates for an address, using cache if available
+func GetCoordinates(addr types.Address) (*types.Location, error) {
+	// Convert to package address type
 	pkgAddr := address.AddressInput{
 		StreetAddress:   addr.StreetAddress,
 		PostalCode:      addr.PostalCode,
 		AddressLocality: addr.AddressLocality,
-		AddressCountry:  addr.AddressCountry,
 	}
 
 	if !address.IsValid(pkgAddr) {
-		return types.Location{Failed: true, LastUpdated: time.Now()}, fmt.Errorf("invalid address")
+		return nil, fmt.Errorf("invalid address")
 	}
 
-	// Generate all possible variants of the address
+	// Generate address variants
 	variants := address.GenerateVariants(&pkgAddr)
-	if len(variants) == 0 {
-		return types.Location{Failed: true, LastUpdated: time.Now()}, fmt.Errorf("no valid address variants")
-	}
 
-	// Try to find any variant in cache first
+	// Try each variant in cache
 	for _, variant := range variants {
 		if loc, exists := cache.DefaultCache.Get(variant); exists {
-			return loc, nil
-		}
-	}
-
-	// If not in cache, try geocoding the most specific variant first
-	loc, err := client.Geocode(variants[0])
-	if err != nil || loc.Failed {
-		// If the most specific variant fails, try the next one
-		for _, variant := range variants[1:] {
-			loc, err = client.Geocode(variant)
-			if err == nil && !loc.Failed {
-				break
+			if !loc.Failed {
+				return &types.Location{
+					Lat:         loc.Lat,
+					Lon:         loc.Lon,
+					Failed:      loc.Failed,
+					Approximate: loc.Approximate,
+				}, nil
 			}
 		}
 	}
 
-	// If we found a valid location, cache it and create aliases
-	if err == nil && !loc.Failed {
-		cache.DefaultCache.Set(variants[0], loc.Lat, loc.Lon, false, loc.Approximate)
-		for _, v := range variants[1:] {
-			cache.DefaultCache.AddAlias(v, variants[0])
+	// If not in cache, geocode the first non-failed variant
+	client := nominatim.NewClient()
+	for _, variant := range variants {
+		if loc, exists := cache.DefaultCache.Get(variant); exists && loc.Failed {
+			continue
 		}
 
-		// Save cache if needed
-		if time.Since(cache.DefaultCache.LastSaveTime()) > 5*time.Minute {
-			if err := cache.DefaultCache.SaveToFile(); err != nil {
-				fmt.Printf("Error saving geocoding cache: %v\n", err)
+		coords, err := client.Geocode(variant)
+		if err != nil {
+			log.Printf("Failed to geocode variant %s: %v", variant, err)
+			cache.DefaultCache.Set(variant, 0, 0, true, false)
+			continue
+		}
+
+		if !coords.Failed {
+			// Add aliases for all variants
+			for _, v := range variants {
+				if v != variant {
+					cache.DefaultCache.AddAlias(v, variant)
+				}
 			}
+
+			return &types.Location{
+				Lat:         coords.Lat,
+				Lon:         coords.Lon,
+				Failed:      coords.Failed,
+				Approximate: coords.Approximate,
+			}, nil
 		}
 
-		return loc, nil
+		cache.DefaultCache.Set(variant, 0, 0, true, false)
 	}
 
-	// If all variants fail, mark as failed in cache
-	failedLoc := types.Location{Failed: true, LastUpdated: time.Now()}
-	cache.DefaultCache.Set(variants[0], 0, 0, true, false)
-	for _, v := range variants[1:] {
-		cache.DefaultCache.AddAlias(v, variants[0])
-	}
-
-	return failedLoc, fmt.Errorf("geocoding failed for all address variants")
+	return nil, fmt.Errorf("failed to geocode address: %s", strings.Join(variants, " / "))
 }

@@ -5,6 +5,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"strings"
 	"time"
 	"tournois-tt/api/internal/geocoding"
 	"tournois-tt/api/internal/types"
@@ -31,6 +32,26 @@ func mapTournamentType(t string) string {
 	default:
 		return t
 	}
+}
+
+func extractTournamentID(id string) string {
+	parts := strings.Split(id, "/")
+	if len(parts) > 0 {
+		return parts[len(parts)-1]
+	}
+	return ""
+}
+
+type FFTTTournament struct {
+	ID        int           `json:"id"`
+	Name      string        `json:"name"`
+	Type      string        `json:"type"`
+	StartDate string        `json:"startDate"`
+	EndDate   string        `json:"endDate"`
+	Address   types.Address `json:"address"`
+	Club      types.Club    `json:"club"`
+	Rules     *types.Rules  `json:"rules"`
+	Status    int           `json:"status"`
 }
 
 func TournamentsHandler(c *gin.Context) {
@@ -68,13 +89,30 @@ func TournamentsHandler(c *gin.Context) {
 	}
 
 	log.Printf("Parsing tournaments data")
-	var tournaments []types.Tournament
-	if err := json.Unmarshal(body, &tournaments); err != nil {
+	var ffttTournaments []FFTTTournament
+	if err := json.Unmarshal(body, &ffttTournaments); err != nil {
 		log.Printf("Error parsing tournaments data: %v", err)
 		log.Printf("Raw response body: %s", string(body))
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to parse tournaments data"})
 		return
 	}
+
+	// Convert to our internal type
+	tournaments := make([]types.Tournament, len(ffttTournaments))
+	for i, t := range ffttTournaments {
+		tournaments[i] = types.Tournament{
+			ID:        t.ID,
+			Name:      t.Name,
+			Type:      t.Type,
+			StartDate: t.StartDate,
+			EndDate:   t.EndDate,
+			Address:   t.Address,
+			Club:      t.Club,
+			Rules:     t.Rules,
+			Status:    t.Status,
+		}
+	}
+
 	log.Printf("Found %d tournaments", len(tournaments))
 
 	// Add coordinates from cache or geocode new addresses

@@ -44,10 +44,11 @@ export const DEFAULT_MAP_CONFIG = {
             speed: 1
         },
         layers: [{
-            id: 'point',
+            id: 'tournoi',
             type: 'point',
             config: {
                 dataId: 'tournament_data',
+                label: 'Tournois',
                 color: [18, 147, 154] as [number, number, number],
                 columns: {
                     lat: 'latitude',

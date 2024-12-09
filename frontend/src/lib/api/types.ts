@@ -48,6 +48,9 @@ export interface Tournament {
   endDate: string;
   address: Address;
   contacts: Contact[];
+  rules?: {
+    url: string;
+  };
   endowment: number;
   status: number;
   id: number;

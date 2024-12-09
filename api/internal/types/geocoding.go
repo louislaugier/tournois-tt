@@ -174,10 +174,7 @@ func (c *RuntimeCache) LastSaveTime() time.Time {
 
 // SaveToFile saves the cache to disk
 func (c *RuntimeCache) SaveToFile() error {
-	c.Lock()
-	defer c.Unlock()
-
-	cacheDir := "api/cache"
+	cacheDir := "cache"
 	if err := os.MkdirAll(cacheDir, 0755); err != nil {
 		return fmt.Errorf("failed to create cache directory: %v", err)
 	}
@@ -295,21 +292,4 @@ type NominatimResponse []struct {
 	Type     string `json:"type"`
 	Class    string `json:"class"`
 	Category string `json:"category"`
-}
-
-// Tournament represents a table tennis tournament
-type Tournament struct {
-	ID        int     `json:"id"`
-	Name      string  `json:"name"`
-	Type      string  `json:"type"`
-	StartDate string  `json:"startDate"`
-	EndDate   string  `json:"endDate"`
-	Address   Address `json:"address"`
-	Club      Club    `json:"club"`
-}
-
-// Club represents a table tennis club
-type Club struct {
-	Name       string `json:"name"`
-	Identifier string `json:"identifier"`
 }
