@@ -15,6 +15,7 @@ export interface Address {
   openingHours: string | null;
   main: boolean;
   id: number;
+  approximate?: boolean;
 }
 
 export interface Club {

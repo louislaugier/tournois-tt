@@ -71,11 +71,11 @@ func PreloadTournaments() error {
 		coords, err := geocodeAddressWithRetry(addr)
 		if err != nil {
 			log.Printf("Warning: Failed to geocode address: %s", addr)
-			cache.Set(addr, Coordinates{Failed: true})
+			cache.Set(addr, 0, 0, true, false)
 			continue
 		}
 
-		cache.Set(addr, coords)
+		cache.Set(addr, coords.Lat, coords.Lon, coords.Failed, coords.Approximate)
 
 		// Save cache periodically
 		if time.Since(cache.LastSave) > 5*time.Minute {

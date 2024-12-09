@@ -17,12 +17,13 @@ func init() {
 	if err != nil {
 		fmt.Printf("Error loading geocoding cache: %v\n", err)
 		cache = &GeocodingCache{
-			Addresses: make(map[string]Coordinates),
+			Locations: make(map[string]Location),
+			Aliases:   make(map[string]string),
 		}
 	}
 }
 
-func geocodeAddressWithRetry(address string) (Coordinates, error) {
+func geocodeAddressWithRetry(address string) (Location, error) {
 	baseURL := "https://nominatim.openstreetmap.org/search"
 	client := &http.Client{Timeout: 10 * time.Second}
 
@@ -33,70 +34,82 @@ func geocodeAddressWithRetry(address string) (Coordinates, error) {
 
 	req, err := http.NewRequest("GET", baseURL+"?"+params.Encode(), nil)
 	if err != nil {
-		return Coordinates{}, err
+		return Location{}, err
 	}
 
 	req.Header.Set("User-Agent", "TournoisTT/1.0")
 
 	resp, err := client.Do(req)
 	if err != nil {
-		return Coordinates{}, err
+		return Location{}, err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return Coordinates{}, fmt.Errorf("geocoding request failed with status: %d", resp.StatusCode)
+		return Location{}, fmt.Errorf("geocoding request failed with status: %d", resp.StatusCode)
 	}
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return Coordinates{}, err
+		return Location{}, err
 	}
 
 	var result nominatimResponse
 	if err := json.Unmarshal(body, &result); err != nil {
-		return Coordinates{}, err
+		return Location{}, err
 	}
 
 	if len(result) == 0 {
-		return Coordinates{Failed: true}, nil
+		return Location{Failed: true, LastUpdated: time.Now()}, nil
 	}
 
 	var lat, lon float64
 	fmt.Sscanf(result[0].Lat, "%f", &lat)
 	fmt.Sscanf(result[0].Lon, "%f", &lon)
 
-	return Coordinates{Lat: lat, Lon: lon}, nil
+	// Check if location is approximate (city-level only)
+	isApproximate := result[0].Type == "city" ||
+		result[0].Type == "administrative" ||
+		result[0].Class == "boundary" ||
+		result[0].Category == "boundary"
+
+	return Location{
+		Lat:         lat,
+		Lon:         lon,
+		Failed:      false,
+		Approximate: isApproximate,
+		LastUpdated: time.Now(),
+	}, nil
 }
 
 // GetCoordinates returns the coordinates for a given address, using cache if available
-func GetCoordinates(addr Address) (Coordinates, error) {
+func GetCoordinates(addr Address) (Location, error) {
 	if !hasValidAddress(addr) {
-		return Coordinates{Failed: true}, fmt.Errorf("invalid address")
+		return Location{Failed: true, LastUpdated: time.Now()}, fmt.Errorf("invalid address")
 	}
 	return GeocodeAddress(addr)
 }
 
-func GeocodeAddress(addr Address) (Coordinates, error) {
+func GeocodeAddress(addr Address) (Location, error) {
 	variants := generateAddressVariants(addr)
 
 	// Check cache first for all variants
 	for _, variant := range variants {
-		if coords, exists := cache.Get(variant); exists {
-			return coords, nil
+		if loc, exists := cache.Get(variant); exists {
+			return loc, nil
 		}
 	}
 
 	// Try geocoding each variant
 	for _, variant := range variants {
-		coords, err := geocodeAddressWithRetry(variant)
+		loc, err := geocodeAddressWithRetry(variant)
 		if err != nil {
 			continue
 		}
 
 		// Cache the result for all variants
 		for _, v := range variants {
-			cache.Set(v, coords)
+			cache.Set(v, loc.Lat, loc.Lon, loc.Failed, loc.Approximate)
 		}
 
 		// Save cache periodically
@@ -106,14 +119,15 @@ func GeocodeAddress(addr Address) (Coordinates, error) {
 			}
 		}
 
-		return coords, nil
+		return loc, nil
 	}
 
 	// If all variants fail, mark as failed in cache
-	failedCoords := Coordinates{Failed: true}
+	now := time.Now()
+	failedLoc := Location{Failed: true, LastUpdated: now}
 	for _, variant := range variants {
-		cache.Set(variant, failedCoords)
+		cache.Set(variant, 0, 0, true, false)
 	}
 
-	return failedCoords, nil
+	return failedLoc, nil
 }

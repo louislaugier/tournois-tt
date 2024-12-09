@@ -41,13 +41,14 @@ const App = () => {
       if (tournamentsWithCoordinates.length > 0) {
         const mapData = {
           fields: [
-            { name: 'name', type: 'string' },
+            { name: 'Tournoi', type: 'string' },
             { name: 'latitude', type: 'real' },
             { name: 'longitude', type: 'real' },
-            { name: 'startDate', type: 'string' },
-            { name: 'endDate', type: 'string' },
-            { name: 'club', type: 'string' },
-            { name: 'address', type: 'string' },
+            { name: 'Date de début', type: 'string' },
+            { name: 'Date de fin', type: 'string' },
+            { name: 'Club', type: 'string' },
+            { name: 'Adresse', type: 'string' },
+            { name: 'approximate', type: 'boolean' },
           ],
           rows: tournamentsWithCoordinates.map(t => [
             t.name,
@@ -55,8 +56,9 @@ const App = () => {
             t.address.longitude,
             t.startDate,
             t.endDate,
-            t.club.name,
-            `${t.address.streetAddress}, ${t.address.postalCode} ${t.address.addressLocality}`
+            `${t.club.name}${t.club.identifier ? ` (${t.club.identifier})` : ''}`,
+            `${t.address.streetAddress}, ${t.address.postalCode} ${t.address.addressLocality}`,
+            t.address.approximate || false,
           ])
         };
 
