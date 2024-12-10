@@ -1,4 +1,5 @@
 import { API_BASE_URL, getDefaultHeaders } from './config';
+import { Tournament } from './types';
 
 export class APIError extends Error {
     constructor(message: string) {
@@ -21,7 +22,7 @@ export interface TournamentQueryParams {
     type?: string;
 }
 
-export async function fetchTournaments(params: TournamentQueryParams = {}): Promise<any[]> {
+export async function fetchTournaments(params: TournamentQueryParams = {}): Promise<Tournament[]> {
     const queryParams = new URLSearchParams();
 
     Object.entries(params).forEach(([key, value]) => {
@@ -57,7 +58,7 @@ export function formatDateParam(date: Date): string {
     return date.toISOString().split('.')[0];
 }
 
-export async function fetchAllTournaments(params: TournamentQueryParams = {}): Promise<any[]> {
+export async function fetchAllTournaments(params: TournamentQueryParams = {}): Promise<Tournament[]> {
     const defaultParams: TournamentQueryParams = {
         itemsPerPage: 100,
         page: 1,
@@ -133,11 +134,11 @@ export class TournamentQueryBuilder {
         return this;
     }
 
-    async execute(): Promise<any[]> {
+    async execute(): Promise<Tournament[]> {
         return fetchTournaments(this.params);
     }
 
-    async executeAndLogAll(): Promise<any[]> {
+    async executeAndLogAll(): Promise<Tournament[]> {
         const tournaments = await fetchAllTournaments(this.params);
         console.log('All tournaments:', tournaments);
         return tournaments;

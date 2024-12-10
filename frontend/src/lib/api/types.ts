@@ -46,6 +46,14 @@ export interface Table {
   endowment: number;
 }
 
+export interface Organization {
+  '@id': string;
+  '@type': string;
+  name: string;
+  identifier: string;
+  id: number;
+}
+
 export interface Tournament {
   '@id': string;
   '@type': string;
@@ -64,6 +72,38 @@ export interface Tournament {
   endowment: number;
   status: number;
   id: number;
+  organization?: {
+    '@id': string;
+    '@type': string;
+    name: string;
+    identifier: string;
+    id: number;
+  };
+  responses?: {
+    '@id': string;
+    '@type': string;
+    accountant: string;
+    date: string;
+    review: number;
+    description: string | null;
+    organization: Organization;
+    id: number;
+  }[];
+  engagmentSheet?: {
+    '@id': string;
+    '@type': string;
+    originalFilename: string;
+    mimeType: string;
+    size: number;
+    id: number;
+    url: string;
+  };
+  decision?: any;
+  page?: string | null;
+  '@permissions'?: {
+    canUpdate: boolean;
+    canDelete: boolean;
+  };
 }
 
 export interface FFTTResponse {
@@ -86,4 +126,15 @@ export interface FFTTQueryParams {
   'endDate[before]'?: string;
   'address.postalCode'?: string;
   'address.addressLocality'?: string;
+}
+
+export interface Response {
+  '@id': string;
+  '@type': string;
+  accountant: string;
+  date: string;
+  review: number;
+  description: string | null;
+  organization: Organization;
+  id: number;
 } 

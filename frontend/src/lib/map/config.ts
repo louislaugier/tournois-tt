@@ -7,25 +7,24 @@ export const DEFAULT_MAP_CONFIG = {
                 fieldsToShow: {
                     tournament_data: [
                         { 
-                            name: 'approximate', 
-                            format: 'Localisation approximative',
-                            hidden: (value: boolean) => !value 
+                            name: 'Localisation approximative', 
+                            format: null,
+                            hidden: (value: boolean) => !value
                         },
                         { name: 'Nom du tournoi', format: null },
                         { name: 'Type', format: null },
                         { name: 'Club', format: null },
+                        { name: 'Organisateur', format: null },
+                        { name: 'Dotation totale', format: null },
                         { name: 'Date de début', format: null },
                         { name: 'Date de fin', format: null },
                         { name: 'Adresse', format: null },
                         { 
                             name: 'Règlement',
                             format: 'Voir le règlement',
-                            type: 'link'
-                        },
-                        // {
-                        //     name: 'Tableaux',
-                        //     format: null
-                        // }
+                            type: 'link',
+                            hidden: (value: string) => !value || value === '#'
+                        }
                     ]
                 },
                 compareMode: false,

@@ -44,16 +44,19 @@ func extractTournamentID(id string) string {
 }
 
 type FFTTTournament struct {
-	ID        int           `json:"id"`
-	Name      string        `json:"name"`
-	Type      string        `json:"type"`
-	StartDate string        `json:"startDate"`
-	EndDate   string        `json:"endDate"`
-	Address   types.Address `json:"address"`
-	Club      types.Club    `json:"club"`
-	Rules     *types.Rules  `json:"rules"`
-	Tables    []types.Table `json:"tables"`
-	Status    int           `json:"status"`
+	ID           int                 `json:"id"`
+	Name         string              `json:"name"`
+	Type         string              `json:"type"`
+	StartDate    string              `json:"startDate"`
+	EndDate      string              `json:"endDate"`
+	Address      types.Address       `json:"address"`
+	Club         types.Club          `json:"club"`
+	Rules        *types.Rules        `json:"rules"`
+	Tables       []types.Table       `json:"tables"`
+	Status       int                 `json:"status"`
+	Endowment    int                 `json:"endowment"`
+	Organization *types.Organization `json:"organization,omitempty"`
+	Responses    []types.Response    `json:"responses,omitempty"`
 }
 
 func formatTableInfo(tables []types.Table) string {
@@ -117,17 +120,22 @@ func TournamentsHandler(c *gin.Context) {
 	// Convert to our internal type
 	tournaments := make([]types.Tournament, len(ffttTournaments))
 	for i, t := range ffttTournaments {
+		log.Printf("Tournament %d organization: %+v", t.ID, t.Organization)
+		log.Printf("Tournament %d responses: %+v", t.ID, t.Responses)
 		tournaments[i] = types.Tournament{
-			ID:        t.ID,
-			Name:      t.Name,
-			Type:      t.Type,
-			StartDate: t.StartDate,
-			EndDate:   t.EndDate,
-			Address:   t.Address,
-			Club:      t.Club,
-			Rules:     t.Rules,
-			Tables:    t.Tables,
-			Status:    t.Status,
+			ID:           t.ID,
+			Name:         t.Name,
+			Type:         t.Type,
+			StartDate:    t.StartDate,
+			EndDate:      t.EndDate,
+			Address:      t.Address,
+			Club:         t.Club,
+			Rules:        t.Rules,
+			Tables:       t.Tables,
+			Status:       t.Status,
+			Endowment:    t.Endowment,
+			Organization: t.Organization,
+			Responses:    t.Responses,
 		}
 	}
 

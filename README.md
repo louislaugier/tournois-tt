@@ -12,4 +12,13 @@ When deploying to production:
    DOMAIN=your-domain.com
    EMAIL=your-email@domain.com
    ```
+
+   # Set gin mode to release in api/
+   ````
+   cd api
+   # Copy the example environment file
+   cp .env.example .env
+   ```
+
 3. The certbot container will automatically obtain and renew SSL certificates when you run `docker-compose up -d` 
+
