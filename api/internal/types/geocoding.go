@@ -13,21 +13,12 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"tournois-tt/api/pkg/geocoding/address"
 )
 
 // Normalize standardizes an address string for consistent comparison
-func Normalize(address string) string {
-	address = strings.ToLower(address)
-	address = strings.Join(strings.Fields(strings.ReplaceAll(address, "-", " - ")), " ")
-	address = strings.ReplaceAll(address, " - ", "-")
-	address = strings.TrimRight(address, ",")
-	address = strings.TrimSuffix(address, ", france")
-	if len(address) > 5 && strings.ContainsAny(address[:5], "0123456789") {
-		postalCode := address[:5]
-		rest := strings.TrimSpace(address[5:])
-		address = postalCode + " " + rest
-	}
-	return address
+func Normalize(addr string) string {
+	return address.Normalize(addr)
 }
 
 // Location represents a geocoded location with metadata
@@ -80,7 +71,7 @@ func (c *RuntimeCache) Get(addr string) (Location, bool) {
 	return loc, exists
 }
 
-// Set stores a location in the cache
+// Set stores a location in the cache, allowing updates to failed geocoding attempts
 func (c *RuntimeCache) Set(addr string, lat, lon float64, failed, approximate bool) {
 	c.Lock()
 	defer c.Unlock()
@@ -88,7 +79,22 @@ func (c *RuntimeCache) Set(addr string, lat, lon float64, failed, approximate bo
 	// Normalize the address
 	addr = Normalize(addr)
 
-	// Store the location
+	// Check if we already have this location
+	if existing, exists := c.Locations[addr]; exists {
+		// Only update if the existing entry was a failure and this is a success
+		if existing.Failed && !failed {
+			c.Locations[addr] = Location{
+				Lat:         lat,
+				Lon:         lon,
+				Failed:      failed,
+				Approximate: approximate,
+				LastUpdated: time.Now(),
+			}
+		}
+		return
+	}
+
+	// Store new location
 	c.Locations[addr] = Location{
 		Lat:         lat,
 		Lon:         lon,

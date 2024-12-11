@@ -43,14 +43,36 @@ func PreloadTournaments() error {
 
 	log.Printf("Found %d tournaments to geocode", len(tournaments))
 
+	// Log raw addresses for debugging
+	for _, t := range tournaments {
+		log.Printf("Raw address: street=%q, postal=%q, locality=%q, desc=%q",
+			t.Address.StreetAddress,
+			t.Address.PostalCode,
+			t.Address.AddressLocality,
+			t.Address.DisambiguatingDescription)
+	}
+
 	// Process each unique address
 	uniqueAddresses := make(map[string]address.AddressInput)
 	for _, t := range tournaments {
 		variants := address.GenerateVariants(&t.Address)
 		log.Printf("Generated %d variants for address: %s, %s %s",
 			len(variants), t.Address.StreetAddress, t.Address.PostalCode, t.Address.AddressLocality)
+
+		// Check if any variant is already successfully geocoded
+		var found bool
 		for _, variant := range variants {
-			uniqueAddresses[variant] = t.Address
+			if loc, exists := gcache.DefaultCache.Get(variant); exists && !loc.Failed {
+				found = true
+				break
+			}
+		}
+
+		// If no successful variant found, add all variants to try
+		if !found {
+			for _, variant := range variants {
+				uniqueAddresses[variant] = t.Address
+			}
 		}
 	}
 
@@ -87,6 +109,7 @@ func PreloadTournaments() error {
 		if !coords.Failed {
 			successCount++
 			gcache.DefaultCache.Set(addr, coords.Lat, coords.Lon, false, coords.Approximate)
+
 			// Add aliases for all variants of this address
 			originalAddr := uniqueAddresses[addr]
 			variants := address.GenerateVariants(&originalAddr)
@@ -95,6 +118,14 @@ func PreloadTournaments() error {
 					gcache.DefaultCache.AddAlias(variant, addr)
 				}
 			}
+
+			// Remove other variants from toGeocode since we found a success
+			for _, variant := range variants {
+				if variant != addr {
+					delete(uniqueAddresses, variant)
+				}
+			}
+
 			log.Printf("Successfully geocoded: %s (%.6f, %.6f) approximate: %v",
 				addr, coords.Lat, coords.Lon, coords.Approximate)
 		} else {

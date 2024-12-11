@@ -11,6 +11,8 @@ import (
 	"tournois-tt/api/internal/geocoding"
 	"tournois-tt/api/internal/types"
 	"tournois-tt/api/pkg/fftt"
+	"tournois-tt/api/pkg/geocoding/address"
+	gcache "tournois-tt/api/pkg/geocoding/cache"
 
 	"github.com/gin-gonic/gin"
 )
@@ -144,6 +146,29 @@ func TournamentsHandler(c *gin.Context) {
 	// Add coordinates from cache or geocode new addresses
 	log.Printf("Adding coordinates to tournaments")
 	for i := range tournaments {
+		// Convert to address input for variant generation
+		addr := address.AddressInput{
+			StreetAddress:             tournaments[i].Address.StreetAddress,
+			PostalCode:                tournaments[i].Address.PostalCode,
+			AddressLocality:           tournaments[i].Address.AddressLocality,
+			DisambiguatingDescription: tournaments[i].Address.DisambiguatingDescription,
+		}
+
+		// Generate variants to check if any have failed
+		variants := address.GenerateVariants(&addr)
+		var previouslyFailed bool
+		for _, variant := range variants {
+			if loc, exists := gcache.DefaultCache.Get(variant); exists && loc.Failed {
+				previouslyFailed = true
+				break
+			}
+		}
+
+		if previouslyFailed {
+			log.Printf("Skipping geocoding for tournament %s - previous attempt failed", tournaments[i].Name)
+			continue
+		}
+
 		coords, err := geocoding.GetCoordinates(tournaments[i].Address)
 		if err != nil {
 			log.Printf("Warning: Failed to get coordinates for tournament %s: %v", tournaments[i].Name, err)

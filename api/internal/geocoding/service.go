@@ -26,52 +26,57 @@ func GetCoordinates(addr types.Address) (*types.Location, error) {
 	// Generate address variants
 	variants := address.GenerateVariants(&pkgAddr)
 
-	// Try each variant in cache
+	// Try each variant in cache first
 	for _, variant := range variants {
-		if loc, exists := cache.DefaultCache.Get(variant); exists {
-			if !loc.Failed {
-				return &types.Location{
-					Lat:         loc.Lat,
-					Lon:         loc.Lon,
-					Failed:      loc.Failed,
-					Approximate: loc.Approximate,
-				}, nil
-			}
+		if loc, exists := cache.DefaultCache.Get(variant); exists && !loc.Failed {
+			return &types.Location{
+				Lat:         loc.Lat,
+				Lon:         loc.Lon,
+				Failed:      loc.Failed,
+				Approximate: loc.Approximate,
+			}, nil
 		}
 	}
 
-	// If not in cache, geocode the first non-failed variant
+	// If not in cache, try geocoding each variant until we find a success
 	client := nominatim.NewClient()
+	var lastError error
 	for _, variant := range variants {
+		// Skip if we already know this variant failed
 		if loc, exists := cache.DefaultCache.Get(variant); exists && loc.Failed {
 			continue
 		}
 
 		coords, err := client.Geocode(variant)
 		if err != nil {
+			lastError = err
 			log.Printf("Failed to geocode variant %s: %v", variant, err)
 			cache.DefaultCache.Set(variant, 0, 0, true, false)
 			continue
 		}
 
 		if !coords.Failed {
-			// Add aliases for all variants
+			// Success! Add aliases for all variants and return
 			for _, v := range variants {
 				if v != variant {
 					cache.DefaultCache.AddAlias(v, variant)
 				}
 			}
-
+			cache.DefaultCache.Set(variant, coords.Lat, coords.Lon, false, coords.Approximate)
 			return &types.Location{
 				Lat:         coords.Lat,
 				Lon:         coords.Lon,
-				Failed:      coords.Failed,
+				Failed:      false,
 				Approximate: coords.Approximate,
 			}, nil
 		}
 
+		// Mark this variant as failed in cache
 		cache.DefaultCache.Set(variant, 0, 0, true, false)
 	}
 
-	return nil, fmt.Errorf("failed to geocode address: %s", strings.Join(variants, " / "))
+	if lastError != nil {
+		return nil, fmt.Errorf("failed to geocode address: %v", lastError)
+	}
+	return nil, fmt.Errorf("no successful geocoding result for variants: %s", strings.Join(variants, " / "))
 }
