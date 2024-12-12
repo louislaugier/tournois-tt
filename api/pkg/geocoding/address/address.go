@@ -20,11 +20,25 @@ func Normalize(address string) string {
 	return address
 }
 
-// GenerateVariants creates a minimal set of address variants in priority order:
-// 1. Full address (everything)
-// 2. Without venue name in parentheses
-// 3. Without street number (if exists)
-// 4. Just postal code + locality
+// cleanStreetAddress removes common prefixes and standardizes the street address
+func cleanStreetAddress(addr string) string {
+	// Common venue prefixes to remove
+	prefixes := []string{
+		"gymnase", "salle", "complexe", "espace", "cosec",
+		"stade", "centre", "palais", "maison", "parc",
+	}
+
+	addr = strings.ToLower(addr)
+	for _, prefix := range prefixes {
+		if strings.HasPrefix(addr, prefix+" ") {
+			addr = strings.TrimPrefix(addr, prefix+" ")
+		}
+	}
+
+	return strings.TrimSpace(addr)
+}
+
+// GenerateVariants creates a comprehensive set of address variants in priority order
 func GenerateVariants(addr *AddressInput) []string {
 	if addr == nil {
 		return nil
@@ -34,6 +48,7 @@ func GenerateVariants(addr *AddressInput) []string {
 	streetAddress := strings.TrimSpace(addr.StreetAddress)
 	postalCode := strings.TrimSpace(addr.PostalCode)
 	locality := strings.TrimSpace(addr.AddressLocality)
+	disambiguatingDesc := strings.TrimSpace(addr.DisambiguatingDescription)
 
 	// Skip if we don't have both postal code and locality
 	if postalCode == "" || locality == "" {
@@ -56,27 +71,46 @@ func GenerateVariants(addr *AddressInput) []string {
 		}
 	}
 
-	// Always include base variant first
-	addVariant(baseVariant + ", france")
+	// Build variants in order of reliability (most reliable first)
 
+	// 1. Street address with postal code and locality (without venue name)
 	if streetAddress != "" {
-		// Full address
 		addVariant(streetAddress + ", " + baseVariant + ", france")
 
-		// Try without venue name if exists
-		re := regexp.MustCompile(`\s*\([^)]+\)`)
-		streetWithoutVenue := strings.TrimSpace(re.ReplaceAllString(streetAddress, ""))
+		// Remove venue names in parentheses if present
+		reVenue := regexp.MustCompile(`\s*\([^)]+\)`)
+		streetWithoutVenue := strings.TrimSpace(reVenue.ReplaceAllString(streetAddress, ""))
 		if streetWithoutVenue != streetAddress {
 			addVariant(streetWithoutVenue + ", " + baseVariant + ", france")
 		}
 
-		// Try without street number if it exists
-		re = regexp.MustCompile(`^[0-9]+[A-Za-z]?(?:[-/][0-9]+)?[\s,]+(.+)$`)
-		if matches := re.FindStringSubmatch(streetWithoutVenue); matches != nil {
-			streetWithoutNumber := strings.TrimSpace(matches[1])
+		// Remove street numbers if present
+		reNumber := regexp.MustCompile(`^\d+\s*`)
+		streetWithoutNumber := strings.TrimSpace(reNumber.ReplaceAllString(streetAddress, ""))
+		if streetWithoutNumber != streetAddress {
 			addVariant(streetWithoutNumber + ", " + baseVariant + ", france")
 		}
+
+		// Try with just the street name (no number, no venue)
+		streetNameOnly := strings.TrimSpace(reNumber.ReplaceAllString(streetWithoutVenue, ""))
+		if streetNameOnly != "" && streetNameOnly != streetAddress && streetNameOnly != streetWithoutNumber {
+			addVariant(streetNameOnly + ", " + baseVariant + ", france")
+		}
 	}
+
+	// 2. Full address with venue name (if available)
+	if disambiguatingDesc != "" && streetAddress != "" {
+		addVariant(disambiguatingDesc + " " + streetAddress + ", " + baseVariant + ", france")
+	}
+
+	// 3. Venue name with postal code and locality
+	if disambiguatingDesc != "" {
+		addVariant(disambiguatingDesc + ", " + baseVariant + ", france")
+	}
+
+	// 4. Base variants (postal code and locality only)
+	addVariant(baseVariant + ", france")
+	addVariant(locality + ", " + postalCode + ", france")
 
 	return variants
 }

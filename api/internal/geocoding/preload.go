@@ -65,6 +65,11 @@ func PreloadTournaments() error {
 		log.Printf("Generated %d variants for address: %s, %s %s",
 			len(variants), t.Address.StreetAddress, t.Address.PostalCode, t.Address.AddressLocality)
 
+		// Log all generated variants
+		for _, variant := range variants {
+			log.Printf("  Variant: %s", variant)
+		}
+
 		// Store original address as key for variants
 		key := fmt.Sprintf("%s, %s %s",
 			t.Address.StreetAddress,
@@ -84,12 +89,17 @@ func PreloadTournaments() error {
 	var toGeocode []string
 	for addr := range uniqueAddresses {
 		if loc, exists := gcache.DefaultCache.Get(addr); exists && !loc.Failed {
+			log.Printf("Skipping cached address: %s", addr)
 			continue // Skip if we have a successful geocoding result
 		}
 		toGeocode = append(toGeocode, addr)
 	}
 
 	log.Printf("%d addresses need geocoding", len(toGeocode))
+	log.Printf("Addresses to geocode:")
+	for _, addr := range toGeocode {
+		log.Printf("  %s", addr)
+	}
 
 	// Create Nominatim client
 	client := nominatim.NewClient()
@@ -104,7 +114,7 @@ func PreloadTournaments() error {
 		if err != nil {
 			log.Printf("Warning: Failed to geocode address: %s: %v", addr, err)
 			failureCount++
-			gcache.DefaultCache.Set(addr, 0, 0, true, false, nil)
+			gcache.DefaultCache.Set(addr, 0, 0, true, false, nil, "")
 			continue
 		}
 
@@ -119,13 +129,13 @@ func PreloadTournaments() error {
 
 			// Store the successful result with all its variants
 			variants := addressVariants[key]
-			gcache.DefaultCache.Set(addr, coords.Lat, coords.Lon, false, coords.Approximate, variants)
+			gcache.DefaultCache.Set(addr, coords.Lat, coords.Lon, false, coords.Approximate, variants, key)
 
 			log.Printf("Successfully geocoded: %s (%.6f, %.6f) approximate: %v",
 				addr, coords.Lat, coords.Lon, coords.Approximate)
 		} else {
 			failureCount++
-			gcache.DefaultCache.Set(addr, 0, 0, true, false, nil)
+			gcache.DefaultCache.Set(addr, 0, 0, true, false, nil, "")
 			log.Printf("Failed to find coordinates for: %s", addr)
 		}
 

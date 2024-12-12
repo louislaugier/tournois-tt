@@ -40,7 +40,7 @@ type GeocodingCache struct {
 // Cache defines the interface for geocoding cache operations
 type Cache interface {
 	Get(address string) (Location, bool)
-	Set(address string, lat, lon float64, failed, approximate bool, variants []string)
+	Set(address string, lat, lon float64, failed, approximate bool, variants []string, tournamentName ...string)
 	SaveToFile() error
 	LastSaveTime() time.Time
 }
@@ -75,7 +75,7 @@ func (c *RuntimeCache) Get(addr string) (Location, bool) {
 }
 
 // Set stores a location in the cache
-func (c *RuntimeCache) Set(addr string, lat, lon float64, failed, approximate bool, variants []string) {
+func (c *RuntimeCache) Set(addr string, lat, lon float64, failed, approximate bool, variants []string, tournamentName ...string) {
 	c.Lock()
 	defer c.Unlock()
 
@@ -86,11 +86,14 @@ func (c *RuntimeCache) Set(addr string, lat, lon float64, failed, approximate bo
 		normalizedVariants = append(normalizedVariants, Normalize(v))
 	}
 
-	// Find the most specific (longest) address to use as the base key
-	baseAddr := normalizedAddr
 	allAddresses := append([]string{normalizedAddr}, normalizedVariants...)
+
+	// Find the most complete address to use as the base key
+	baseAddr := normalizedAddr
 	for _, a := range allAddresses {
-		if len(a) > len(baseAddr) {
+		// Look for addresses that contain the current baseAddr
+		// This means they are more complete versions of the same address
+		if strings.Contains(a, baseAddr) && len(a) > len(baseAddr) {
 			baseAddr = a
 		}
 	}
@@ -115,12 +118,23 @@ func (c *RuntimeCache) Set(addr string, lat, lon float64, failed, approximate bo
 		}
 	}
 
+	// Check if the address is approximate (missing both street number and venue name)
+	hasStreetNumber := regexp.MustCompile(`\d+`).MatchString(baseAddr)
+	hasVenueName := strings.Contains(baseAddr, "gymnase") ||
+		strings.Contains(baseAddr, "salle") ||
+		strings.Contains(baseAddr, "complexe") ||
+		strings.Contains(baseAddr, "espace") ||
+		strings.Contains(baseAddr, "stade")
+
+	// Location is approximate only if both street number and venue name are missing
+	isApproximate := !hasStreetNumber && !hasVenueName
+
 	// Store the location with the base address as key
 	c.Locations[baseAddr] = Location{
 		Lat:         lat,
 		Lon:         lon,
 		Failed:      failed,
-		Approximate: approximate,
+		Approximate: isApproximate,
 		LastUpdated: time.Now(),
 		Variants:    uniqueVariants,
 	}
@@ -160,12 +174,13 @@ type NominatimClient struct {
 	BaseURL    string
 }
 
-// Geocode performs geocoding for an address
+// Geocode performs geocoding for an address with more robust error handling
 func (c *NominatimClient) Geocode(address string) (Location, error) {
 	params := url.Values{}
 	params.Add("q", address)
 	params.Add("format", "json")
 	params.Add("limit", "1")
+	params.Add("addressdetails", "1") // Get more detailed address information
 
 	req, err := http.NewRequest("GET", c.BaseURL+"?"+params.Encode(), nil)
 	if err != nil {
@@ -187,10 +202,14 @@ func (c *NominatimClient) Geocode(address string) (Location, error) {
 
 	var result NominatimResponse
 	if err := json.Unmarshal(body, &result); err != nil {
+		// Log the raw response for debugging
+		log.Printf("Failed to parse Nominatim response for address %s: %v\nRaw response: %s",
+			address, err, string(body))
 		return Location{}, fmt.Errorf("error parsing response: %v", err)
 	}
 
 	if len(result) == 0 {
+		log.Printf("No geocoding result found for address: %s", address)
 		return Location{Failed: true, LastUpdated: time.Now()}, nil
 	}
 
@@ -212,6 +231,43 @@ func (c *NominatimClient) Geocode(address string) (Location, error) {
 	}, nil
 }
 
+// generateStreetKeywords dynamically generates street keywords from the address
+func generateStreetKeywords(address string) []string {
+	// Common French street type prefixes and keywords
+	baseKeywords := []string{
+		"rue", "avenue", "boulevard", "place",
+		"chemin", "impasse", "route", "allee",
+		"square", "passage", "quai", "cours",
+		"allée", "voie", "impasse", "esplanade",
+		"mail", "promenade", "rond-point", "carrefour",
+	}
+
+	// Extract potential keywords from the address
+	addressKeywords := strings.Fields(strings.ToLower(address))
+
+	// Combine base keywords with address-specific keywords
+	keywords := make(map[string]bool)
+	for _, kw := range baseKeywords {
+		keywords[kw] = true
+	}
+
+	// Add unique keywords from the address that might indicate a street
+	for _, word := range addressKeywords {
+		// Ignore very short words
+		if len(word) > 2 {
+			keywords[word] = true
+		}
+	}
+
+	// Convert map keys to slice
+	var result []string
+	for kw := range keywords {
+		result = append(result, kw)
+	}
+
+	return result
+}
+
 // isApproximateResult determines if a geocoding result is approximate
 func (c *NominatimClient) isApproximateResult(result struct {
 	Lat      string `json:"lat"`
@@ -220,19 +276,32 @@ func (c *NominatimClient) isApproximateResult(result struct {
 	Class    string `json:"class"`
 	Category string `json:"category"`
 }, address string) bool {
-	// Check if it's a city-level or administrative result
-	if result.Type == "city" || result.Type == "administrative" || result.Class == "boundary" {
-		return true
+	// Be more lenient with location types
+	approximateTypes := []string{
+		"city", "administrative", "boundary",
+		"village", "town", "municipality",
+		"county", "region", "district",
 	}
 
-	// Check if we're using a simplified variant without street info
-	hasStreetInfo := strings.Contains(address, "rue") ||
-		strings.Contains(address, "avenue") ||
-		strings.Contains(address, "boulevard") ||
-		strings.Contains(address, "place") ||
-		strings.Contains(address, "chemin") ||
-		strings.Contains(address, "impasse")
+	for _, t := range approximateTypes {
+		if result.Type == t || result.Class == t {
+			return true
+		}
+	}
 
+	// Dynamically generate street keywords
+	streetKeywords := generateStreetKeywords(address)
+
+	// Check for street information
+	hasStreetInfo := false
+	for _, keyword := range streetKeywords {
+		if strings.Contains(strings.ToLower(address), keyword) {
+			hasStreetInfo = true
+			break
+		}
+	}
+
+	// If no street info, consider it approximate
 	if !hasStreetInfo {
 		return true
 	}

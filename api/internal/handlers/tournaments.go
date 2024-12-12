@@ -157,11 +157,24 @@ func TournamentsHandler(c *gin.Context) {
 			DisambiguatingDescription: tournaments[i].Address.DisambiguatingDescription,
 		}
 
+		// Log detailed address information
+		log.Printf("Attempting to geocode tournament: %s", tournaments[i].Name)
+		log.Printf("  Street Address: %q", addr.StreetAddress)
+		log.Printf("  Postal Code: %q", addr.PostalCode)
+		log.Printf("  Locality: %q", addr.AddressLocality)
+		log.Printf("  Disambiguating Description: %q", addr.DisambiguatingDescription)
+
 		// Generate variants to check if any have failed
 		variants := address.GenerateVariants(&addr)
+		log.Printf("  Generated %d variants", len(variants))
+		for _, variant := range variants {
+			log.Printf("    Variant: %q", variant)
+		}
+
 		var previouslyFailed bool
 		for _, variant := range variants {
 			if loc, exists := gcache.DefaultCache.Get(variant); exists && loc.Failed {
+				log.Printf("  Variant %q was previously marked as failed", variant)
 				previouslyFailed = true
 				break
 			}
@@ -176,6 +189,7 @@ func TournamentsHandler(c *gin.Context) {
 		coords, err := geocoding.GetCoordinates(tournaments[i].Address)
 		if err != nil {
 			log.Printf("Warning: Failed to get coordinates for tournament %s: %v", tournaments[i].Name, err)
+			log.Printf("  Detailed address: %+v", tournaments[i].Address)
 			failedGeocoding++
 			continue
 		}

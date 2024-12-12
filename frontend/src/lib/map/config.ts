@@ -6,24 +6,26 @@ export const DEFAULT_MAP_CONFIG = {
                 enabled: true,
                 fieldsToShow: {
                     tournament_data: [
-                        { 
-                            name: 'Localisation approximative', 
+                        // { name: 'latitude', format: null },
+                        // { name: 'longitude', format: null },
+                        {
+                            name: 'Localisation',
                             format: null,
-                            hidden: (value: boolean) => !value
                         },
                         { name: 'Nom du tournoi', format: null },
                         { name: 'Type', format: null },
                         { name: 'Club', format: null },
-                        { name: 'Organisateur', format: null },
                         { name: 'Dotation totale', format: null },
-                        { name: 'Date de début', format: null },
-                        { name: 'Date de fin', format: null },
-                        { name: 'Adresse', format: null },
-                        { 
+                        { name: 'Dates de début / fin', format: null },
+                        {
+                            name: 'Adresse',
+                            format: 'Voir sur Google Maps',
+                            type: 'link',
+                        },
+                        {
                             name: 'Règlement',
                             format: 'Voir le règlement',
                             type: 'link',
-                            hidden: (value: string) => !value || value === '#'
                         }
                     ]
                 },
@@ -52,7 +54,7 @@ export const DEFAULT_MAP_CONFIG = {
             config: {
                 dataId: 'tournament_data',
                 label: 'Tournoi',
-                color: [18, 147, 154] as [number, number, number],
+                color: [51, 153, 255] as [number, number, number],
                 columns: {
                     lat: 'latitude',
                     lng: 'longitude'

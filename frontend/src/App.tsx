@@ -40,18 +40,21 @@ const App = () => {
       const tournamentsWithoutCoordinates = tournaments.filter(
         t => !t.address?.latitude || !t.address?.longitude
       );
-      
+
       console.log('Tournaments with coordinates:', tournamentsWithCoordinates.length);
       console.log('Tournaments without coordinates:', tournamentsWithoutCoordinates.length);
-      console.log('Tournaments without coordinates details:', 
+      console.log('Tournaments without coordinates details:',
         tournamentsWithoutCoordinates.map(t => ({
           name: t.name,
-          address: t.address,
+          streetAddress: t.address?.streetAddress,
+          postalCode: t.address?.postalCode,
+          locality: t.address?.addressLocality,
+          disambiguatingDescription: t.address?.disambiguatingDescription,
           hasLatitude: !!t.address?.latitude,
           hasLongitude: !!t.address?.longitude
         }))
       );
-      
+
       // Combine tournaments with and without coordinates
       const allTournamentsForMap = [
         ...tournamentsWithCoordinates,
@@ -65,49 +68,54 @@ const App = () => {
           }
         }))
       ];
-      
+
       if (allTournamentsForMap.length > 0) {
         const mapData = {
           fields: [
-            { name: 'Nom du tournoi', type: 'string' },
             { name: 'latitude', type: 'real' },
             { name: 'longitude', type: 'real' },
+            { name: 'Localisation', type: 'string' },
+            { name: 'Nom du tournoi', type: 'string' },
             { name: 'Type', type: 'string' },
-            { name: 'Date de début', type: 'string' },
-            { name: 'Date de fin', type: 'string' },
             { name: 'Club', type: 'string' },
-            { name: 'Adresse', type: 'string' },
-            { name: 'Règlement', type: 'string' },
+            { name: 'Organisateur', type: 'string' },
             { name: 'Dotation totale', type: 'string' },
-            { name: 'Localisation approximative', type: 'string' },
+            { name: 'Dates de début / fin', type: 'string' },
+            { name: 'Adresse', type: 'link' },
+            { name: 'Règlement', type: 'string' },
           ],
           rows: allTournamentsForMap.map(t => {
-            const endowmentStr = typeof t.endowment === 'number' && t.endowment > 0 
-              ? (t.endowment / 100).toFixed(2) + '€' 
+            const endowmentStr = typeof t.endowment === 'number' && t.endowment > 0
+              ? (t.endowment / 100).toFixed(2) + '€'
               : '';
 
             return [
-              t.name || '',
               t.address.latitude,
               t.address.longitude,
+              t.address.approximate ? 'approximative' : 'exacte',
+              t.name || '',
               t.type || '',
-              new Date(t.startDate).toLocaleDateString('fr-FR', {
-                weekday: 'long',
-                day: 'numeric',
-                month: 'long',
-                year: 'numeric'
-              }),
-              new Date(t.endDate).toLocaleDateString('fr-FR', {
-                weekday: 'long',
-                day: 'numeric',
-                month: 'long',
-                year: 'numeric'
-              }),
               t.club.name ? `${t.club.name}${t.club.identifier ? ` (${t.club.identifier})` : ''}` : '',
-              t.address.streetAddress ? `${t.address.streetAddress}, ${t.address.postalCode} ${t.address.addressLocality}` : '',
-              t.rules?.url || '',
+              '', // Organisateur left empty
               endowmentStr,
-              'oui', // Always mark as approximate for tournaments without coordinates
+              `${new Date(t.startDate).toLocaleDateString('fr-FR', {
+                weekday: 'long',
+                day: 'numeric',
+                month: 'long',
+                year: 'numeric'
+              })} - ${new Date(t.endDate).toLocaleDateString('fr-FR', {
+                weekday: 'long',
+                day: 'numeric',
+                month: 'long',
+                year: 'numeric'
+              })}`,
+              // t.address.streetAddress
+              //   ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${t.address.disambiguatingDescription ? t.address.disambiguatingDescription + ' ' : ''}${t.address.streetAddress}, ${t.address.postalCode} ${t.address.addressLocality}`)}`
+              //   : '',
+              t.address.streetAddress
+                ? `${t.address.disambiguatingDescription ? t.address.disambiguatingDescription + ' ' : ''}${t.address.streetAddress}, ${t.address.postalCode} ${t.address.addressLocality}`
+                : '',
+              t.rules?.url || '',
             ];
           })
         };
