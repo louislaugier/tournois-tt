@@ -28,20 +28,19 @@ type Location struct {
 	Failed      bool      `json:"failed"`
 	Approximate bool      `json:"approximate"`
 	LastUpdated time.Time `json:"lastUpdated"`
+	Variants    []string  `json:"variants,omitempty"`
 }
 
 // GeocodingCache represents the persistent cache data structure
 type GeocodingCache struct {
-	Locations   map[string]Location `json:"Locations"`
-	AliasGroups [][]string          `json:"AliasGroups"`
-	LastSave    time.Time           `json:"LastSave"`
+	Locations map[string]Location `json:"Locations"`
+	LastSave  time.Time           `json:"LastSave"`
 }
 
 // Cache defines the interface for geocoding cache operations
 type Cache interface {
 	Get(address string) (Location, bool)
-	Set(address string, lat, lon float64, failed, approximate bool)
-	AddAlias(alias, canonical string)
+	Set(address string, lat, lon float64, failed, approximate bool, variants []string)
 	SaveToFile() error
 	LastSaveTime() time.Time
 }
@@ -50,7 +49,6 @@ type Cache interface {
 type RuntimeCache struct {
 	sync.RWMutex
 	*GeocodingCache
-	AliasMap map[string]string // runtime-only map for quick lookups
 }
 
 // Get retrieves a location from the cache
@@ -58,116 +56,73 @@ func (c *RuntimeCache) Get(addr string) (Location, bool) {
 	c.RLock()
 	defer c.RUnlock()
 
-	// Normalize the address
 	addr = Normalize(addr)
-
-	// Check if this address is an alias
-	if canonical, exists := c.AliasMap[addr]; exists {
-		addr = canonical
+	if loc, exists := c.Locations[addr]; exists {
+		return loc, true
 	}
 
-	// Look up the location
-	loc, exists := c.Locations[addr]
-	return loc, exists
+	// Check variants
+	for _, loc := range c.Locations {
+		if !loc.Failed {
+			for _, variant := range loc.Variants {
+				if variant == addr {
+					return loc, true
+				}
+			}
+		}
+	}
+	return Location{}, false
 }
 
-// Set stores a location in the cache, allowing updates to failed geocoding attempts
-func (c *RuntimeCache) Set(addr string, lat, lon float64, failed, approximate bool) {
+// Set stores a location in the cache
+func (c *RuntimeCache) Set(addr string, lat, lon float64, failed, approximate bool, variants []string) {
 	c.Lock()
 	defer c.Unlock()
 
-	// Normalize the address
-	addr = Normalize(addr)
-
-	// Check if we already have this location
-	if existing, exists := c.Locations[addr]; exists {
-		// Only update if the existing entry was a failure and this is a success
-		if existing.Failed && !failed {
-			c.Locations[addr] = Location{
-				Lat:         lat,
-				Lon:         lon,
-				Failed:      failed,
-				Approximate: approximate,
-				LastUpdated: time.Now(),
-			}
-		}
-		return
+	// Normalize all addresses
+	normalizedAddr := Normalize(addr)
+	normalizedVariants := make([]string, 0)
+	for _, v := range variants {
+		normalizedVariants = append(normalizedVariants, Normalize(v))
 	}
 
-	// Store new location
-	c.Locations[addr] = Location{
+	// Find the most specific (longest) address to use as the base key
+	baseAddr := normalizedAddr
+	allAddresses := append([]string{normalizedAddr}, normalizedVariants...)
+	for _, a := range allAddresses {
+		if len(a) > len(baseAddr) {
+			baseAddr = a
+		}
+	}
+
+	// Create variants list excluding the base address
+	uniqueVariants := make([]string, 0)
+	seen := make(map[string]bool)
+	seen[baseAddr] = true
+
+	// Add all other addresses as variants
+	for _, a := range allAddresses {
+		if !seen[a] && a != baseAddr {
+			seen[a] = true
+			uniqueVariants = append(uniqueVariants, a)
+		}
+	}
+
+	// Remove any existing entries that are now variants
+	for variant := range seen {
+		if variant != baseAddr {
+			delete(c.Locations, variant)
+		}
+	}
+
+	// Store the location with the base address as key
+	c.Locations[baseAddr] = Location{
 		Lat:         lat,
 		Lon:         lon,
 		Failed:      failed,
 		Approximate: approximate,
 		LastUpdated: time.Now(),
-	}
-}
-
-// AddAlias adds an alias for an address
-func (c *RuntimeCache) AddAlias(alias, canonical string) {
-	c.Lock()
-	defer c.Unlock()
-
-	// Normalize both addresses
-	alias = Normalize(alias)
-	canonical = Normalize(canonical)
-
-	// Don't create self-referential aliases
-	if alias == canonical {
-		return
-	}
-
-	// Find existing group or create new one
-	found := false
-	for i := range c.AliasGroups {
-		for _, addr := range c.AliasGroups[i] {
-			if addr == alias || addr == canonical {
-				// Add both addresses to this group if not already present
-				hasAlias := false
-				hasCanonical := false
-				for _, a := range c.AliasGroups[i] {
-					if a == alias {
-						hasAlias = true
-					}
-					if a == canonical {
-						hasCanonical = true
-					}
-				}
-				if !hasAlias {
-					c.AliasGroups[i] = append(c.AliasGroups[i], alias)
-				}
-				if !hasCanonical {
-					c.AliasGroups[i] = append(c.AliasGroups[i], canonical)
-				}
-				found = true
-				break
-			}
-		}
-		if found {
-			break
-		}
-	}
-
-	if !found {
-		// Create new group
-		c.AliasGroups = append(c.AliasGroups, []string{alias, canonical})
-	}
-
-	// Update runtime alias map
-	c.RebuildAliasMap()
-}
-
-// RebuildAliasMap rebuilds the runtime alias map
-func (c *RuntimeCache) RebuildAliasMap() {
-	c.AliasMap = make(map[string]string)
-	for _, group := range c.AliasGroups {
-		if len(group) > 0 {
-			canonical := group[0] // Use first address as canonical
-			for _, alias := range group[1:] {
-				c.AliasMap[alias] = canonical
-			}
-		}
+		Variants:    uniqueVariants,
 	}
 }
 

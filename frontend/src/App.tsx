@@ -37,9 +37,36 @@ const App = () => {
       const tournamentsWithCoordinates = tournaments.filter(
         t => t.address?.latitude && t.address?.longitude
       );
-      console.log('Tournaments with coordinates:', tournamentsWithCoordinates.length);
+      const tournamentsWithoutCoordinates = tournaments.filter(
+        t => !t.address?.latitude || !t.address?.longitude
+      );
       
-      if (tournamentsWithCoordinates.length > 0) {
+      console.log('Tournaments with coordinates:', tournamentsWithCoordinates.length);
+      console.log('Tournaments without coordinates:', tournamentsWithoutCoordinates.length);
+      console.log('Tournaments without coordinates details:', 
+        tournamentsWithoutCoordinates.map(t => ({
+          name: t.name,
+          address: t.address,
+          hasLatitude: !!t.address?.latitude,
+          hasLongitude: !!t.address?.longitude
+        }))
+      );
+      
+      // Combine tournaments with and without coordinates
+      const allTournamentsForMap = [
+        ...tournamentsWithCoordinates,
+        ...tournamentsWithoutCoordinates.map(t => ({
+          ...t,
+          address: {
+            ...t.address,
+            latitude: 46.777138, // France center latitude
+            longitude: 2.804568, // France center longitude
+            approximate: true
+          }
+        }))
+      ];
+      
+      if (allTournamentsForMap.length > 0) {
         const mapData = {
           fields: [
             { name: 'Nom du tournoi', type: 'string' },
@@ -54,7 +81,7 @@ const App = () => {
             { name: 'Dotation totale', type: 'string' },
             { name: 'Localisation approximative', type: 'string' },
           ],
-          rows: tournamentsWithCoordinates.map(t => {
+          rows: allTournamentsForMap.map(t => {
             const endowmentStr = typeof t.endowment === 'number' && t.endowment > 0 
               ? (t.endowment / 100).toFixed(2) + '€' 
               : '';
@@ -80,7 +107,7 @@ const App = () => {
               t.address.streetAddress ? `${t.address.streetAddress}, ${t.address.postalCode} ${t.address.addressLocality}` : '',
               t.rules?.url || '',
               endowmentStr,
-              t.address.approximate ? 'oui' : 'non',
+              'oui', // Always mark as approximate for tournaments without coordinates
             ];
           })
         };

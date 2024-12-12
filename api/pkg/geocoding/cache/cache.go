@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"time"
 	"tournois-tt/api/internal/types"
 )
 
@@ -23,10 +24,9 @@ func init() {
 func NewCache() types.Cache {
 	return &types.RuntimeCache{
 		GeocodingCache: &types.GeocodingCache{
-			Locations:   make(map[string]types.Location),
-			AliasGroups: make([][]string, 0),
+			Locations: make(map[string]types.Location),
+			LastSave:  time.Time{},
 		},
-		AliasMap: make(map[string]string),
 	}
 }
 
@@ -34,8 +34,19 @@ func NewCache() types.Cache {
 func LoadFromFile() (types.Cache, error) {
 	cache := NewCache().(*types.RuntimeCache)
 
-	cacheFile := filepath.Join("cache", "geocoding_cache.json")
-	data, err := os.ReadFile(cacheFile)
+	// Ensure cache directory exists
+	cacheDir := "cache"
+	if err := os.MkdirAll(cacheDir, 0755); err != nil {
+		return nil, fmt.Errorf("failed to create cache directory: %v", err)
+	}
+
+	cacheFile := filepath.Join(cacheDir, "geocoding_cache.json")
+	absPath, err := filepath.Abs(cacheFile)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get absolute path: %v", err)
+	}
+
+	data, err := os.ReadFile(absPath)
 	if err != nil {
 		if os.IsNotExist(err) {
 			return cache, nil
@@ -46,9 +57,6 @@ func LoadFromFile() (types.Cache, error) {
 	if err := json.Unmarshal(data, cache.GeocodingCache); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal cache: %v", err)
 	}
-
-	// Rebuild alias map
-	cache.RebuildAliasMap()
 
 	return cache, nil
 }

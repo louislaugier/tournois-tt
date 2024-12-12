@@ -51,18 +51,13 @@ func GetCoordinates(addr types.Address) (*types.Location, error) {
 		if err != nil {
 			lastError = err
 			log.Printf("Failed to geocode variant %s: %v", variant, err)
-			cache.DefaultCache.Set(variant, 0, 0, true, false)
+			cache.DefaultCache.Set(variant, 0, 0, true, false, nil)
 			continue
 		}
 
 		if !coords.Failed {
-			// Success! Add aliases for all variants and return
-			for _, v := range variants {
-				if v != variant {
-					cache.DefaultCache.AddAlias(v, variant)
-				}
-			}
-			cache.DefaultCache.Set(variant, coords.Lat, coords.Lon, false, coords.Approximate)
+			// Success! Store with all variants and return
+			cache.DefaultCache.Set(variant, coords.Lat, coords.Lon, false, coords.Approximate, variants)
 			return &types.Location{
 				Lat:         coords.Lat,
 				Lon:         coords.Lon,
@@ -72,7 +67,7 @@ func GetCoordinates(addr types.Address) (*types.Location, error) {
 		}
 
 		// Mark this variant as failed in cache
-		cache.DefaultCache.Set(variant, 0, 0, true, false)
+		cache.DefaultCache.Set(variant, 0, 0, true, false, nil)
 	}
 
 	if lastError != nil {

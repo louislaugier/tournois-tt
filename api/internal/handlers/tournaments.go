@@ -143,6 +143,9 @@ func TournamentsHandler(c *gin.Context) {
 
 	log.Printf("Found %d tournaments", len(tournaments))
 
+	var skippedGeocoding, failedGeocoding int
+	var tournamentsWithCoordinates []types.Tournament
+
 	// Add coordinates from cache or geocode new addresses
 	log.Printf("Adding coordinates to tournaments")
 	for i := range tournaments {
@@ -166,12 +169,14 @@ func TournamentsHandler(c *gin.Context) {
 
 		if previouslyFailed {
 			log.Printf("Skipping geocoding for tournament %s - previous attempt failed", tournaments[i].Name)
+			skippedGeocoding++
 			continue
 		}
 
 		coords, err := geocoding.GetCoordinates(tournaments[i].Address)
 		if err != nil {
 			log.Printf("Warning: Failed to get coordinates for tournament %s: %v", tournaments[i].Name, err)
+			failedGeocoding++
 			continue
 		}
 
@@ -179,7 +184,15 @@ func TournamentsHandler(c *gin.Context) {
 		tournaments[i].Address.Longitude = coords.Lon
 		tournaments[i].Address.Approximate = coords.Approximate
 		tournaments[i].Type = mapTournamentType(tournaments[i].Type)
+
+		tournamentsWithCoordinates = append(tournamentsWithCoordinates, tournaments[i])
 	}
+
+	log.Printf("Geocoding summary:")
+	log.Printf("  Total tournaments: %d", len(tournaments))
+	log.Printf("  Skipped due to previous geocoding failures: %d", skippedGeocoding)
+	log.Printf("  Failed geocoding: %d", failedGeocoding)
+	log.Printf("  Tournaments with coordinates: %d", len(tournamentsWithCoordinates))
 
 	elapsed := time.Since(start)
 	log.Printf("Request processing completed in %v", elapsed)

@@ -56,27 +56,27 @@ func GenerateVariants(addr *AddressInput) []string {
 		}
 	}
 
+	// Always include base variant first
+	addVariant(baseVariant + ", france")
+
 	if streetAddress != "" {
-		// 1. Full address first
+		// Full address
 		addVariant(streetAddress + ", " + baseVariant + ", france")
 
-		// 2. Try without venue name if exists
+		// Try without venue name if exists
 		re := regexp.MustCompile(`\s*\([^)]+\)`)
 		streetWithoutVenue := strings.TrimSpace(re.ReplaceAllString(streetAddress, ""))
 		if streetWithoutVenue != streetAddress {
 			addVariant(streetWithoutVenue + ", " + baseVariant + ", france")
 		}
 
-		// 3. Try without street number if it exists
+		// Try without street number if it exists
 		re = regexp.MustCompile(`^[0-9]+[A-Za-z]?(?:[-/][0-9]+)?[\s,]+(.+)$`)
 		if matches := re.FindStringSubmatch(streetWithoutVenue); matches != nil {
 			streetWithoutNumber := strings.TrimSpace(matches[1])
 			addVariant(streetWithoutNumber + ", " + baseVariant + ", france")
 		}
 	}
-
-	// 4. Always include base variant
-	addVariant(baseVariant + ", france")
 
 	return variants
 }
