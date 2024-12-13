@@ -8,10 +8,6 @@ export const DEFAULT_MAP_CONFIG = {
                     tournament_data: [
                         // { name: 'latitude', format: null },
                         // { name: 'longitude', format: null },
-                        {
-                            name: 'Localisation',
-                            format: null,
-                        },
                         { name: 'Nom du tournoi', format: null },
                         { name: 'Type', format: null },
                         { name: 'Club', format: null },

@@ -74,7 +74,6 @@ const App = () => {
           fields: [
             { name: 'latitude', type: 'real' },
             { name: 'longitude', type: 'real' },
-            { name: 'Localisation', type: 'string' },
             { name: 'Nom du tournoi', type: 'string' },
             { name: 'Type', type: 'string' },
             { name: 'Club', type: 'string' },
@@ -92,7 +91,6 @@ const App = () => {
             return [
               t.address.latitude,
               t.address.longitude,
-              t.address.approximate ? 'approximative' : 'exacte',
               t.name || '',
               t.type || '',
               t.club.name ? `${t.club.name}${t.club.identifier ? ` (${t.club.identifier})` : ''}` : '',

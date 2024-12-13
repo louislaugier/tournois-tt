@@ -23,14 +23,16 @@ type Club struct {
 	Code       string `json:"code"`
 	Department string `json:"department"`
 	Region     string `json:"region"`
+	Identifier string `json:"identifier"`
 }
 
 // Rules represents tournament rules
 type Rules struct {
-	AgeMin  int `json:"ageMin"`
-	AgeMax  int `json:"ageMax"`
-	Points  int `json:"points"`
-	Ranking int `json:"ranking"`
+	AgeMin  int    `json:"ageMin"`
+	AgeMax  int    `json:"ageMax"`
+	Points  int    `json:"points"`
+	Ranking int    `json:"ranking"`
+	URL     string `json:"url,omitempty"`
 }
 
 // Table represents a tournament table
@@ -130,6 +132,13 @@ func generateCacheKey(addr geocoding.Address) string {
 		strings.TrimSpace(addr.AddressLocality))
 }
 
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
+}
+
 // Modify TournamentsHandler to use geocoding cache
 func TournamentsHandler(c *gin.Context) {
 	start := time.Now()
@@ -175,6 +184,18 @@ func TournamentsHandler(c *gin.Context) {
 		return
 	}
 
+	// Debug log for raw response
+	log.Printf("Raw response sample (first 500 chars): %s", string(body)[:min(len(string(body)), 500)])
+
+	// Debug log first tournament raw data
+	var rawTournaments []map[string]interface{}
+	if err := json.Unmarshal(body, &rawTournaments); err != nil {
+		log.Printf("Error parsing raw tournaments: %v", err)
+	} else if len(rawTournaments) > 0 {
+		rawJSON, _ := json.MarshalIndent(rawTournaments[0], "", "  ")
+		log.Printf("First tournament raw data: %s", string(rawJSON))
+	}
+
 	log.Printf("Parsing tournaments data")
 	var ffttTournaments []Tournament
 	if err := json.Unmarshal(body, &ffttTournaments); err != nil {
@@ -188,6 +209,14 @@ func TournamentsHandler(c *gin.Context) {
 	tournaments := make([]Tournament, len(ffttTournaments))
 	for i, t := range ffttTournaments {
 		tournaments[i] = t
+
+		// Map the tournament type to full form
+		tournaments[i].Type = mapTournamentType(t.Type)
+
+		// Debug logging for rules URL
+		if tournaments[i].Rules != nil {
+			log.Printf("Tournament %s - Rules URL: %s", t.Name, tournaments[i].Rules.URL)
+		}
 
 		// Check if address is in geocoding cache
 		cacheKey := generateCacheKey(t.Address)
@@ -216,8 +245,6 @@ func TournamentsHandler(c *gin.Context) {
 			// 	tournaments[i].Address.Failed = true
 			// }
 		}
-
-		tournaments[i].Type = mapTournamentType(tournaments[i].Type)
 	}
 
 	elapsed := time.Since(start)
