@@ -67,6 +67,8 @@ func PreloadTournaments() error {
 	// Prepare addresses for geocoding
 	addressesToGeocode := make([]Address, 0)
 	geocodeResults := make([]GeocodeResult, 0, len(tournaments))
+	successCount := 0
+	failureCount := 0
 
 	for _, t := range tournaments {
 		if !t.Address.IsValid() {
@@ -90,21 +92,19 @@ func PreloadTournaments() error {
 		addressesToGeocode = append(addressesToGeocode, t.Address)
 	}
 
-	// Perform bulk geocoding
-	bulkLocations := BulkGeocodeAddresses(addressesToGeocode)
-
-	// Process geocoding results
-	successCount := 0
-	failureCount := 0
-
-	for i, addr := range addressesToGeocode {
+	// Perform individual geocoding
+	for _, addr := range addressesToGeocode {
 		result := GeocodeResult{
 			Address:   addr,
 			Timestamp: time.Now(),
 		}
 
-		location := bulkLocations[i]
-		if location.Failed {
+		// Rate limit between requests
+		time.Sleep(rateLimitDelay)
+
+		// Geocode individual address
+		location, err := GetCoordinates(addr)
+		if err != nil {
 			log.Printf("Failed to geocode address: %s, %s %s",
 				strings.TrimSpace(addr.StreetAddress),
 				strings.TrimSpace(addr.PostalCode),
