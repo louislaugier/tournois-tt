@@ -69,3 +69,33 @@ func saveGeocodeResultsToCache(results []GeocodeResult) error {
 	log.Printf("Saved %d geocoding results to %s", len(results), cacheFilePath)
 	return nil
 }
+
+// loadGeocodeResultsFromCache loads existing geocoding results from JSON file
+func loadGeocodeResultsFromCache() (map[string]GeocodeResult, error) {
+	cacheFilePath := filepath.Join("cache", "geocoding_cache.json")
+
+	// Check if cache file exists
+	if _, err := os.Stat(cacheFilePath); os.IsNotExist(err) {
+		return make(map[string]GeocodeResult), nil
+	}
+
+	// Read cache file
+	data, err := os.ReadFile(cacheFilePath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read geocoding cache: %v", err)
+	}
+
+	var cachedResults []GeocodeResult
+	if err := json.Unmarshal(data, &cachedResults); err != nil {
+		return nil, fmt.Errorf("failed to parse geocoding cache: %v", err)
+	}
+
+	// Convert to map for faster lookup
+	cacheMap := make(map[string]GeocodeResult)
+	for _, result := range cachedResults {
+		key := generateCacheKey(result.Address)
+		cacheMap[key] = result
+	}
+
+	return cacheMap, nil
+}

@@ -10,6 +10,7 @@ type Address struct {
 	DisambiguatingDescription string  `json:"disambiguatingDescription,omitempty"`
 	Latitude                  float64 `json:"latitude,omitempty"`
 	Longitude                 float64 `json:"longitude,omitempty"`
+	Failed                    bool    `json:"failed,omitempty"`
 }
 
 // Location represents a geocoded location

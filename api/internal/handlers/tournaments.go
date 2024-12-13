@@ -6,10 +6,12 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strings"
 	"time"
-	"tournois-tt/api/pkg/geocoding"
 	"tournois-tt/api/pkg/fftt"
+	"tournois-tt/api/pkg/geocoding"
 
 	"github.com/gin-gonic/gin"
 )
@@ -91,32 +93,57 @@ func mapTournamentType(t string) string {
 	}
 }
 
-func extractTournamentID(id string) string {
-	parts := strings.Split(id, "/")
-	if len(parts) > 0 {
-		return parts[len(parts)-1]
+// Add a function to load geocoding cache
+func loadGeocodeCache() (map[string]geocoding.GeocodeResult, error) {
+	cacheFilePath := filepath.Join("cache", "geocoding_cache.json")
+
+	// Check if cache file exists
+	if _, err := os.Stat(cacheFilePath); os.IsNotExist(err) {
+		return nil, fmt.Errorf("geocoding cache file not found")
 	}
-	return ""
+
+	// Read cache file
+	data, err := os.ReadFile(cacheFilePath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read geocoding cache: %v", err)
+	}
+
+	var cachedResults []geocoding.GeocodeResult
+	if err := json.Unmarshal(data, &cachedResults); err != nil {
+		return nil, fmt.Errorf("failed to parse geocoding cache: %v", err)
+	}
+
+	cacheMap := make(map[string]geocoding.GeocodeResult)
+	for _, result := range cachedResults {
+		key := generateCacheKey(result.Address)
+		cacheMap[key] = result
+	}
+
+	return cacheMap, nil
 }
 
-func formatTableInfo(tables []Table) string {
-	if len(tables) == 0 {
-		return ""
-	}
-
-	var result strings.Builder
-	for _, t := range tables {
-		fee := float64(t.Fee) / 100.0
-		endowment := float64(t.Endowment) / 100.0
-		result.WriteString(fmt.Sprintf("%s - %s (%s %s) : %.2f€ / %.2f€\n",
-			t.Name, t.Description, t.Date[0:10], t.Time, fee, endowment))
-	}
-	return result.String()
+// generateCacheKey creates a unique key for an address
+func generateCacheKey(addr geocoding.Address) string {
+	return fmt.Sprintf("%s|%s|%s",
+		strings.TrimSpace(addr.StreetAddress),
+		strings.TrimSpace(addr.PostalCode),
+		strings.TrimSpace(addr.AddressLocality))
 }
 
+// Modify TournamentsHandler to use geocoding cache
 func TournamentsHandler(c *gin.Context) {
 	start := time.Now()
 	log.Printf("Starting tournament request processing")
+
+	// Load geocoding cache
+	geocodingCache, err := loadGeocodeCache()
+	if err != nil {
+		log.Printf("Failed to load geocoding cache: %v", err)
+		log.Printf("Initializing empty geocoding cache")
+		geocodingCache = make(map[string]geocoding.GeocodeResult)
+	} else {
+		log.Printf("Successfully loaded %d cached geocoding results", len(geocodingCache))
+	}
 
 	// Get all query parameters
 	queryParams := c.Request.URL.Query()
@@ -160,48 +187,38 @@ func TournamentsHandler(c *gin.Context) {
 	// Convert to our internal type
 	tournaments := make([]Tournament, len(ffttTournaments))
 	for i, t := range ffttTournaments {
-		log.Printf("Tournament %d organization: %+v", t.ID, t.Organization)
-		log.Printf("Tournament %d responses: %+v", t.ID, t.Responses)
 		tournaments[i] = t
-	}
 
-	log.Printf("Found %d tournaments", len(tournaments))
+		// Check if address is in geocoding cache
+		cacheKey := generateCacheKey(t.Address)
+		if cachedResult, exists := geocodingCache[cacheKey]; exists {
+			log.Printf("Using cached geocoding result for tournament: %s", t.Name)
 
-	var skippedGeocoding, failedGeocoding int
-	var tournamentsWithCoordinates []Tournament
+			// Use cached coordinates or failed status
+			tournaments[i].Address.Latitude = cachedResult.Latitude
+			tournaments[i].Address.Longitude = cachedResult.Longitude
+			tournaments[i].Address.Failed = cachedResult.Failed
 
-	// Add coordinates from cache or geocode new addresses
-	log.Printf("Adding coordinates to tournaments")
-	for i := range tournaments {
-		addr := tournaments[i].Address
-
-		// Log detailed address information
-		log.Printf("Attempting to geocode tournament: %s", tournaments[i].Name)
-		log.Printf("  Street Address: %q", addr.StreetAddress)
-		log.Printf("  Postal Code: %q", addr.PostalCode)
-		log.Printf("  Locality: %q", addr.AddressLocality)
-
-		// Attempt to get coordinates
-		coords, err := geocoding.GetCoordinates(tournaments[i].Address)
-		if err != nil {
-			log.Printf("Warning: Failed to get coordinates for tournament %s: %v", tournaments[i].Name, err)
-			log.Printf("  Detailed address: %+v", tournaments[i].Address)
-			failedGeocoding++
+			// Skip further geocoding if already processed
 			continue
+		} else {
+			// Attempt to geocode if not in cache
+			// coords, err := geocoding.GetCoordinates(t.Address)
+			// if err != nil {
+			// 	log.Printf("Warning: Failed to get coordinates for tournament %s: %v", t.Name, err)
+			// 	continue
+			// }
+
+			// if !coords.Failed {
+			// 	tournaments[i].Address.Latitude = coords.Lat
+			// 	tournaments[i].Address.Longitude = coords.Lon
+			// } else {
+			// 	tournaments[i].Address.Failed = true
+			// }
 		}
 
-		tournaments[i].Address.Latitude = coords.Lat
-		tournaments[i].Address.Longitude = coords.Lon
 		tournaments[i].Type = mapTournamentType(tournaments[i].Type)
-
-		tournamentsWithCoordinates = append(tournamentsWithCoordinates, tournaments[i])
 	}
-
-	log.Printf("Geocoding summary:")
-	log.Printf("  Total tournaments: %d", len(tournaments))
-	log.Printf("  Skipped due to previous geocoding failures: %d", skippedGeocoding)
-	log.Printf("  Failed geocoding: %d", failedGeocoding)
-	log.Printf("  Tournaments with coordinates: %d", len(tournamentsWithCoordinates))
 
 	elapsed := time.Since(start)
 	log.Printf("Request processing completed in %v", elapsed)
