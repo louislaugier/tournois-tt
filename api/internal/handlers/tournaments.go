@@ -8,14 +8,68 @@ import (
 	"net/http"
 	"strings"
 	"time"
-	"tournois-tt/api/internal/geocoding"
-	"tournois-tt/api/internal/types"
+	"tournois-tt/api/pkg/geocoding"
 	"tournois-tt/api/pkg/fftt"
-	"tournois-tt/api/pkg/geocoding/address"
-	gcache "tournois-tt/api/pkg/geocoding/cache"
 
 	"github.com/gin-gonic/gin"
 )
+
+// Club represents a table tennis club
+type Club struct {
+	ID         int    `json:"id"`
+	Name       string `json:"name"`
+	Code       string `json:"code"`
+	Department string `json:"department"`
+	Region     string `json:"region"`
+}
+
+// Rules represents tournament rules
+type Rules struct {
+	AgeMin  int `json:"ageMin"`
+	AgeMax  int `json:"ageMax"`
+	Points  int `json:"points"`
+	Ranking int `json:"ranking"`
+}
+
+// Table represents a tournament table
+type Table struct {
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	Date        string `json:"date"`
+	Time        string `json:"time"`
+	Fee         int    `json:"fee"`
+	Endowment   int    `json:"endowment"`
+}
+
+// Organization represents tournament organization details
+type Organization struct {
+	Name    string `json:"name"`
+	Contact string `json:"contact"`
+}
+
+// Response represents tournament responses
+type Response struct {
+	PlayerID  int    `json:"playerId"`
+	Status    string `json:"status"`
+	Timestamp string `json:"timestamp"`
+}
+
+// Tournament represents a complete tournament
+type Tournament struct {
+	ID           int               `json:"id"`
+	Name         string            `json:"name"`
+	Type         string            `json:"type"`
+	StartDate    string            `json:"startDate"`
+	EndDate      string            `json:"endDate"`
+	Address      geocoding.Address `json:"address"`
+	Club         Club              `json:"club"`
+	Rules        *Rules            `json:"rules"`
+	Tables       []Table           `json:"tables"`
+	Status       int               `json:"status"`
+	Endowment    int               `json:"endowment"`
+	Organization *Organization     `json:"organization,omitempty"`
+	Responses    []Response        `json:"responses,omitempty"`
+}
 
 // mapTournamentType converts single letter type to full name
 func mapTournamentType(t string) string {
@@ -45,23 +99,7 @@ func extractTournamentID(id string) string {
 	return ""
 }
 
-type FFTTTournament struct {
-	ID           int                 `json:"id"`
-	Name         string              `json:"name"`
-	Type         string              `json:"type"`
-	StartDate    string              `json:"startDate"`
-	EndDate      string              `json:"endDate"`
-	Address      types.Address       `json:"address"`
-	Club         types.Club          `json:"club"`
-	Rules        *types.Rules        `json:"rules"`
-	Tables       []types.Table       `json:"tables"`
-	Status       int                 `json:"status"`
-	Endowment    int                 `json:"endowment"`
-	Organization *types.Organization `json:"organization,omitempty"`
-	Responses    []types.Response    `json:"responses,omitempty"`
-}
-
-func formatTableInfo(tables []types.Table) string {
+func formatTableInfo(tables []Table) string {
 	if len(tables) == 0 {
 		return ""
 	}
@@ -111,7 +149,7 @@ func TournamentsHandler(c *gin.Context) {
 	}
 
 	log.Printf("Parsing tournaments data")
-	var ffttTournaments []FFTTTournament
+	var ffttTournaments []Tournament
 	if err := json.Unmarshal(body, &ffttTournaments); err != nil {
 		log.Printf("Error parsing tournaments data: %v", err)
 		log.Printf("Raw response body: %s", string(body))
@@ -120,72 +158,30 @@ func TournamentsHandler(c *gin.Context) {
 	}
 
 	// Convert to our internal type
-	tournaments := make([]types.Tournament, len(ffttTournaments))
+	tournaments := make([]Tournament, len(ffttTournaments))
 	for i, t := range ffttTournaments {
 		log.Printf("Tournament %d organization: %+v", t.ID, t.Organization)
 		log.Printf("Tournament %d responses: %+v", t.ID, t.Responses)
-		tournaments[i] = types.Tournament{
-			ID:           t.ID,
-			Name:         t.Name,
-			Type:         t.Type,
-			StartDate:    t.StartDate,
-			EndDate:      t.EndDate,
-			Address:      t.Address,
-			Club:         t.Club,
-			Rules:        t.Rules,
-			Tables:       t.Tables,
-			Status:       t.Status,
-			Endowment:    t.Endowment,
-			Organization: t.Organization,
-			Responses:    t.Responses,
-		}
+		tournaments[i] = t
 	}
 
 	log.Printf("Found %d tournaments", len(tournaments))
 
 	var skippedGeocoding, failedGeocoding int
-	var tournamentsWithCoordinates []types.Tournament
+	var tournamentsWithCoordinates []Tournament
 
 	// Add coordinates from cache or geocode new addresses
 	log.Printf("Adding coordinates to tournaments")
 	for i := range tournaments {
-		// Convert to address input for variant generation
-		addr := address.AddressInput{
-			StreetAddress:             tournaments[i].Address.StreetAddress,
-			PostalCode:                tournaments[i].Address.PostalCode,
-			AddressLocality:           tournaments[i].Address.AddressLocality,
-			DisambiguatingDescription: tournaments[i].Address.DisambiguatingDescription,
-		}
+		addr := tournaments[i].Address
 
 		// Log detailed address information
 		log.Printf("Attempting to geocode tournament: %s", tournaments[i].Name)
 		log.Printf("  Street Address: %q", addr.StreetAddress)
 		log.Printf("  Postal Code: %q", addr.PostalCode)
 		log.Printf("  Locality: %q", addr.AddressLocality)
-		log.Printf("  Disambiguating Description: %q", addr.DisambiguatingDescription)
 
-		// Generate variants to check if any have failed
-		variants := address.GenerateVariants(&addr)
-		log.Printf("  Generated %d variants", len(variants))
-		for _, variant := range variants {
-			log.Printf("    Variant: %q", variant)
-		}
-
-		var previouslyFailed bool
-		for _, variant := range variants {
-			if loc, exists := gcache.DefaultCache.Get(variant); exists && loc.Failed {
-				log.Printf("  Variant %q was previously marked as failed", variant)
-				previouslyFailed = true
-				break
-			}
-		}
-
-		if previouslyFailed {
-			log.Printf("Skipping geocoding for tournament %s - previous attempt failed", tournaments[i].Name)
-			skippedGeocoding++
-			continue
-		}
-
+		// Attempt to get coordinates
 		coords, err := geocoding.GetCoordinates(tournaments[i].Address)
 		if err != nil {
 			log.Printf("Warning: Failed to get coordinates for tournament %s: %v", tournaments[i].Name, err)
@@ -196,7 +192,6 @@ func TournamentsHandler(c *gin.Context) {
 
 		tournaments[i].Address.Latitude = coords.Lat
 		tournaments[i].Address.Longitude = coords.Lon
-		tournaments[i].Address.Approximate = coords.Approximate
 		tournaments[i].Type = mapTournamentType(tournaments[i].Type)
 
 		tournamentsWithCoordinates = append(tournamentsWithCoordinates, tournaments[i])

@@ -3,7 +3,7 @@ package main
 import (
 	"log"
 
-	"tournois-tt/api/internal/geocoding"
+	"tournois-tt/api/pkg/geocoding"
 	"tournois-tt/api/internal/router"
 )
 
