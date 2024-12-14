@@ -59,8 +59,8 @@ export const DEFAULT_MAP_CONFIG = {
                 visConfig: {
                     radius: 10,
                     fixedRadius: false,
-                    opacity: 0.8,
-                    outline: false,
+                    opacity: 0.6,
+                    outline: true,
                     filled: true,
                     color: [64, 224, 208] as [number, number, number],
                     fillColor: [64, 224, 208] as [number, number, number]

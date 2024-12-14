@@ -158,9 +158,9 @@ const App = () => {
           },
           mapState: {
             ...DEFAULT_MAP_CONFIG.mapState,
-            pitch: 0,
+            pitch: 0, // Reset pitch to default
             bearing: 0,
-            dragRotate: false
+            dragRotate: false // Disable rotation
           }
         };
 
