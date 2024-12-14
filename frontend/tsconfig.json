@@ -14,11 +14,8 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     "noEmit": false,
-    "jsx": "react",
-    "baseUrl": ".",
-    "paths": {
-      "kepler.gl/*": ["node_modules/kepler.gl/*"]
-    }
+    "jsx": "react-jsx",
+    "typeRoots": ["./node_modules/@types", "./src/types"]
   },
   "include": [
     "src"

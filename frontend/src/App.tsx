@@ -7,6 +7,63 @@ import { Map } from './components/Map';
 import { DEFAULT_MAP_CONFIG } from './lib/map/config';
 import { TournamentQueryBuilder } from './lib/api/tournaments';
 import { Tournament } from './lib/api/types';
+import { MapPopoverFactory } from '@kepler.gl/components';
+
+const CustomMapPopover: React.FC<any> = ({ data }) => {
+  // If no data or empty, return null
+  if (!data || data.length === 0) return null;
+
+  // For single point, show detailed tournament info
+  if (data.length === 1) {
+    const point = data[0];
+    return (
+      <div style={{
+        backgroundColor: 'white',
+        padding: '10px',
+        borderRadius: '5px',
+        boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+      }}>
+        <h4>{point.Tournoi}</h4>
+        <p><strong>Type:</strong> {point.Type}</p>
+        <p><strong>Club:</strong> {point.Club}</p>
+        <p><strong>Dotation:</strong> {point.Dotation}</p>
+        <p><strong>Dates:</strong> {point.Dates}</p>
+        <p><strong>Adresse:</strong> {point.Adresse}</p>
+        {point.Règlement && (
+          <p>
+            <strong>Règlement:</strong>
+            <a href={point.Règlement} target="_blank" rel="noopener noreferrer">
+              Voir le règlement
+            </a>
+          </p>
+        )}
+      </div>
+    );
+  }
+
+  // For multiple points, show summary
+  return (
+    <div style={{
+      backgroundColor: 'white',
+      padding: '10px',
+      borderRadius: '5px',
+      boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+    }}>
+      <h4>Plusieurs Tournois</h4>
+      <p><strong>Nombre de Tournois:</strong> {data.length}</p>
+      <p><strong>Tournois:</strong></p>
+      <ul>
+        {data.map((point: any, index: any) => (
+          <li key={index}>{point.Tournoi}</li>
+        ))}
+      </ul>
+    </div>
+  );
+};
+
+// Replace the default MapPopoverFactory
+const CustomMapPopoverFactory = () => CustomMapPopover;
+CustomMapPopoverFactory.deps = MapPopoverFactory.deps;
 
 const App = () => {
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
@@ -21,8 +78,6 @@ const App = () => {
           .itemsPerPage(999999);
 
         const tournamentData = await query.executeAndLogAll();
-        console.log('Raw tournament data (first tournament):', JSON.stringify(tournamentData?.[0], null, 2));
-        console.log('Tournament data length:', tournamentData?.length ?? 0);
         setTournaments(tournamentData || []);
       } catch (error) {
         console.error('Failed to load tournaments:', error);
@@ -33,26 +88,12 @@ const App = () => {
   }, []);
 
   useEffect(() => {
-    if (tournaments.length > 0) {
+    if (tournaments?.length > 0) {
       const tournamentsWithCoordinates = tournaments.filter(
         t => t.address?.latitude && t.address?.longitude
       );
       const tournamentsWithoutCoordinates = tournaments.filter(
         t => !t.address?.latitude || !t.address?.longitude
-      );
-
-      console.log('Tournaments with coordinates:', tournamentsWithCoordinates.length);
-      console.log('Tournaments without coordinates:', tournamentsWithoutCoordinates.length);
-      console.log('Tournaments without coordinates details:',
-        tournamentsWithoutCoordinates.map(t => ({
-          name: t.name,
-          streetAddress: t.address?.streetAddress,
-          postalCode: t.address?.postalCode,
-          locality: t.address?.addressLocality,
-          disambiguatingDescription: t.address?.disambiguatingDescription,
-          hasLatitude: !!t.address?.latitude,
-          hasLongitude: !!t.address?.longitude
-        }))
       );
 
       // Combine tournaments with and without coordinates
@@ -62,78 +103,110 @@ const App = () => {
           ...t,
           address: {
             ...t.address,
-            latitude: 46.777138, // France center latitude
-            longitude: 2.804568, // France center longitude
+            latitude: 46.777138,
+            longitude: 2.804568,
             approximate: true
           }
         }))
       ];
 
       if (allTournamentsForMap.length > 0) {
-        const mapData = {
+        const enhancedMapConfig = {
+          ...DEFAULT_MAP_CONFIG,
+          visState: {
+            ...DEFAULT_MAP_CONFIG.visState,
+            interactionConfig: {
+              ...DEFAULT_MAP_CONFIG.visState.interactionConfig,
+              tooltip: {
+                fieldsToShow: {
+                  tournoi: [
+                    { name: 'Tournoi', format: null },
+                    { name: 'Type', format: null },
+                    { name: 'Club', format: null },
+                    { name: 'Dotation', format: null },
+                    { name: 'Dates', format: null },
+                    { name: 'Adresse', format: null },
+                    { name: 'Règlement', format: null }
+                  ]
+                },
+                enabled: true,
+                compareMode: false,
+                compareType: 'absolute'
+              }
+            },
+            layers: [{
+              id: 'tournament_points',
+              type: 'point',
+              config: {
+                dataId: 'tournoi',
+                label: 'Tournois',
+                color: [64, 224, 208] as [number, number, number],
+                columns: {
+                  lat: 'latitude',
+                  lng: 'longitude'
+                },
+                isVisible: true,
+                visConfig: {
+                  radius: 13,
+                  fillColor: [64, 224, 208] as [number, number, number],
+                  color: [64, 224, 208] as [number, number, number],
+                  opacity: 0.8
+                }
+              },
+              visualChannels: {}
+            }]
+          },
+          mapState: {
+            ...DEFAULT_MAP_CONFIG.mapState,
+            pitch: 0,
+            bearing: 0,
+            dragRotate: false
+          }
+        };
+
+        const tournamentsDataset = {
           fields: [
             { name: 'latitude', type: 'real' },
             { name: 'longitude', type: 'real' },
-            { name: 'Nom du tournoi', type: 'string' },
+            { name: 'Tournoi', type: 'string' },
             { name: 'Type', type: 'string' },
             { name: 'Club', type: 'string' },
-            { name: 'Organisateur', type: 'string' },
-            { name: 'Dotation totale', type: 'string' },
-            { name: 'Dates de début / fin', type: 'string' },
-            { name: 'Adresse', type: 'link' },
-            { name: 'Règlement', type: 'string' },
+            { name: 'Dotation', type: 'string' },
+            { name: 'Dates', type: 'string' },
+            { name: 'Adresse', type: 'string' },
+            { name: 'Règlement', type: 'string' }
           ],
-          rows: allTournamentsForMap.map(t => {
-            const endowmentStr = typeof t.endowment === 'number' && t.endowment > 0
-              ? (t.endowment / 100).toFixed(2) + '€'
-              : '';
-
-            return [
-              t.address.latitude,
-              t.address.longitude,
-              t.name || '',
-              t.type || '',
-              t.club.name ? `${t.club.name}${t.club.identifier ? ` (${t.club.identifier})` : ''}` : '',
-              '', // Organisateur left empty
-              endowmentStr,
-              `${new Date(t.startDate).toLocaleDateString('fr-FR', {
-                weekday: 'long',
-                day: 'numeric',
-                month: 'long',
-                year: 'numeric'
-              })} - ${new Date(t.endDate).toLocaleDateString('fr-FR', {
-                weekday: 'long',
-                day: 'numeric',
-                month: 'long',
-                year: 'numeric'
-              })}`,
-              // t.address.streetAddress
-              //   ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${t.address.disambiguatingDescription ? t.address.disambiguatingDescription + ' ' : ''}${t.address.streetAddress}, ${t.address.postalCode} ${t.address.addressLocality}`)}`
-              //   : '',
-              t.address.streetAddress
-                ? `${t.address.disambiguatingDescription ? t.address.disambiguatingDescription + ' ' : ''}${t.address.streetAddress}, ${t.address.postalCode} ${t.address.addressLocality}`
-                : '',
-              t.rules?.url || '',
-            ];
-          })
+          rows: allTournamentsForMap.map(t => [
+            t.address.latitude,
+            t.address.longitude,
+            t.name || '',
+            t.type || '',
+            t.club.name ? `${t.club.name}${t.club.identifier ? ` (${t.club.identifier})` : ''}` : '',
+            typeof t.endowment === 'number' && t.endowment > 0 
+              ? `${Math.floor(t.endowment / 100)}€` 
+              : '?',
+            `${new Date(t.startDate).toLocaleDateString('fr-FR')} - ${new Date(t.endDate).toLocaleDateString('fr-FR')}`,
+            t.address.streetAddress
+              ? `${t.address.disambiguatingDescription ? t.address.disambiguatingDescription + ' ' : ''}${t.address.streetAddress}, ${t.address.postalCode} ${t.address.addressLocality}`
+              : '',
+            t.rules?.url || ''
+          ])
         };
-
-        console.log('Final mapData:', mapData);
 
         store.dispatch(
           addDataToMap({
             datasets: [{
               info: {
                 label: 'Tournois FFTT',
-                id: 'tournament_data'
+                id: 'tournoi'
               },
-              data: mapData
+              data: tournamentsDataset
             }],
             options: {
               centerMap: false,
               readOnly: false
             },
-            config: DEFAULT_MAP_CONFIG
+            config: enhancedMapConfig
           })
         );
       }
@@ -142,7 +215,7 @@ const App = () => {
 
   return (
     <Provider store={store}>
-      <div style={{ position: 'absolute', width: '100%', height: '100%' }}>
+      <div style={{ position: 'absolute', width: '100%', height: '100%', opacity: !!tournaments.length ? 1 : 0 }}>
         <Map
           id="paris"
           width={window.innerWidth}

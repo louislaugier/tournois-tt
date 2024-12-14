@@ -50,7 +50,7 @@ export const DEFAULT_MAP_CONFIG = {
             config: {
                 dataId: 'tournament_data',
                 label: 'Tournoi',
-                color: [51, 153, 255] as [number, number, number],
+                color: [64, 224, 208] as [number, number, number],
                 columns: {
                     lat: 'latitude',
                     lng: 'longitude'
@@ -61,8 +61,12 @@ export const DEFAULT_MAP_CONFIG = {
                     fixedRadius: false,
                     opacity: 0.8,
                     outline: false,
-                    filled: true
-                }
+                    filled: true,
+                    color: [64, 224, 208] as [number, number, number],
+                    fillColor: [64, 224, 208] as [number, number, number]
+                },
+                colorField: null,
+                colorScale: 'quantile'
             }
         }]
     },
