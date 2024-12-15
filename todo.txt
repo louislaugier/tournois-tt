@@ -1,3 +1,1 @@
-common docker compose & nginx configs
-
-consistent packages between containers and IDE's host machine
+consistent node_modules/... & go/src/... between containers and IDE's host machine
