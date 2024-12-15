@@ -5,7 +5,7 @@ const webpack = require('webpack');
 module.exports = {
   entry: './src/index.tsx',
   output: {
-    path: path.resolve(__dirname, 'dist'),
+    path: path.resolve(__dirname, 'build'),
     filename: '[name].[contenthash].js',
     clean: true
   },
@@ -13,7 +13,18 @@ module.exports = {
     rules: [
       {
         test: /\.(ts|tsx)$/,
-        use: 'ts-loader',
+        use: [
+          {
+            loader: 'ts-loader',
+            options: {
+              transpileOnly: true,
+              compilerOptions: {
+                noEmit: false,
+                skipLibCheck: true
+              }
+            }
+          }
+        ],
         exclude: /node_modules/,
       },
       {
@@ -33,7 +44,8 @@ module.exports = {
     alias: {
       'styled-components': path.resolve(__dirname, 'node_modules/styled-components'),
       'react': path.resolve(__dirname, 'node_modules/react'),
-      'react-dom': path.resolve(__dirname, 'node_modules/react-dom')
+      'react-dom': path.resolve(__dirname, 'node_modules/react-dom'),
+      'classnames': path.resolve(__dirname, 'node_modules/classnames')
     }
   },
   plugins: [
@@ -68,7 +80,7 @@ module.exports = {
   },
   devServer: {
     static: {
-      directory: path.join(__dirname, 'dist'),
+      directory: path.join(__dirname, 'build'),
     },
     compress: true,
     port: 3000,
