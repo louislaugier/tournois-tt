@@ -1,14 +1,19 @@
 const path = require('path');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const webpack = require('webpack');
+const BundleAnalyzerPlugin = require('webpack-bundle-analyzer').BundleAnalyzerPlugin;
+const TerserPlugin = require('terser-webpack-plugin');
 
 module.exports = {
+  mode: 'production',
   entry: './src/index.tsx',
   output: {
     path: path.resolve(__dirname, 'build'),
     filename: '[name].[contenthash].js',
-    clean: true
+    clean: true,
+    publicPath: '/'
   },
+  devtool: 'source-map',
   module: {
     rules: [
       {
@@ -34,76 +39,103 @@ module.exports = {
     ],
   },
   resolve: {
-    extensions: ['.tsx', '.ts', '.js'],
+    extensions: ['.tsx', '.ts', '.js', '.jsx'],
+    alias: {
+      'react': path.resolve('./node_modules/react'),
+      'react-dom': path.resolve('./node_modules/react-dom'),
+      'styled-components': path.resolve('./node_modules/styled-components')
+    },
     fallback: {
       assert: require.resolve('assert/'),
       buffer: require.resolve('buffer/'),
       stream: require.resolve('stream-browserify'),
       util: require.resolve('util/'),
-    },
-    alias: {
-      'styled-components': path.resolve(__dirname, 'node_modules/styled-components'),
-      'react': path.resolve(__dirname, 'node_modules/react'),
-      'react-dom': path.resolve(__dirname, 'node_modules/react-dom'),
-      'classnames': path.resolve(__dirname, 'node_modules/classnames')
+      'process': require.resolve('process/browser'),
+      'path': require.resolve('path-browserify'),
+      'fs': false,
+      'crypto': false
     }
   },
   plugins: [
     new HtmlWebpackPlugin({
       template: './public/index.html',
+      inject: true,
+      minify: {
+        removeComments: true,
+        collapseWhitespace: true,
+        removeRedundantAttributes: true,
+        useShortDoctype: true,
+        removeEmptyAttributes: true,
+        removeStyleLinkTypeAttributes: true,
+        keepClosingSlash: true,
+        minifyJS: true,
+        minifyCSS: true,
+        minifyURLs: true,
+      }
     }),
     new webpack.DefinePlugin({
       'process.env': {
-        NODE_ENV: JSON.stringify(process.env.NODE_ENV),
+        NODE_ENV: JSON.stringify('production'),
         REACT_APP_API_KEY: JSON.stringify(process.env.REACT_APP_API_KEY),
       },
-      'process.browser': true,
+      'process.browser': true
     }),
     new webpack.ProvidePlugin({
       process: 'process/browser',
       Buffer: ['buffer', 'Buffer'],
+      React: 'react'
     }),
     new webpack.optimize.ModuleConcatenationPlugin(),
+    new BundleAnalyzerPlugin({
+      analyzerMode: 'static',
+      openAnalyzer: false,
+      reportFilename: 'bundle-report.html'
+    })
   ],
   optimization: {
-    moduleIds: 'deterministic',
-    runtimeChunk: 'single',
+    minimize: true,
+    minimizer: [
+      new TerserPlugin({
+        terserOptions: {
+          parse: {
+            ecma: 8,
+          },
+          compress: {
+            ecma: 5,
+            warnings: false,
+            comparisons: false,
+            inline: 2,
+          },
+          mangle: {
+            safari10: true,
+          },
+          output: {
+            ecma: 5,
+            comments: false,
+            ascii_only: true,
+          },
+        },
+        parallel: true,
+      }),
+    ],
     splitChunks: {
+      chunks: 'all',
+      name: false,
       cacheGroups: {
         vendor: {
           test: /[\\/]node_modules[\\/]/,
           name: 'vendors',
-          chunks: 'all',
-        },
-      },
+          chunks: 'all'
+        }
+      }
     },
+    runtimeChunk: {
+      name: entrypoint => `runtime-${entrypoint.name}`
+    }
   },
-  devServer: {
-    static: {
-      directory: path.join(__dirname, 'build'),
-    },
-    compress: true,
-    port: 3000,
-    hot: true,
-    host: '0.0.0.0',
-    allowedHosts: 'all',
-    historyApiFallback: true,
-    client: {
-      webSocketURL: 'ws://localhost/ws',
-      progress: true,
-    },
-    headers: {
-      'Access-Control-Allow-Origin': '*',
-    },
-    watchFiles: {
-      paths: ['src/**/*', 'public/**/*'],
-      options: {
-        usePolling: true,
-        poll: 1000,
-      },
-    },
-    devMiddleware: {
-      writeToDisk: true,
-    },
-  },
+  performance: {
+    maxEntrypointSize: 512000,
+    maxAssetSize: 512000,
+    hints: 'warning'
+  }
 }; 

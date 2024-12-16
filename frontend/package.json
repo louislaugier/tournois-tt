@@ -4,19 +4,28 @@
   "description": "Tournois FFTT",
   "main": "index.js",
   "scripts": {
-    "start": "webpack serve --mode development --open",
-    "build": "webpack --mode production",
+    "start": "webpack serve --config webpack.dev.js",
+    "build": "webpack --config webpack.prod.js",
+    "build:dev": "webpack --config webpack.dev.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@deck.gl/core": "^8.9.36",
+    "@deck.gl/geo-layers": "^8.9.36",
+    "@deck.gl/layers": "^8.9.36",
+    "@floating-ui/react": "^0.26.2",
+    "@floating-ui/utils": "^0.2.1",
     "@kepler.gl/components": "^3.0.0",
     "@kepler.gl/reducers": "^3.0.0",
-    "@loaders.gl/core": "^3.4.15",
+    "@loaders.gl/core": "^3.4.13",
+    "ajv": "^8.12.0",
+    "ajv-keywords": "^5.1.0",
     "classnames": "2.5.1",
     "kepler.gl": "^3.0.0",
+    "path-browserify": "^1.0.1",
     "process": "^0.11.10",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
@@ -34,17 +43,22 @@
     "buffer": "^6.0.3",
     "css-loader": "^7.1.2",
     "html-webpack-plugin": "^5.6.3",
+    "path-browserify": "^1.0.1",
     "stream-browserify": "^3.0.0",
     "style-loader": "^4.0.0",
+    "terser-webpack-plugin": "^5.3.9",
     "ts-loader": "^9.5.1",
     "typescript": "^5.7.2",
     "util": "^0.12.5",
     "webpack": "^5.97.1",
+    "webpack-bundle-analyzer": "^4.10.1",
     "webpack-cli": "^5.1.4",
-    "webpack-dev-server": "^5.1.0"
+    "webpack-dev-server": "^5.1.0",
+    "webpack-merge": "^5.10.0"
   },
   "resolutions": {
     "styled-components": "^5.3.11",
-    "**/styled-components": "^5.3.11"
+    "**/styled-components": "^5.3.11",
+    "@loaders.gl/core": "^3.4.13"
   }
 }

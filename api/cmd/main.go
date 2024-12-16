@@ -3,8 +3,8 @@ package main
 import (
 	"log"
 
-	"tournois-tt/api/pkg/geocoding"
 	"tournois-tt/api/internal/router"
+	"tournois-tt/api/pkg/geocoding"
 )
 
 func main() {

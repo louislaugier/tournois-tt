@@ -10,10 +10,8 @@ import { Tournament } from './lib/api/types';
 import { MapPopoverFactory } from '@kepler.gl/components';
 
 const CustomMapPopover: React.FC<any> = ({ data }) => {
-  // If no data or empty, return null
   if (!data || data.length === 0) return null;
 
-  // For single point, show detailed tournament info
   if (data.length === 1) {
     const point = data[0];
     return (
@@ -41,7 +39,6 @@ const CustomMapPopover: React.FC<any> = ({ data }) => {
     );
   }
 
-  // For multiple points, show summary
   return (
     <div style={{
       backgroundColor: 'white',
@@ -53,7 +50,7 @@ const CustomMapPopover: React.FC<any> = ({ data }) => {
       <p><strong>Nombre de Tournois:</strong> {data.length}</p>
       <p><strong>Tournois:</strong></p>
       <ul>
-        {data.map((point: any, index: any) => (
+        {data.map((point: any, index: number) => (
           <li key={index}>{point.Tournoi}</li>
         ))}
       </ul>
@@ -61,11 +58,10 @@ const CustomMapPopover: React.FC<any> = ({ data }) => {
   );
 };
 
-// Replace the default MapPopoverFactory
 const CustomMapPopoverFactory = () => CustomMapPopover;
 CustomMapPopoverFactory.deps = MapPopoverFactory.deps;
 
-const App = () => {
+const App: React.FC = () => {
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
 
   useEffect(() => {
@@ -96,7 +92,6 @@ const App = () => {
         t => !t.address?.latitude || !t.address?.longitude
       );
 
-      // Combine tournaments with and without coordinates
       const allTournamentsForMap = [
         ...tournamentsWithCoordinates,
         ...tournamentsWithoutCoordinates.map(t => ({
@@ -158,9 +153,9 @@ const App = () => {
           },
           mapState: {
             ...DEFAULT_MAP_CONFIG.mapState,
-            pitch: 0, // Reset pitch to default
+            pitch: 0,
             bearing: 0,
-            dragRotate: false // Disable rotation
+            dragRotate: false
           }
         };
 
@@ -226,4 +221,4 @@ const App = () => {
   );
 };
 
-export default App; 
+export default App;
