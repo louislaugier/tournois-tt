@@ -1,1 +1,0 @@
-consistent node_modules/... & go/src/... between containers and IDE's host machine
