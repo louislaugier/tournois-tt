@@ -22,7 +22,7 @@ services:
       - ./frontend/package.json/:/tournois-tt/frontend/package.json
       - ./frontend/package-lock.json/:/tournois-tt/frontend/package-lock.json
       - ./frontend/tsconfig.json/:/tournois-tt/frontend/tsconfig.json
-      - ./frontend/webpack.config.js/:/tournois-tt/frontend/webpack.config.js
+      - ./frontend/webpack.dev.js/:/tournois-tt/frontend/webpack.dev.js
     expose:
       - 3000
     environment:
