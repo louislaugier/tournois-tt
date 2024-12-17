@@ -3,7 +3,7 @@ import { keplerGlReducer, enhanceReduxMiddleware } from '@kepler.gl/reducers';
 
 const customizedKeplerGlReducer = keplerGlReducer.initialState({
   uiState: {
-    // UI state customization
+    currentModal: null,
   }
 });
 
