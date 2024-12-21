@@ -9,6 +9,15 @@ import { TournamentQueryBuilder } from './lib/api/tournaments';
 import { Tournament } from './lib/api/types';
 import { MapPopoverFactory } from '@kepler.gl/components';
 
+const formatDateDDMMYYYY = (date: Date | string) => {
+  const d = new Date(date);
+  return d.toLocaleDateString('fr-FR', { 
+    day: '2-digit', 
+    month: '2-digit', 
+    year: 'numeric' 
+  });
+};
+
 const CustomMapPopover: React.FC<any> = ({ data }) => {
   if (!data || data.length === 0) return null;
 
@@ -116,9 +125,9 @@ const App: React.FC = () => {
                 fieldsToShow: {
                   tournoi: [
                     { name: 'Nom du tournoi', format: null },
-                    { name: 'Type', format: null },
-                    { name: 'Club', format: null },
-                    { name: 'Dotation', format: null },
+                    { name: 'Type de tournoi', format: null },
+                    { name: 'Club organisateur', format: null },
+                    { name: 'Dotation totale', format: null },
                     { name: 'Dates', format: null },
                     { name: 'Adresse', format: null },
                     { name: 'Règlement', format: null }
@@ -133,7 +142,7 @@ const App: React.FC = () => {
               {
                 id: 'type_filter',
                 dataId: ['tournoi'],
-                name: ['Type'],
+                name: ['Type de tournoi'],
                 type: 'select',
                 value: [],
                 enlarged: false,
@@ -141,13 +150,13 @@ const App: React.FC = () => {
                 layerId: undefined,
                 field: {
                   type: 'string',
-                  name: 'Type'
+                  name: 'Type de tournoi'
                 }
               },
               {
                 id: 'club_filter',
                 dataId: ['tournoi'],
-                name: ['Club'],
+                name: ['Club organisateur'],
                 type: 'multiSelect',
                 value: [],
                 enlarged: false,
@@ -155,13 +164,13 @@ const App: React.FC = () => {
                 layerId: undefined,
                 field: {
                   type: 'string',
-                  name: 'Club'
+                  name: 'Club organisateur'
                 }
               },
               {
                 id: 'date_filter',
                 dataId: ['tournoi'],
-                name: ['Start Date'],
+                name: ['Date de début'],
                 type: 'timeRange',
                 value: [
                   Math.min(...tournaments.map(t => new Date(t.startDate).getTime())),
@@ -172,13 +181,13 @@ const App: React.FC = () => {
                 layerId: undefined,
                 field: {
                   type: 'timestamp',
-                  name: 'Start Date'
+                  name: 'Date de début'
                 }
               },
               {
                 id: 'endowment_filter',
                 dataId: ['tournoi'],
-                name: ['Dotation'],
+                name: ['Dotation totale'],
                 type: 'range',
                 value: [0, 10000],
                 enlarged: false,
@@ -186,7 +195,7 @@ const App: React.FC = () => {
                 layerId: undefined,
                 field: {
                   type: 'real',
-                  name: 'Dotation'
+                  name: 'Dotation totale'
                 }
               },
               {
@@ -240,11 +249,11 @@ const App: React.FC = () => {
             { name: 'latitude', type: 'real' },
             { name: 'longitude', type: 'real' },
             { name: 'Nom du tournoi', type: 'string' },
-            { name: 'Type', type: 'string' },
-            { name: 'Club', type: 'string' },
-            { name: 'Dotation', type: 'real' },
+            { name: 'Type de tournoi', type: 'string' },
+            { name: 'Club organisateur', type: 'string' },
+            { name: 'Dotation totale', type: 'real' },
             { name: 'Dates', type: 'date' },
-            { name: 'Start Date', type: 'date' },
+            { name: 'Date de début', type: 'date' },
             { name: 'Adresse', type: 'string' },
             { name: 'Règlement', type: 'string' }
           ],
@@ -257,7 +266,7 @@ const App: React.FC = () => {
             typeof t.endowment === 'number' && t.endowment > 0 
               ? Math.floor(t.endowment / 100)
               : 0,
-            `${new Date(t.startDate).toISOString().split('T')[0]} - ${new Date(t.endDate).toISOString().split('T')[0]}`,
+            `${formatDateDDMMYYYY(t.startDate)} - ${formatDateDDMMYYYY(t.endDate)}`,
             new Date(t.startDate).getTime(),
             t.address.streetAddress
               ? `${t.address.disambiguatingDescription ? t.address.disambiguatingDescription + ' ' : ''}${t.address.streetAddress}, ${t.address.postalCode} ${t.address.addressLocality}`
