@@ -24,9 +24,9 @@ const initializeApp = () => {
   try {
     const root = createRoot(container);
     root.render(
-      <React.StrictMode>
+      // <React.StrictMode>
         <App />
-      </React.StrictMode>
+      // </React.StrictMode>
     );
   } catch (error) {
     console.error('CRITICAL: Failed to render React application', error);

@@ -115,7 +115,7 @@ const App: React.FC = () => {
               tooltip: {
                 fieldsToShow: {
                   tournoi: [
-                    { name: 'Tournoi', format: null },
+                    { name: 'Nom du tournoi', format: null },
                     { name: 'Type', format: null },
                     { name: 'Club', format: null },
                     { name: 'Dotation', format: null },
@@ -129,16 +129,92 @@ const App: React.FC = () => {
                 compareType: 'absolute'
               }
             },
+            filters: [
+              {
+                id: 'type_filter',
+                dataId: ['tournoi'],
+                name: ['Type'],
+                type: 'select',
+                value: [],
+                enlarged: false,
+                plotType: 'histogram',
+                layerId: undefined,
+                field: {
+                  type: 'string',
+                  name: 'Type'
+                }
+              },
+              {
+                id: 'club_filter',
+                dataId: ['tournoi'],
+                name: ['Club'],
+                type: 'multiSelect',
+                value: [],
+                enlarged: false,
+                plotType: 'histogram',
+                layerId: undefined,
+                field: {
+                  type: 'string',
+                  name: 'Club'
+                }
+              },
+              {
+                id: 'date_filter',
+                dataId: ['tournoi'],
+                name: ['Start Date'],
+                type: 'timeRange',
+                value: [
+                  Math.min(...tournaments.map(t => new Date(t.startDate).getTime())),
+                  Math.max(...tournaments.map(t => new Date(t.startDate).getTime()))
+                ],
+                enlarged: true,
+                plotType: 'histogram',
+                layerId: undefined,
+                field: {
+                  type: 'timestamp',
+                  name: 'Start Date'
+                }
+              },
+              {
+                id: 'endowment_filter',
+                dataId: ['tournoi'],
+                name: ['Dotation'],
+                type: 'range',
+                value: [0, 10000],
+                enlarged: false,
+                plotType: 'histogram',
+                layerId: undefined,
+                field: {
+                  type: 'real',
+                  name: 'Dotation'
+                }
+              },
+              {
+                id: 'name_filter',
+                dataId: ['tournoi'],
+                name: ['Nom du tournoi'],
+                type: 'input',
+                value: '',
+                enlarged: false,
+                plotType: 'histogram',
+                layerId: undefined,
+                field: {
+                  type: 'string',
+                  name: 'Nom du tournoi'
+                }
+              }
+            ],
             layers: [{
               id: 'tournament_points',
               type: 'point',
               config: {
                 dataId: 'tournoi',
-                label: 'Tournois',
+                label: 'Tournoi',
                 color: [64, 224, 208] as [number, number, number],
                 columns: {
                   lat: 'latitude',
-                  lng: 'longitude'
+                  lng: 'longitude',
+                  altitude: 'Dotation'
                 },
                 isVisible: true,
                 visConfig: {
@@ -163,28 +239,30 @@ const App: React.FC = () => {
           fields: [
             { name: 'latitude', type: 'real' },
             { name: 'longitude', type: 'real' },
-            { name: 'Tournoi', type: 'string' },
+            { name: 'Nom du tournoi', type: 'string' },
             { name: 'Type', type: 'string' },
             { name: 'Club', type: 'string' },
-            { name: 'Dotation', type: 'string' },
-            { name: 'Dates', type: 'string' },
+            { name: 'Dotation', type: 'real' },
+            { name: 'Dates', type: 'date' },
+            { name: 'Start Date', type: 'date' },
             { name: 'Adresse', type: 'string' },
             { name: 'Règlement', type: 'string' }
           ],
           rows: allTournamentsForMap.map(t => [
             t.address.latitude,
             t.address.longitude,
-            t.name || '',
-            t.type || '',
-            t.club.name ? `${t.club.name}${t.club.identifier ? ` (${t.club.identifier})` : ''}` : '',
+            t.name || 'Tournoi sans nom',
+            t.type || 'Non spécifié',
+            t.club.name ? `${t.club.name}${t.club.identifier ? ` (${t.club.identifier})` : ''}` : 'Club non spécifié',
             typeof t.endowment === 'number' && t.endowment > 0 
-              ? `${Math.floor(t.endowment / 100)}€` 
-              : '?',
-            `${new Date(t.startDate).toLocaleDateString('fr-FR')} - ${new Date(t.endDate).toLocaleDateString('fr-FR')}`,
+              ? Math.floor(t.endowment / 100)
+              : 0,
+            `${new Date(t.startDate).toISOString().split('T')[0]} - ${new Date(t.endDate).toISOString().split('T')[0]}`,
+            new Date(t.startDate).getTime(),
             t.address.streetAddress
               ? `${t.address.disambiguatingDescription ? t.address.disambiguatingDescription + ' ' : ''}${t.address.streetAddress}, ${t.address.postalCode} ${t.address.addressLocality}`
-              : '',
-            t.rules?.url || ''
+              : 'Adresse non disponible',
+            t.rules?.url || 'Pas de règlement'
           ])
         };
 
