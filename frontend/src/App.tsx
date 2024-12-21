@@ -285,7 +285,7 @@ const App: React.FC = () => {
                 type: 'geojson',
                 config: {
                   dataId: 'france',
-                  label: 'Frontière',
+                  label: 'France',
                   color: [255, 255, 255] as [number, number, number],
                   columns: {
                     geojson: '_geojson'
@@ -357,20 +357,18 @@ const App: React.FC = () => {
             dragRotate: false
           },
           mapStyle: {
-            styleType: 'dark_matter',
+            ...DEFAULT_MAP_CONFIG.mapStyle,
+            styleType: 'dark',
             topLayerGroups: {},
             visibleLayerGroups: {
+              ...DEFAULT_MAP_CONFIG.mapStyle.visibleLayerGroups,
               label: true,
               road: true,
-              border: true,
               building: true,
               water: true,
               land: true,
-              '3d building': false
-            },
-            threeDBuildingColor: [209, 206, 199] as [number, number, number],
-            backgroundColor: [255, 255, 255] as [number, number, number],
-            mapStyles: {}
+              border: true
+            }
           }
         };
 

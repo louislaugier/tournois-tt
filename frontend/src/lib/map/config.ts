@@ -89,17 +89,17 @@ export const DEFAULT_MAP_CONFIG = {
             border: true
         },
         styleType: 'dark',
-        custom: {
-            layers: [
-                {
-                    type: 'line',
-                    paint: {
-                        'line-color': '#FFFFFF',
-                        'line-width': 2
-                    },
-                    filter: ['==', '$type', 'LineString']
-                }
-            ]
-        }
+        // custom: {
+        //     layers: [
+        //         {
+        //             type: 'line',
+        //             paint: {
+        //                 'line-color': '#FFFFFF',
+        //                 'line-width': 2
+        //             },
+        //             filter: ['==', '$type', 'LineString']
+        //         }
+        //     ]
+        // }
     }
 }; 

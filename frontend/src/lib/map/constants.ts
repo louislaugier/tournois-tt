@@ -1,5 +1,5 @@
-export const MAPBOX_TOKEN = "pk.eyJ1IjoibG91aXNsYXVnaWVyMSIsImEiOiJjbTRjbmdjbXYwNzFnMmpyNjlxcTl1eGx4In0.n0ZrKrJWvwlg";
-// pk.eyJ1IjoiZGVsdGEtc3R1ZHVlbnQiLCJhIjoiY2xvMDk0MTVhMTJ3ZDJrcGR5ZDFkaHl4ciJ9.Gj2VU1wvxc7rFVt5E4KLOQ
+export const MAPBOX_TOKEN = "pk.eyJ1IjoibG91aXNsYXVnaWVyMSIsImEiOiJjbTRjbmdjbXYwNzFnMmpyNjlxcTl1eGx4In0.n0ZrKrJFzLpTrvMKdWvwlg";
+
 export const INITIAL_MAP_DATA = {
   fields: [
     { name: 'name', type: 'string' },
