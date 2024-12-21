@@ -30,6 +30,10 @@ module.exports = {
         test: /\.css$/,
         use: ['style-loader', 'css-loader'],
       },
+      {
+        test: /\.geojson$/,
+        use: 'raw-loader'
+      },
     ],
   },
   resolve: {
@@ -62,5 +66,6 @@ module.exports = {
     new webpack.DefinePlugin({
       'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV || 'development')
     })
-  ]
+  ],
+  externals: []
 }; 

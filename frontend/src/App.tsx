@@ -2,20 +2,36 @@ import React, { useEffect, useState } from 'react';
 import { Provider } from 'react-redux';
 import { addDataToMap } from '@kepler.gl/actions';
 import '@kepler.gl/styles';
+
+// Disable error overlay in production
+if (process.env.NODE_ENV === 'production') {
+  console.error = () => { };
+  window.addEventListener('error', (e) => {
+    e.stopPropagation();
+    e.preventDefault();
+  });
+  window.addEventListener('unhandledrejection', (e) => {
+    e.stopPropagation();
+    e.preventDefault();
+  });
+}
+
 import { store } from './lib/store';
 import { Map } from './components/Map';
 import { DEFAULT_MAP_CONFIG } from './lib/map/config';
 import { TournamentQueryBuilder } from './lib/api/tournaments';
 import { Tournament } from './lib/api/types';
 import { MapPopoverFactory } from '@kepler.gl/components';
+import franceBordersRaw from './assets/metropole-et-outre-mer.json';
+
+const franceBorders = typeof franceBordersRaw === 'string' ? JSON.parse(franceBordersRaw) : franceBordersRaw;
 
 const formatDateDDMMYYYY = (date: Date | string) => {
   const d = new Date(date);
-  return d.toLocaleDateString('fr-FR', { 
-    day: '2-digit', 
-    month: '2-digit', 
-    year: 'numeric' 
-  });
+  const day = d.getDate().toString().padStart(2, '0');
+  const month = (d.getMonth() + 1).toString().padStart(2, '0');
+  const year = d.getFullYear();
+  return `${day}/${month}/${year}`;
 };
 
 const CustomMapPopover: React.FC<any> = ({ data }) => {
@@ -127,15 +143,25 @@ const App: React.FC = () => {
                     { name: 'Nom du tournoi', format: null },
                     { name: 'Type de tournoi', format: null },
                     { name: 'Club organisateur', format: null },
-                    { name: 'Dotation totale', format: null },
+                    { name: 'Dotation totale (€)', format: null },
                     { name: 'Dates', format: null },
                     { name: 'Adresse', format: null },
                     { name: 'Règlement', format: null }
-                  ]
+                  ],
+                  france: []
                 },
                 enabled: true,
                 compareMode: false,
                 compareType: 'absolute'
+              },
+              brush: {
+                enabled: false
+              },
+              coordinate: {
+                enabled: false
+              },
+              geocoder: {
+                enabled: true
               }
             },
             filters: [
@@ -187,7 +213,7 @@ const App: React.FC = () => {
               {
                 id: 'endowment_filter',
                 dataId: ['tournoi'],
-                name: ['Dotation totale'],
+                name: ['Dotation totale (€)'],
                 type: 'range',
                 value: [0, 10000],
                 enlarged: false,
@@ -195,7 +221,7 @@ const App: React.FC = () => {
                 layerId: undefined,
                 field: {
                   type: 'real',
-                  name: 'Dotation totale'
+                  name: 'Dotation totale (€)'
                 }
               },
               {
@@ -213,34 +239,138 @@ const App: React.FC = () => {
                 }
               }
             ],
-            layers: [{
-              id: 'tournament_points',
-              type: 'point',
-              config: {
-                dataId: 'tournoi',
-                label: 'Tournoi',
-                color: [64, 224, 208] as [number, number, number],
-                columns: {
-                  lat: 'latitude',
-                  lng: 'longitude',
-                  altitude: 'Dotation'
-                },
-                isVisible: true,
-                visConfig: {
-                  radius: 13,
-                  fillColor: [64, 224, 208] as [number, number, number],
+            layers: [
+              {
+                id: 'tournament_points',
+                type: 'point',
+                config: {
+                  dataId: 'tournoi',
+                  label: 'Tournoi',
                   color: [64, 224, 208] as [number, number, number],
-                  opacity: 0.8
+                  columns: {
+                    lat: 'latitude',
+                    lng: 'longitude',
+                    altitude: 'Dotation'
+                  } as { [key: string]: string },
+                  isVisible: true,
+                  visConfig: {
+                    radius: 13,
+                    fillColor: [64, 224, 208] as [number, number, number],
+                    opacity: 0.8
+                  },
+                  textLabel: {
+                    field: { name: '', type: 'string' },
+                    color: [255, 255, 255] as [number, number, number],
+                    size: 12,
+                    offset: [0, 0] as [number, number],
+                    anchor: 'start',
+                    alignment: 'center',
+                    outlineWidth: 0,
+                    outlineColor: [0, 0, 0, 0] as [number, number, number, number],
+                    background: false,
+                    backgroundColor: [0, 0, 0, 0] as [number, number, number, number]
+                  }
+                },
+                visualChannels: {
+                  colorField: { name: '', type: 'string' },
+                  colorScale: 'quantile',
+                  sizeField: { name: '', type: 'string' },
+                  sizeScale: 'linear',
+                  strokeColorField: { name: '', type: 'string' },
+                  strokeColorScale: 'quantile'
                 }
               },
-              visualChannels: {}
-            }]
+              {
+                id: 'france_borders',
+                type: 'geojson',
+                config: {
+                  dataId: 'france',
+                  label: 'Frontière',
+                  color: [255, 255, 255] as [number, number, number],
+                  columns: {
+                    geojson: '_geojson'
+                  } as { [key: string]: string },
+                  isVisible: true,
+                  visConfig: {
+                    opacity: 1,
+                    thickness: 2,
+                    strokeColor: [255, 255, 255] as [number, number, number],
+                    filled: false,
+                    stroked: true,
+                    enable3d: false,
+                    pickable: false,
+                    fixedRadius: false,
+                    radiusRange: [0, 0],
+                    clusterRadius: 0
+                  },
+                  textLabel: {
+                    field: { name: '', type: 'string' },
+                    color: [255, 255, 255] as [number, number, number],
+                    size: 12,
+                    offset: [0, 0] as [number, number],
+                    anchor: 'start',
+                    alignment: 'center',
+                    outlineWidth: 0,
+                    outlineColor: [0, 0, 0, 0] as [number, number, number, number],
+                    background: false,
+                    backgroundColor: [0, 0, 0, 0] as [number, number, number, number]
+                  },
+                  hidden: true,
+                  tooltipField: null,
+                  isConfigActive: true,
+                  colorUI: {
+                    color: {
+                      type: 'none',
+                      defaultValue: null
+                    }
+                  },
+                  interaction: {
+                    tooltip: {
+                      enabled: false,
+                      fieldsToShow: {}
+                    },
+                    brush: {
+                      enabled: false
+                    },
+                    coordinate: {
+                      enabled: false
+                    },
+                    clicked: false,
+                    hovered: false
+                  }
+                },
+                visualChannels: {
+                  colorField: { name: '', type: 'string' },
+                  colorScale: 'quantile',
+                  sizeField: { name: '', type: 'string' },
+                  sizeScale: 'linear',
+                  strokeColorField: { name: '', type: 'string' },
+                  strokeColorScale: 'quantile'
+                }
+              }
+            ]
           },
           mapState: {
             ...DEFAULT_MAP_CONFIG.mapState,
             pitch: 0,
             bearing: 0,
             dragRotate: false
+          },
+          mapStyle: {
+            styleType: 'dark_matter',
+            topLayerGroups: {},
+            visibleLayerGroups: {
+              label: true,
+              road: true,
+              border: true,
+              building: true,
+              water: true,
+              land: true,
+              '3d building': false
+            },
+            threeDBuildingColor: [209, 206, 199] as [number, number, number],
+            backgroundColor: [255, 255, 255] as [number, number, number],
+            mapStyles: {}
           }
         };
 
@@ -251,7 +381,7 @@ const App: React.FC = () => {
             { name: 'Nom du tournoi', type: 'string' },
             { name: 'Type de tournoi', type: 'string' },
             { name: 'Club organisateur', type: 'string' },
-            { name: 'Dotation totale', type: 'real' },
+            { name: 'Dotation totale (€)', type: 'real' },
             { name: 'Dates', type: 'date' },
             { name: 'Date de début', type: 'date' },
             { name: 'Adresse', type: 'string' },
@@ -263,7 +393,7 @@ const App: React.FC = () => {
             t.name || 'Tournoi sans nom',
             t.type || 'Non spécifié',
             t.club.name ? `${t.club.name}${t.club.identifier ? ` (${t.club.identifier})` : ''}` : 'Club non spécifié',
-            typeof t.endowment === 'number' && t.endowment > 0 
+            typeof t.endowment === 'number' && t.endowment > 0
               ? Math.floor(t.endowment / 100)
               : 0,
             `${formatDateDDMMYYYY(t.startDate)} - ${formatDateDDMMYYYY(t.endDate)}`,
@@ -277,13 +407,27 @@ const App: React.FC = () => {
 
         store.dispatch(
           addDataToMap({
-            datasets: [{
-              info: {
-                label: 'Tournois FFTT',
-                id: 'tournoi'
+            datasets: [
+              {
+                info: {
+                  label: 'Tournois FFTT',
+                  id: 'tournoi'
+                },
+                data: tournamentsDataset
               },
-              data: tournamentsDataset
-            }],
+              {
+                info: {
+                  label: 'France',
+                  id: 'france'
+                },
+                data: {
+                  fields: [
+                    { name: '_geojson', type: 'geojson' }
+                  ],
+                  rows: [[franceBorders]]
+                }
+              }
+            ],
             options: {
               centerMap: false,
               readOnly: false

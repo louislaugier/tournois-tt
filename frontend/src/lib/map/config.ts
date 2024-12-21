@@ -11,7 +11,7 @@ export const DEFAULT_MAP_CONFIG = {
                         { name: 'Nom du tournoi', format: null },
                         { name: 'Type de tournoi', format: null },
                         { name: 'Club organisateur', format: null },
-                        { name: 'Dotation totale', format: null },
+                        { name: 'Dotation totale (€)', format: null },
                         { name: 'Dates', format: null },
                         {
                             name: 'Adresse',
@@ -87,6 +87,19 @@ export const DEFAULT_MAP_CONFIG = {
             water: true,
             land: true,
             border: true
+        },
+        styleType: 'dark',
+        custom: {
+            layers: [
+                {
+                    type: 'line',
+                    paint: {
+                        'line-color': '#FFFFFF',
+                        'line-width': 2
+                    },
+                    filter: ['==', '$type', 'LineString']
+                }
+            ]
         }
     }
 }; 

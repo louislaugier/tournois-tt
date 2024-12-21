@@ -1,6 +1,7 @@
 import React from 'react';
 import KeplerGl from '@kepler.gl/components';
 import fr from '../locales/fr';
+import { MAPBOX_TOKEN } from '../lib/map/constants';
 
 interface MapProps {
   id: string;
@@ -14,7 +15,7 @@ export const Map: React.FC<MapProps> = ({ id, width, height }) => {
       id={id}
       width={width}
       height={height}
-      mapboxApiAccessToken={process.env.REACT_APP_MAPBOX_TOKEN}
+      mapboxApiAccessToken={MAPBOX_TOKEN}
       localeMessages={{ en: fr }} // override EN with FR
     />
   );
