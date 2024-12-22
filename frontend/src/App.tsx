@@ -315,8 +315,6 @@ const App: React.FC = () => {
                     background: false,
                     backgroundColor: [0, 0, 0, 0] as [number, number, number, number]
                   },
-                  hidden: true,
-                  tooltipField: null,
                   isConfigActive: true,
                   colorUI: {
                     color: {

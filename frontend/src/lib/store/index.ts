@@ -4,8 +4,10 @@ import { keplerGlReducer, enhanceReduxMiddleware } from '@kepler.gl/reducers';
 const customizedKeplerGlReducer = keplerGlReducer.initialState({
   uiState: {
     currentModal: null,
-    activeSidePanel: 'filter'
-  }
+    activeSidePanel: 'filter',
+    readOnly: true,
+  },
+
 });
 
 const reducers = {
