@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Provider } from 'react-redux';
 import { addDataToMap } from '@kepler.gl/actions';
 import '@kepler.gl/styles';
+import { initializeDateFormatter } from './dateFormatter';
 
 // Disable error overlay in production
 if (process.env.NODE_ENV === 'production') {
@@ -88,6 +89,10 @@ CustomMapPopoverFactory.deps = MapPopoverFactory.deps;
 
 const App: React.FC = () => {
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
+
+  useEffect(() => {
+    initializeDateFormatter();
+  }, []);
 
   useEffect(() => {
     const loadTournaments = async () => {
@@ -196,7 +201,7 @@ const App: React.FC = () => {
               {
                 id: 'date_filter',
                 dataId: ['tournoi'],
-                name: ['Date de début'],
+                name: ['Date de début du tournoi'],
                 type: 'timeRange',
                 value: [
                   Math.min(...tournaments.map(t => new Date(t.startDate).getTime())),
@@ -207,7 +212,7 @@ const App: React.FC = () => {
                 layerId: undefined,
                 field: {
                   type: 'timestamp',
-                  name: 'Date de début'
+                  name: 'Date de début du tournoi'
                 }
               },
               {
@@ -293,7 +298,7 @@ const App: React.FC = () => {
                   isVisible: true,
                   visConfig: {
                     opacity: 1,
-                    thickness: 2,
+                    thickness: 1,
                     strokeColor: [255, 255, 255] as [number, number, number],
                     filled: false,
                     stroked: true,
@@ -378,7 +383,7 @@ const App: React.FC = () => {
             { name: 'Club organisateur', type: 'string' },
             { name: 'Dotation totale (€)', type: 'real', analyzerType: 'INT' },
             { name: 'Dates', type: 'date' },
-            { name: 'Date de début', type: 'date' },
+            { name: 'Date de début du tournoi', type: 'date' },
             { name: 'Adresse', type: 'string' },
             { name: 'Règlement', type: 'string' }
           ],
