@@ -215,7 +215,7 @@ const App: React.FC = () => {
                 dataId: ['tournoi'],
                 name: ['Dotation totale (€)'],
                 type: 'range',
-                value: [0, 10000],
+                value: null,
                 enlarged: false,
                 plotType: 'histogram',
                 layerId: undefined,
@@ -356,7 +356,6 @@ const App: React.FC = () => {
           },
           mapStyle: {
             ...DEFAULT_MAP_CONFIG.mapStyle,
-            styleType: 'dark',
             topLayerGroups: {},
             visibleLayerGroups: {
               ...DEFAULT_MAP_CONFIG.mapStyle.visibleLayerGroups,
@@ -377,7 +376,7 @@ const App: React.FC = () => {
             { name: 'Nom du tournoi', type: 'string' },
             { name: 'Type de tournoi', type: 'string' },
             { name: 'Club organisateur', type: 'string' },
-            { name: 'Dotation totale (€)', type: 'real' },
+            { name: 'Dotation totale (€)', type: 'real', analyzerType: 'INT' },
             { name: 'Dates', type: 'date' },
             { name: 'Date de début', type: 'date' },
             { name: 'Adresse', type: 'string' },
@@ -389,15 +388,15 @@ const App: React.FC = () => {
             t.name || 'Tournoi sans nom',
             t.type || 'Non spécifié',
             t.club.name ? `${t.club.name}${t.club.identifier ? ` (${t.club.identifier})` : ''}` : 'Club non spécifié',
-            typeof t.endowment === 'number' && t.endowment > 0
-              ? Math.floor(t.endowment / 100)
-              : 0,
+            typeof t.endowment === 'number' && t.endowment > 0 
+              ? Math.floor(t.endowment / 100) 
+              : (t.tables?.reduce((sum, table) => sum + (table.endowment || 0), 0) || 0) / 100,
             `${formatDateDDMMYYYY(t.startDate)} - ${formatDateDDMMYYYY(t.endDate)}`,
             new Date(t.startDate).getTime(),
             t.address.streetAddress
               ? `${t.address.disambiguatingDescription ? t.address.disambiguatingDescription + ' ' : ''}${t.address.streetAddress}, ${t.address.postalCode} ${t.address.addressLocality}`
               : 'Adresse non disponible',
-            t.rules?.url || 'Pas de règlement'
+            t.rules?.url || 'Pas encore de règlement'
           ])
         };
 
@@ -437,7 +436,7 @@ const App: React.FC = () => {
 
   return (
     <Provider store={store}>
-      <div style={{ position: 'absolute', width: '100%', height: '100%', opacity: !!tournaments.length ? 1 : 0 }}>
+      <div style={{ position: 'absolute', width: '100%', height: '100%' }}>
         <Map
           id="paris"
           width={window.innerWidth}

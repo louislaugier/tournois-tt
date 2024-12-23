@@ -87,19 +87,6 @@ export const DEFAULT_MAP_CONFIG = {
             water: true,
             land: true,
             border: true
-        },
-        styleType: 'dark',
-        // custom: {
-        //     layers: [
-        //         {
-        //             type: 'line',
-        //             paint: {
-        //                 'line-color': '#FFFFFF',
-        //                 'line-width': 2
-        //             },
-        //             filter: ['==', '$type', 'LineString']
-        //         }
-        //     ]
-        // }
+        }
     }
 }; 
