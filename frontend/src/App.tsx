@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Provider } from 'react-redux';
 import { addDataToMap } from '@kepler.gl/actions';
 import '@kepler.gl/styles';
-import { initializeDateFormatter } from './dateFormatter';
+import { initializeDateFormatter } from './lib/dateFormatter';
 
 // Disable error overlay in production
 if (process.env.NODE_ENV === 'production') {
