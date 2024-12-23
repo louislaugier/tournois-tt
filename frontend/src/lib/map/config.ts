@@ -35,7 +35,7 @@ export const DEFAULT_MAP_CONFIG = {
                 enabled: false
             },
             geocoder: {
-                enabled: true
+                enabled: false
             }
         },
         layerBlending: 'normal',

@@ -166,7 +166,7 @@ const App: React.FC = () => {
                 enabled: false
               },
               geocoder: {
-                enabled: true
+                enabled: false
               }
             },
             filters: [

@@ -21,7 +21,7 @@ type GeocodeConfig struct {
 
 // DefaultGeocodeConfig provides default geocoding configuration
 var DefaultGeocodeConfig = GeocodeConfig{
-	Enabled:             true,
+	Enabled:             false,
 	MaxGeocodeAttempts:  3,
 	SkipFailedAddresses: true,
 }
