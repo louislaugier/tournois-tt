@@ -44,10 +44,28 @@ func init() {
 	fmt.Println("Geocoding cache initialized")
 }
 
+// getCacheDirectory returns the absolute path to the cache directory
+func getCacheDirectory() string {
+	// Get the executable's directory
+	execDir, err := os.Getwd()
+	if err != nil {
+		log.Printf("Warning: Failed to get working directory, falling back to relative path: %v", err)
+		return "cache"
+	}
+
+	// In production, the binary is in /app/api
+	if execDir == "/app/api" {
+		return filepath.Join(execDir, "cache")
+	}
+
+	// For local development
+	return filepath.Join(execDir, "api", "cache")
+}
+
 // saveGeocodeResultsToCache saves geocoding results to a JSON file
 func saveGeocodeResultsToCache(results []GeocodeResult) error {
-	// Ensure cache directory exists
-	cacheDir := "cache"
+	// Get cache directory
+	cacheDir := getCacheDirectory()
 	if err := os.MkdirAll(cacheDir, 0755); err != nil {
 		return fmt.Errorf("failed to create cache directory: %v", err)
 	}
@@ -72,7 +90,7 @@ func saveGeocodeResultsToCache(results []GeocodeResult) error {
 
 // loadGeocodeResultsFromCache loads existing geocoding results from JSON file
 func loadGeocodeResultsFromCache() (map[string]GeocodeResult, error) {
-	cacheFilePath := filepath.Join("cache", "geocoding_cache.json")
+	cacheFilePath := filepath.Join(getCacheDirectory(), "geocoding_cache.json")
 
 	// Check if cache file exists
 	if _, err := os.Stat(cacheFilePath); os.IsNotExist(err) {
@@ -97,5 +115,6 @@ func loadGeocodeResultsFromCache() (map[string]GeocodeResult, error) {
 		cacheMap[key] = result
 	}
 
+	log.Printf("Loaded %d geocoding results from cache at %s", len(cacheMap), cacheFilePath)
 	return cacheMap, nil
 }

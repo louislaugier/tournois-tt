@@ -47,6 +47,9 @@ RUN apk add --no-cache nginx nodejs npm
 # Create /app/api directory
 RUN mkdir -p /app/api
 
+# Create necessary directories
+RUN mkdir -p /app/api/cache
+
 # Copy built frontend
 COPY --from=frontend-build /app/frontend/build /usr/share/nginx/html
 # Verify the contents of the build directory
@@ -61,9 +64,10 @@ COPY --from=api-build /go/bin/api /app/api
 # Copy nginx configuration
 COPY nginx.conf /etc/nginx/nginx.conf
 
-# Copy necessary configuration files
+# Copy necessary configuration files and cache
 COPY api/.env.example /app/api/.env
 COPY api/air.toml /app/api/air.toml
+COPY api/cache/geocoding_cache.json /app/api/cache/
 
 # Create entrypoint script
 COPY entrypoint.sh /entrypoint.sh
