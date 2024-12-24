@@ -19,12 +19,13 @@ if (process.env.NODE_ENV === 'production') {
 }
 
 import { store } from './lib/store';
-import { Map } from './components/Map';
 import { DEFAULT_MAP_CONFIG } from './lib/map/config';
 import { TournamentQueryBuilder } from './lib/api/tournaments';
 import { Tournament } from './lib/api/types';
-import { MapPopoverFactory } from '@kepler.gl/components';
+import { KeplerGl, MapPopoverFactory } from '@kepler.gl/components';
 import franceBordersRaw from './assets/metropole-et-outre-mer.json';
+import { MAPBOX_TOKEN } from './lib/map/constants';
+import fr from './locales/fr';
 
 const franceBorders = typeof franceBordersRaw === 'string' ? JSON.parse(franceBordersRaw) : franceBordersRaw;
 
@@ -395,8 +396,8 @@ const App: React.FC = () => {
             t.name || 'Tournoi sans nom',
             t.type || 'Non spécifié',
             t.club.name ? `${t.club.name}${t.club.identifier ? ` (${t.club.identifier})` : ''}` : 'Club non spécifié',
-            typeof t.endowment === 'number' && t.endowment > 0 
-              ? Math.floor(t.endowment / 100) 
+            typeof t.endowment === 'number' && t.endowment > 0
+              ? Math.floor(t.endowment / 100)
               : (t.tables?.reduce((sum, table) => sum + (table.endowment || 0), 0) || 0) / 100,
             `${formatDateDDMMYYYY(t.startDate)} - ${formatDateDDMMYYYY(t.endDate)}`,
             new Date(t.startDate).getTime(),
@@ -444,10 +445,12 @@ const App: React.FC = () => {
   return (
     <Provider store={store}>
       <div style={{ position: 'absolute', width: '100%', height: '100%' }}>
-        <Map
+        <KeplerGl
           id="paris"
           width={window.innerWidth}
           height={window.innerHeight}
+          mapboxApiAccessToken={MAPBOX_TOKEN}
+          localeMessages={{ en: fr }}
         />
       </div>
     </Provider>
