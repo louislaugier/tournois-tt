@@ -1,0 +1,599 @@
+[
+  {
+    "address": {
+      "streetAddress": "15 rue des Vosges ",
+      "postalCode": "54120",
+      "addressLocality": "Thiaville-Sur-Meurthe",
+      "disambiguatingDescription": "Espace Michel Jacquel"
+    },
+    "latitude": 48.412838,
+    "longitude": 6.8097892,
+    "failed": false,
+    "timestamp": "2024-12-13T17:31:38.080488423Z"
+  },
+  {
+    "address": {
+      "streetAddress": "Rue de Saint Exupéry",
+      "postalCode": "44680",
+      "addressLocality": "STE PAZANNE",
+      "disambiguatingDescription": "la salle des Fraîches"
+    },
+    "failed": false,
+    "latitude": 48.060264,
+    "longitude": 0.144753,
+    "timestamp": "2024-12-13T17:31:47.980786178Z"
+  },
+  {
+    "address": {
+      "streetAddress": "1D Boulevard Dézerseul",
+      "postalCode": "35510",
+      "addressLocality": "Cesson-Sévigné",
+      "disambiguatingDescription": "Salle Paul Janson"
+    },
+    "latitude": 48.1193351,
+    "longitude": -1.5973889,
+    "failed": false,
+    "timestamp": "2024-12-13T17:31:44.022307051Z"
+  },
+  {
+    "address": {
+      "streetAddress": "20 B Avenue Gambetta",
+      "postalCode": "76200",
+      "addressLocality": "DIEPPE"
+    },
+    "latitude": 49.9165532,
+    "longitude": 1.0744682,
+    "failed": false,
+    "timestamp": "2024-12-13T17:31:40.754157675Z"
+  },
+  {
+    "address": {
+      "streetAddress": "Rue des montagnes du soir",
+      "postalCode": "42210",
+      "addressLocality": "Montrond-les-Bains"
+    },
+    "latitude": 45.647736,
+    "longitude": 4.2294732,
+    "failed": false,
+    "timestamp": "2024-12-13T17:31:42.232285092Z"
+  },
+  {
+    "address": {
+      "streetAddress": "Gymnase Roger François",
+      "postalCode": "26100",
+      "addressLocality": "ROMANS SUR ISERE",
+      "disambiguatingDescription": "Avenue de St Donat"
+    },
+    "latitude": 45.055533600000004,
+    "longitude": 5.04583323969595,
+    "failed": false,
+    "timestamp": "2024-12-13T17:31:45.473750844Z"
+  },
+  {
+    "address": {
+      "streetAddress": "20 rue d'Austerlitz",
+      "postalCode": "59200",
+      "addressLocality": "Tourcoing",
+      "disambiguatingDescription": "Salle Moutaa Louati"
+    },
+    "latitude": 50.7186163,
+    "longitude": 3.1524777,
+    "failed": false,
+    "timestamp": "2024-12-13T17:31:49.568250179Z"
+  },
+  {
+    "address": {
+      "streetAddress": "1 Ter Rue Colette",
+      "postalCode": "37700",
+      "addressLocality": "La Ville aux Dames"
+    },
+    "latitude": 47.3978414,
+    "longitude": 0.7728482,
+    "failed": false,
+    "timestamp": "2024-12-13T17:31:50.99945168Z"
+  },
+  {
+    "address": {
+      "streetAddress": "Parc du Château",
+      "postalCode": "28240",
+      "addressLocality": "LA LOUPE"
+    },
+    "failed": false,
+    "latitude":48.4737,
+    "longitude": 1.02521,
+    "timestamp": "2024-12-13T17:31:39.465478674Z"
+  },
+  {
+    "address": {
+      "streetAddress": "85-89 avenue Charles Rouxel",
+      "postalCode": "77340",
+      "addressLocality": "Pontault-Combault",
+      "disambiguatingDescription": "Gymnase Roger Boisramé"
+    },
+    "latitude": 48.787056,
+    "longitude": 2.602626,
+    "failed": false,
+    "timestamp": "2024-12-13T17:31:46.547051761Z"
+  },
+  {
+    "address": {
+      "streetAddress": "RUE FRANCOIS MAURIAC ",
+      "postalCode": "51110",
+      "addressLocality": "REIMS",
+      "disambiguatingDescription": "GYMNASE GEO ANDRE"
+    },
+    "latitude": 49.2183704,
+    "longitude": 4.0472275,
+    "failed": false,
+    "timestamp": "2024-12-21T11:07:22.218448343Z"
+  },
+  {
+    "address": {
+      "streetAddress": "Salle des Sports",
+      "postalCode": "53200",
+      "addressLocality": "Laigné"
+    },
+    "failed": false,
+    "latitude": 47.842938,
+    "longitude": -0.8176076,
+    "timestamp": "2024-12-13T17:31:52.499759097Z"
+  },
+  {
+    "address": {
+      "streetAddress": "route du stade",
+      "postalCode": "17810",
+      "addressLocality": "Saint Georges des Côteaux"
+    },
+    "latitude": 45.7669383,
+    "longitude": -0.7095616,
+    "failed": false,
+    "timestamp": "2024-12-13T17:31:53.865067292Z"
+  },
+  {
+    "address": {
+      "streetAddress": "Rue principale",
+      "postalCode": "67370",
+      "addressLocality": "WILLGOTTHEIM"
+    },
+    "latitude": 48.6711105,
+    "longitude": 7.5114482,
+    "failed": false,
+    "timestamp": "2024-12-13T17:31:57.41386821Z"
+  },
+  {
+    "address": {
+      "streetAddress": "22 Rue du Mal Assis",
+      "postalCode": "59000",
+      "addressLocality": "Lille",
+      "disambiguatingDescription": "Complexe tennistique Marcel Bernard"
+    },
+    "latitude": 50.6183361,
+    "longitude": 3.0253888,
+    "failed": false,
+    "timestamp": "2024-12-13T17:31:55.027273876Z"
+  },
+  {
+    "address": {
+      "streetAddress": "391 Avenue René Char",
+      "postalCode": "84210",
+      "addressLocality": "Pernes les Fontaines"
+    },
+    "latitude": 43.997694,
+    "longitude": 5.0692593,
+    "failed": false,
+    "timestamp": "2024-12-13T17:31:56.224697209Z"
+  },
+  {
+    "address": {
+      "streetAddress": "67 rue St François de Sales",
+      "postalCode": "73000",
+      "addressLocality": "chambery"
+    },
+    "latitude": 45.5669659,
+    "longitude": 5.9253014,
+    "failed": false,
+    "timestamp": "2024-12-13T17:32:03.828997005Z"
+  },
+  {
+    "address": {
+      "streetAddress": "Gymnase du Moulin Blanc",
+      "postalCode": "83990",
+      "addressLocality": "Saint-Tropez",
+      "disambiguatingDescription": "Route des Salins"
+    },
+    "failed": false,
+    "latitude": 43.2727191,
+    "longitude": 6.6405225,
+    "timestamp": "2024-12-13T17:32:00.974516003Z"
+  },
+  {
+    "address": {
+      "streetAddress": "41 rue Pierre de Coubertin",
+      "postalCode": "86000",
+      "addressLocality": "POITIERS"
+    },
+    "latitude": 46.5885803,
+    "longitude": 0.3653779,
+    "failed": false,
+    "timestamp": "2024-12-13T17:32:02.560384629Z"
+  },
+  {
+    "address": {
+      "streetAddress": " 3 rue Joseph Flamens",
+      "postalCode": "82100",
+      "addressLocality": "Castelsarrasin",
+      "disambiguatingDescription": "Gymnase Flamens"
+    },
+    "latitude": 44.0387855,
+    "longitude": 1.1120428366161645,
+    "failed": false,
+    "timestamp": "2024-12-13T17:31:59.831635878Z"
+  },
+  {
+    "address": {
+      "streetAddress": "51 rue Garnier Pagès",
+      "postalCode": "72000",
+      "addressLocality": "LE MANS",
+      "disambiguatingDescription": "Salle de Tennis de Table"
+    },
+    "latitude": 47.9939899,
+    "longitude": 0.1739227,
+    "failed": false,
+    "timestamp": "2024-12-13T17:31:58.674460669Z"
+  },
+  {
+    "address": {
+      "streetAddress": "Avenue Paul LANGEVIN",
+      "postalCode": "36130",
+      "addressLocality": "DEOLS"
+    },
+    "latitude": 46.8254589,
+    "longitude": 1.7033424,
+    "failed": false,
+    "timestamp": "2024-12-13T17:32:05.956788631Z"
+  },
+  {
+    "address": {
+      "streetAddress": "105 rue des fosses",
+      "postalCode": "45400",
+      "addressLocality": "fleury les aubaris"
+    },
+    "failed": false,
+    "latitude": 47.9295455,
+    "longitude": 1.9263593,
+    "timestamp": "2024-12-13T17:32:07.135911298Z"
+  },
+  {
+    "address": {
+      "streetAddress": "3, RUE GUSTAVE EIFFEL",
+      "postalCode": "10430",
+      "addressLocality": "ROSIERES PRES TROYES",
+      "disambiguatingDescription": "COSEC N°3 HENRI TERRE"
+    },
+    "latitude": 48.26447296939345,
+    "longitude": 4.082463288871201,
+    "failed": false,
+    "timestamp": "2024-12-21T11:07:23.336734719Z"
+  },
+  {
+    "address": {
+      "streetAddress": "30 avenue Aristide Briand",
+      "postalCode": "33110",
+      "addressLocality": "le bouscat"
+    },
+    "latitude": 44.866426400405295,
+    "longitude": -0.5808395887557757,
+    "failed": false,
+    "timestamp": "2024-12-13T17:32:08.186465007Z"
+  },
+  {
+    "address": {
+      "streetAddress": "11 Bis Rue Georges Clémenceau",
+      "postalCode": "79000",
+      "addressLocality": "NIORT"
+    },
+    "latitude": 46.3228547,
+    "longitude": -0.4444493,
+    "failed": false,
+    "timestamp": "2024-12-13T17:32:13.516338968Z"
+  },
+  {
+    "address": {
+      "streetAddress": "Chemin du feil",
+      "postalCode": "35500",
+      "addressLocality": "VITRE"
+    },
+    "latitude": 48.1071423,
+    "longitude": -1.1953422,
+    "failed": false,
+    "timestamp": "2024-12-13T17:32:10.7842103Z"
+  },
+  {
+    "address": {
+      "streetAddress": "10 rue Louis Roger",
+      "postalCode": "60000",
+      "addressLocality": "BEAUVAIS",
+      "disambiguatingDescription": "Gymnase Corot"
+    },
+    "latitude": 49.4170058,
+    "longitude": 2.0783942,
+    "failed": false,
+    "timestamp": "2024-12-13T17:32:14.834975135Z"
+  },
+  {
+    "address": {
+      "streetAddress": "Rue de Coup de Pied",
+      "postalCode": "72650",
+      "addressLocality": "La Chapelle-Saint-Aubin",
+      "disambiguatingDescription": "Complexe sportif Raoul Rousselière"
+    },
+    "latitude": 48.0339113,
+    "longitude": 0.1704417,
+    "failed": false,
+    "timestamp": "2024-12-13T17:32:09.633097966Z"
+  },
+  {
+    "address": {
+      "streetAddress": "complexe sportif des esum",
+      "postalCode": "59650",
+      "addressLocality": "VILLENEUVE D ASCQ",
+      "disambiguatingDescription": "allee de la frange"
+    },
+    "failed": false,
+    "latitude": 50.739304,
+    "longitude": 2.259288,
+    "timestamp": "2024-12-13T17:32:11.948818884Z"
+  },
+  {
+    "address": {
+      "streetAddress": "108 Avenue Claude Antoine peccot",
+      "postalCode": "44700",
+      "addressLocality": "ORVAULT"
+    },
+    "latitude": 47.25178725,
+    "longitude": -1.6094855021051098,
+    "failed": false,
+    "timestamp": "2024-12-13T17:32:16.344855427Z"
+  },
+  {
+    "address": {
+      "streetAddress": "Rue Galilée",
+      "postalCode": "13310",
+      "addressLocality": "Saint Martin de Crau",
+      "disambiguatingDescription": "Complexe Multisport du Salat"
+    },
+    "failed": false,
+    "latitude": 43.6384838,
+    "longitude": 4.8111564,
+    "timestamp": "2024-12-13T17:32:19.888605429Z"
+  },
+  {
+    "address": {
+      "streetAddress": "COSEC, route de la Petite Chapelle",
+      "postalCode": "5140",
+      "addressLocality": "MORTAIN"
+    },
+    "failed": false,
+    "latitude": 47.97626,
+    "longitude": 2.192634,
+    "timestamp": "2024-12-13T17:32:18.754363345Z"
+  },
+  {
+    "address": {
+      "streetAddress": "Rue du Moutier",
+      "postalCode": "51390",
+      "addressLocality": "GUEUX"
+    },
+    "latitude": 49.2494039,
+    "longitude": 3.9155937,
+    "failed": false,
+    "timestamp": "2024-12-13T17:32:21.251315305Z"
+  },
+  {
+    "address": {
+      "streetAddress": "Rue des Collèges",
+      "postalCode": "72230",
+      "addressLocality": "Arnage",
+      "disambiguatingDescription": "Gymnase Fernand Lusson et Salle Roger "
+    },
+    "latitude": 47.9394482,
+    "longitude": 0.1838816,
+    "failed": false,
+    "timestamp": "2024-12-13T17:32:26.36028796Z"
+  },
+  {
+    "address": {
+      "streetAddress": "31 rue Frédéric Joliot-Curie ",
+      "postalCode": "37550",
+      "addressLocality": "Saint-Avertin"
+    },
+    "latitude": 47.34651077043619,
+    "longitude": 0.7319774578235152,
+    "failed": false,
+    "timestamp": "2024-12-13T17:32:23.679751792Z"
+  },
+  {
+    "address": {
+      "streetAddress": "Rue Clément Pineau",
+      "postalCode": "79500",
+      "addressLocality": "Melle"
+    },
+    "latitude": 46.230352,
+    "longitude": -0.1342739,
+    "failed": false,
+    "timestamp": "2024-12-13T17:32:25.268237209Z"
+  },
+  {
+    "address": {
+      "streetAddress": "260 Avenue René Privas",
+      "postalCode": "07000",
+      "addressLocality": "Privas",
+      "disambiguatingDescription": "Salle Gaby Rampon"
+    },
+    "latitude": 44.72098185958565,
+    "longitude": 4.608775336436059,
+    "failed": false,
+    "timestamp": "2024-12-13T17:32:27.429166502Z"
+  },
+  {
+    "address": {
+      "streetAddress": "Impasse des Colibris",
+      "postalCode": "33380",
+      "addressLocality": "MIOS"
+    },
+    "failed": false,
+    "latitude": 44.608162,
+    "longitude": -0.932254,
+    "timestamp": "2024-12-13T17:32:22.398229764Z"
+  },
+  {
+    "address": {
+      "streetAddress": "4, place Emile Gaborit",
+      "postalCode": "85300",
+      "addressLocality": "SALLERTAINE",
+      "disambiguatingDescription": "Salles 1,2,3 et 4"
+    },
+    "latitude": 46.8608036,
+    "longitude": -1.9571912,
+    "failed": false,
+    "timestamp": "2024-12-13T17:32:29.062902794Z"
+  },
+  {
+    "address": {
+      "streetAddress": "rue du stade ",
+      "postalCode": "17700",
+      "addressLocality": "Surgères",
+      "disambiguatingDescription": "Gymnase n°2"
+    },
+    "latitude": 46.109164359702454,
+    "longitude": -0.7490644280392522,
+    "failed": false,
+    "timestamp": "2024-12-13T17:32:30.296792336Z"
+  },
+  {
+    "address": {
+      "streetAddress": "4 Parc de l'Artière",
+      "postalCode": "63122",
+      "addressLocality": "CEYRAT"
+    },
+    "latitude": 45.7352517,
+    "longitude": 3.068167,
+    "failed": false,
+    "timestamp": "2024-12-13T17:32:31.54049342Z"
+  },
+  {
+    "address": {
+      "streetAddress": "3 place Emile Loubet",
+      "postalCode": "26270",
+      "addressLocality": "SAULCE SUR RHONE",
+      "disambiguatingDescription": "Gymnase Georges Mirabel"
+    },
+    "latitude": 44.702843,
+    "longitude": 4.7993949,
+    "failed": false,
+    "timestamp": "2024-12-13T17:32:46.629916719Z"
+  },
+  {
+    "address": {
+      "streetAddress": "7 avenue François Mitterrand ",
+      "postalCode": "66300",
+      "addressLocality": "Thuir",
+      "disambiguatingDescription": "Salle des Aspres "
+    },
+    "latitude": 42.6325423,
+    "longitude": 2.7576117,
+    "failed": false,
+    "timestamp": "2024-12-13T17:32:34.669363547Z"
+  },
+  {
+    "address": {
+      "streetAddress": "salle de Tennis - Route de Descartes ",
+      "postalCode": "86220",
+      "addressLocality": "Dangé-St Romain"
+    },
+    "failed": false,
+    "latitude": 46.928119,
+    "longitude": 0.603622,
+    "timestamp": "2024-12-13T17:32:38.231599632Z"
+  },
+  {
+    "address": {
+      "streetAddress": "Rue de Peusec",
+      "postalCode": "16400",
+      "addressLocality": "Puymoyen"
+    },
+    "latitude": 45.6182484,
+    "longitude": 0.1814216,
+    "failed": false,
+    "timestamp": "2024-12-13T17:32:36.972899173Z"
+  },
+  {
+    "address": {
+      "streetAddress": "2349 avenue René Cassin",
+      "postalCode": "73290",
+      "addressLocality": "LA MOTTE SERVOLEX",
+      "disambiguatingDescription": "Gymnase de l'Epine"
+    },
+    "latitude": 45.5977183,
+    "longitude": 5.8844847,
+    "failed": false,
+    "timestamp": "2024-12-13T17:32:41.555073092Z"
+  },
+  {
+    "address": {
+      "streetAddress": "Impasse Max Linder(rue Max Linder)",
+      "postalCode": "33450",
+      "addressLocality": "saint loubès",
+      "disambiguatingDescription": "Gymnase"
+    },
+    "failed": false,
+    "latitude": 47.305546,
+    "longitude": 0.537325,
+    "timestamp": "2024-12-13T17:32:39.802077883Z"
+  },
+  {
+    "address": {
+      "streetAddress": "Salle des Sports",
+      "postalCode": "60410",
+      "addressLocality": "SAINTINES"
+    },
+    "failed": false,
+    "latitude": 49.3066982,
+    "longitude": 2.7641135,
+    "timestamp": "2024-12-13T17:32:43.161672509Z"
+  },
+  {
+    "address": {
+      "streetAddress": "5 rue des sports",
+      "postalCode": "37210",
+      "addressLocality": "Parçay-Meslay"
+    },
+    "latitude": 47.441806,
+    "longitude": 0.7420563,
+    "failed": false,
+    "timestamp": "2024-12-13T17:32:44.513742135Z"
+  },
+  {
+    "address": {
+      "streetAddress": "3 place Emile Loubet",
+      "postalCode": "26270",
+      "addressLocality": "SAULCE SUR RHONE",
+      "disambiguatingDescription": "Gymnase Georges Mirabel"
+    },
+    "latitude": 44.702843,
+    "longitude": 4.7993949,
+    "failed": false,
+    "timestamp": "2024-12-13T17:32:46.629916719Z"
+  },
+  {
+    "address": {
+      "streetAddress": "RUE LIONEL TERRAY ",
+      "postalCode": "38130",
+      "addressLocality": "Echirolles"
+    },
+    "latitude": 45.14513810748569,
+    "longitude": 5.717234440809883,
+    "failed": false,
+    "timestamp": "2024-12-23T22:06:34.51189725Z"
+  }
+]
