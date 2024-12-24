@@ -9,7 +9,7 @@ COPY api ./
 RUN CGO_ENABLED=0 GOOS=linux go build -o /go/bin/api ./cmd/main.go
 
 # Frontend build stage
-FROM node:18-alpine AS frontend-build
+FROM node:20.18.1-alpine AS frontend-build
 WORKDIR /app/frontend
 
 # Install global dependencies
