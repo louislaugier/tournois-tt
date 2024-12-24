@@ -1,6 +1,6 @@
 export default {
     // ['layerManager.addData']: 'Test'
-    layerManager: {
-        addData: 'Testt'
+    placeholder: {
+        enterValue: 'Sélectionner / rechercher'
     }
 }

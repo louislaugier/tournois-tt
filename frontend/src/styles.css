@@ -99,3 +99,16 @@ body {
 .edit-feature.toolbar-item.edit-feature {
   display: none !important;
 }
+
+.panel--header__action {
+  display: none !important;
+}
+
+.filter-panel__header {
+  border-image: none !important;
+  border-left: 3px solid #1FBAD6 !important;
+}
+
+.select-geometry {
+  display: none !important;
+}

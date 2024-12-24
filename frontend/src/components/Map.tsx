@@ -16,7 +16,7 @@ export const Map: React.FC<MapProps> = ({ id, width, height }) => {
       width={width}
       height={height}
       mapboxApiAccessToken={MAPBOX_TOKEN}
-      locale={fr}
+      localeMessages={{ en: fr }}
     />
   );
 }; 
