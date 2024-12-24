@@ -112,3 +112,8 @@ body {
 .select-geometry {
   display: none !important;
 }
+
+.popover-arrow-left,
+.popover-pin {
+  display: none !important;
+}
