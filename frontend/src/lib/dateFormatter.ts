@@ -5,6 +5,7 @@ export function initializeDateFormatter(): void {
     const [datePart] = text.split(' ');
     if (!datePart) return;
     
+    // For all elements, convert from MM/DD/YYYY to DD/MM/YYYY
     const [month, day, year] = datePart.split('/');
     if (parseInt(month) <= 12 && !element.hasAttribute('data-formatted')) {
       element.textContent = `${day}/${month}/${year}`;
@@ -13,7 +14,7 @@ export function initializeDateFormatter(): void {
   }
 
   function formatAllDates(): void {
-    const dateElements: NodeListOf<HTMLElement> = document.querySelectorAll('.animation-control__time-domain span');
+    const dateElements: NodeListOf<HTMLElement> = document.querySelectorAll('.animation-control__time-domain span, .animation-control__time-display__top');
     dateElements.forEach(formatDate);
   }
 
@@ -25,7 +26,7 @@ export function initializeDateFormatter(): void {
     mutations.forEach((mutation) => {
       if (mutation.type === 'characterData') {
         const element = mutation.target.parentElement as HTMLElement;
-        if (element && element.closest('.animation-control__time-domain')) {
+        if (element && (element.closest('.animation-control__time-domain') || element.closest('.animation-control__time-display__top'))) {
           element.removeAttribute('data-formatted');
           formatDate(element);
         }
