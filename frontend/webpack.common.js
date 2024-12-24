@@ -1,6 +1,7 @@
 const path = require('path');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const webpack = require('webpack');
+const CopyWebpackPlugin = require('copy-webpack-plugin');
 
 module.exports = {
   entry: './src/index.tsx',
@@ -56,7 +57,14 @@ module.exports = {
     new HtmlWebpackPlugin({
       template: './public/index.html',
       inject: 'body',
-      scriptLoading: 'defer'
+      scriptLoading: 'defer',
+      favicon: './public/favicon.ico'
+    }),
+    new CopyWebpackPlugin({
+      patterns: [
+        { from: 'public/favicon.ico', to: 'favicon.ico' },
+        { from: 'public/ads.txt', to: 'ads.txt' }
+      ]
     }),
     new webpack.ProvidePlugin({
       React: 'react',
