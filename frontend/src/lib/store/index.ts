@@ -7,7 +7,8 @@ const customizedKeplerGlReducer = keplerGlReducer.initialState({
     currentModal: null,
     activeSidePanel: 'filter',
     readOnly: true,
-    lastActiveSidePanel: 'filter'
+    lastActiveSidePanel: 'filter',
+    // locale: 'fr'
   },
   mapStyle: {
     topLayerGroups: {},
