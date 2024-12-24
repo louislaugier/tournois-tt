@@ -53,13 +53,7 @@ func getCacheDirectory() string {
 		return "cache"
 	}
 
-	// In production, the binary is in /app/api
-	if execDir == "/app/api" {
-		return filepath.Join(execDir, "cache")
-	}
-
-	// For local development
-	return filepath.Join(execDir, "api", "cache")
+	return filepath.Join(execDir, "cache")
 }
 
 // saveGeocodeResultsToCache saves geocoding results to a JSON file
