@@ -99,20 +99,3 @@ body {
 .edit-feature.toolbar-item.edit-feature {
   display: none !important;
 }
-
-.side-panel--container {
-  transition: width 0.3s ease-in-out !important;
-}
-
-.side-bar__inner {
-  transition: width 0.3s ease-in-out, opacity 0.3s ease-in-out !important;
-}
-
-.side-panel--container.collapsed {
-  width: 0px !important;
-}
-
-.side-bar__inner.collapsed {
-  width: 0px !important;
-  opacity: 0 !important;
-}
