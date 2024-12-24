@@ -13,9 +13,37 @@ export function initializeDateFormatter(): void {
     }
   }
 
+  function translateMonths(): void {
+    const monthTranslations: { [key: string]: string } = {
+      'January': 'Janvier',
+      'February': 'Février',
+      'March': 'Mars',
+      'April': 'Avril',
+      'May': 'Mai',
+      'June': 'Juin',
+      'July': 'Juillet',
+      'August': 'Août',
+      'September': 'Septembre',
+      'October': 'Octobre',
+      'November': 'Novembre',
+      'December': 'Décembre'
+    };
+
+    const timeSliderElements = document.querySelectorAll('.time-slider-marker text');
+    timeSliderElements.forEach((element) => {
+      const text = element.textContent || '';
+      const translatedMonth = monthTranslations[text];
+      if (translatedMonth && !element.hasAttribute('data-translated')) {
+        element.textContent = translatedMonth;
+        element.setAttribute('data-translated', 'true');
+      }
+    });
+  }
+
   function formatAllDates(): void {
     const dateElements: NodeListOf<HTMLElement> = document.querySelectorAll('.animation-control__time-domain span, .animation-control__time-display__top');
     dateElements.forEach(formatDate);
+    translateMonths();
   }
 
   // Initial formatting and cloning
@@ -43,4 +71,7 @@ export function initializeDateFormatter(): void {
     childList: true,
     subtree: true
   });
+
+  // Add periodic check for new elements that need translation
+  setInterval(translateMonths, 1000);
 } 
