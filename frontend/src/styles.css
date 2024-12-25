@@ -123,3 +123,21 @@ body {
   background-color: #242730 !important;
   border: none !important;
 }
+
+.map-popover>div:nth-child(2) {
+  margin-top: 0 !important;
+}
+
+.map-popover{
+  padding-top: 7.5px !important;
+  padding-bottom: 1.5px !important;
+}
+
+.map-popover__layer-info>div:last-child {
+  display: none !important;
+}
+
+/* Only apply margin when within a Tournoi tooltip */
+.map-popover[data-layer-name*="Tournoi"] .jlDYGb {
+  margin-bottom: 10px !important;
+}
