@@ -117,3 +117,12 @@ body {
 .popover-pin {
   display: none !important;
 }
+
+.item-selector__dropdown:hover {
+  pointer-events: none !important;
+}
+
+.item-selector__dropdown {
+  background-color: #242730 !important;
+  border: none !important;
+}
