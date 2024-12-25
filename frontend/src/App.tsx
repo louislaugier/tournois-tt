@@ -37,6 +37,52 @@ const formatDateDDMMYYYY = (date: Date | string) => {
   return `${day}/${month}/${year}`;
 };
 
+const formatPostcode = (postcode: string | undefined): string => {
+  if (!postcode) return '';  // Return empty string for undefined/null
+  
+  // Remove any non-digit characters and convert to string
+  const cleanPostcode = postcode.toString().replace(/\D/g, '');
+  
+  // Return the cleaned string or empty string
+  return cleanPostcode || '';
+};
+
+const formatCityName = (city: string): string => {
+  const upperCity = city?.toUpperCase() || '';
+
+  // Special case for VILLENEUVE D ASCQ
+  if (upperCity === 'VILLENEUVE D ASCQ') {
+    return "VILLENEUVE D'ASCQ";
+  }
+
+  // Replace STE and ST with full words
+  const cityWithFullWords = upperCity
+    .replace(/\bSTE\b/g, 'SAINTE')
+    .replace(/\bST\b/g, 'SAINT');
+
+  // Split the string into words
+  const words = cityWithFullWords.split(' ');
+  const result: string[] = [];
+
+  for (let i = 0; i < words.length; i++) {
+    const currentWord = words[i];
+    const nextWord = words[i + 1];
+
+    // Add current word
+    result.push(currentWord);
+
+    // If there's a next word and current word is not LA/LE/LES, add hyphen
+    if (nextWord && !['LA', 'LE', 'LES'].includes(currentWord)) {
+      result.push('-');
+    } else if (nextWord) {
+      // If it is LA/LE/LES, add space
+      result.push(' ');
+    }
+  }
+
+  return result.join('');
+};
+
 const CustomMapPopover: React.FC<any> = ({ data }) => {
   if (!data || data.length === 0) return null;
 
@@ -136,7 +182,13 @@ const App: React.FC = () => {
             approximate: true
           }
         }))
-      ];
+      ].map(t => ({
+        ...t,
+        address: {
+          ...t.address,
+          postalCode: formatPostcode(t.address.postalCode)
+        }
+      }));
 
       if (allTournamentsForMap.length > 0) {
         const enhancedMapConfig = {
@@ -174,6 +226,23 @@ const App: React.FC = () => {
             },
             filters: [
               {
+                id: 'date_filter',
+                dataId: ['tournoi'],
+                name: ['Dates de début des tournois'],
+                type: 'timeRange',
+                value: [
+                  Math.min(...tournaments.map(t => new Date(t.startDate).getTime())),
+                  Math.max(...tournaments.map(t => new Date(t.startDate).getTime()))
+                ],
+                enlarged: true,
+                plotType: 'histogram',
+                layerId: undefined,
+                field: {
+                  type: 'timestamp',
+                  name: 'Dates de début des tournois'
+                }
+              },
+              {
                 id: 'type_filter',
                 dataId: ['tournoi'],
                 name: ['Type de tournoi'],
@@ -202,23 +271,6 @@ const App: React.FC = () => {
                 }
               },
               {
-                id: 'date_filter',
-                dataId: ['tournoi'],
-                name: ['Dates de début des tournois'],
-                type: 'timeRange',
-                value: [
-                  Math.min(...tournaments.map(t => new Date(t.startDate).getTime())),
-                  Math.max(...tournaments.map(t => new Date(t.startDate).getTime()))
-                ],
-                enlarged: true,
-                plotType: 'histogram',
-                layerId: undefined,
-                field: {
-                  type: 'timestamp',
-                  name: 'Dates de début des tournois'
-                }
-              },
-              {
                 id: 'endowment_filter',
                 dataId: ['tournoi'],
                 name: ['Dotation totale (€)'],
@@ -230,6 +282,33 @@ const App: React.FC = () => {
                 field: {
                   type: 'real',
                   name: 'Dotation totale (€)'
+                }
+              },
+              // {
+              //   id: 'postcode_filter',
+              //   dataId: ['tournoi'],
+              //   name: ['Code postal'],
+              //   type: 'multiSelect',
+              //   value: [],
+              //   enlarged: false,
+              //   plotType: 'histogram',
+              //   fieldType: 'string',
+              //   layerId: undefined,
+              //   field: {
+              //     type: 'string',
+              //     name: 'Code postal'
+              //   }
+              // },
+              {
+                id: 'city_filter',
+                dataId: ['tournoi'],
+                name: ['Ville'],
+                type: 'multiSelect',
+                value: [],
+                enlarged: false,
+                field: {
+                  type: 'string',
+                  name: 'Ville'
                 }
               },
               {
@@ -245,7 +324,7 @@ const App: React.FC = () => {
                   type: 'string',
                   name: 'Nom du tournoi'
                 }
-              }
+              },
             ],
             layers: [
               {
@@ -391,6 +470,8 @@ const App: React.FC = () => {
             { name: 'Dates de début des tournois', type: 'date' },
             { name: 'Adresse', type: 'string' },
             { name: 'Règlement', type: 'string' },
+            { name: 'Code postal', type: 'string', analyzerType: 'STRING_ID' },
+            { name: 'Ville', type: 'string' },
             { name: 'count', type: 'integer' },
             { name: 'count_display', type: 'string' },
             { name: 'size_multiplier', type: 'real' }
@@ -416,13 +497,13 @@ const App: React.FC = () => {
             location.tournaments.map(t => t.name).join(' | '),
             location.tournaments.map(t => t.type).join(' | '),
             Array.from(new Set<string>(location.tournaments.map(t => `${t.club.name} (${t.club.identifier})`))).join(' | '),
-            location.tournaments.map(t => 
-              (typeof t.endowment === 'number' && t.endowment > 0
-                ? Math.floor(t.endowment / 100)
-                : (t.tables?.reduce((sum, table) => sum + (table.endowment || 0), 0) || 0) / 100)
+            location.tournaments.map(t =>
+            (typeof t.endowment === 'number' && t.endowment > 0
+              ? Math.floor(t.endowment / 100)
+              : (t.tables?.reduce((sum, table) => sum + (table.endowment || 0), 0) || 0) / 100)
             ).join(' | '),
-            location.tournaments.map(t => 
-              t.startDate === t.endDate 
+            location.tournaments.map(t =>
+              t.startDate === t.endDate
                 ? formatDateDDMMYYYY(t.startDate)
                 : `${formatDateDDMMYYYY(t.startDate)} - ${formatDateDDMMYYYY(t.endDate)}`
             ).join(' | '),
@@ -431,6 +512,8 @@ const App: React.FC = () => {
               ? `${location.tournaments[0].address.disambiguatingDescription ? location.tournaments[0].address.disambiguatingDescription + ' ' : ''}${location.tournaments[0].address.streetAddress}, ${location.tournaments[0].address.postalCode} ${location.tournaments[0].address.addressLocality}`
               : 'Adresse non disponible',
             location.tournaments.map(t => t.rules?.url || 'Pas encore de règlement').join(' | '),
+            `${formatPostcode(location.tournaments[0].address.postalCode)}`,
+            formatCityName(location.tournaments[0].address.addressLocality),
             location.count,
             location.count > 1 ? location.count.toString() : '',
             location.count > 1 ? 1.5 : 1

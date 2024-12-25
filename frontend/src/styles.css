@@ -72,23 +72,12 @@ body {
   display: none !important;
 }
 
-/* .map-control>button:first-child {
-  display: none !important;
-}
-
-.map-control>div:nth-child(4) {
-  display: none !important;
-}
-
-.map-control>div:nth-child(5) {
-  display: none !important;
-} */
-
 .data-source-selector.side-panel-section.data-source-selector {
   display: none !important;
 }
 
-.side-panel-section>div:nth-child(3) {
+/* hide date filter in sidebar */
+.side-panel-section>div:nth-child(6) {
   display: none !important;
 }
 
