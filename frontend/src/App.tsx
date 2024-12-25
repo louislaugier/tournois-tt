@@ -172,7 +172,7 @@ const App: React.FC = () => {
               // Find and style jlDYGb elements within this tooltip
               const tooltipContainer = el.closest('.map-popover');
               tooltipContainer?.querySelectorAll('.jlDYGb').forEach((jlElement) => {
-                (jlElement as HTMLElement).style.marginBottom = '10px';
+                (jlElement as HTMLElement).style.marginBottom = '12.5px';
               });
             } else {
               (el as HTMLElement).style.display = '';

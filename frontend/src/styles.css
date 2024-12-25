@@ -136,8 +136,3 @@ body {
 .map-popover__layer-info>div:last-child {
   display: none !important;
 }
-
-/* Only apply margin when within a Tournoi tooltip */
-.map-popover[data-layer-name*="Tournoi"] .jlDYGb {
-  margin-bottom: 10px !important;
-}
