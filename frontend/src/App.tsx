@@ -39,12 +39,7 @@ const formatDateDDMMYYYY = (date: Date | string) => {
 
 const formatPostcode = (postcode: string | undefined): string => {
   if (!postcode) return '';  // Return empty string for undefined/null
-  
-  // Remove any non-digit characters and convert to string
-  const cleanPostcode = postcode.toString().replace(/\D/g, '');
-  
-  // Return the cleaned string or empty string
-  return cleanPostcode || '';
+  return postcode.toString();
 };
 
 const formatCityName = (city: string): string => {
@@ -257,17 +252,17 @@ const App: React.FC = () => {
                 }
               },
               {
-                id: 'club_filter',
+                id: 'postcode_filter',
                 dataId: ['tournoi'],
-                name: ['Club organisateur'],
-                type: 'multiSelect',
-                value: [],
+                name: ['Code postal'],
+                type: 'input',
+                fieldType: 'string',
+                value: '',
                 enlarged: false,
-                plotType: 'histogram',
                 layerId: undefined,
                 field: {
                   type: 'string',
-                  name: 'Club organisateur'
+                  name: 'Code postal'
                 }
               },
               {
@@ -284,21 +279,20 @@ const App: React.FC = () => {
                   name: 'Dotation totale (€)'
                 }
               },
-              // {
-              //   id: 'postcode_filter',
-              //   dataId: ['tournoi'],
-              //   name: ['Code postal'],
-              //   type: 'multiSelect',
-              //   value: [],
-              //   enlarged: false,
-              //   plotType: 'histogram',
-              //   fieldType: 'string',
-              //   layerId: undefined,
-              //   field: {
-              //     type: 'string',
-              //     name: 'Code postal'
-              //   }
-              // },
+              {
+                id: 'club_filter',
+                dataId: ['tournoi'],
+                name: ['Club organisateur'],
+                type: 'multiSelect',
+                value: [],
+                enlarged: false,
+                plotType: 'histogram',
+                layerId: undefined,
+                field: {
+                  type: 'string',
+                  name: 'Club organisateur'
+                }
+              },
               {
                 id: 'city_filter',
                 dataId: ['tournoi'],
@@ -470,7 +464,7 @@ const App: React.FC = () => {
             { name: 'Dates de début des tournois', type: 'date' },
             { name: 'Adresse', type: 'string' },
             { name: 'Règlement', type: 'string' },
-            { name: 'Code postal', type: 'string', analyzerType: 'STRING_ID' },
+            { name: 'Code postal', type: 'string' },
             { name: 'Ville', type: 'string' },
             { name: 'count', type: 'integer' },
             { name: 'count_display', type: 'string' },
@@ -495,7 +489,7 @@ const App: React.FC = () => {
             location.latitude,
             location.longitude,
             location.tournaments.map(t => t.name).join(' | '),
-            location.tournaments.map(t => t.type).join(' | '),
+            Array.from(new Set<string>(location.tournaments.map(t => t.type))).join(' | '),
             Array.from(new Set<string>(location.tournaments.map(t => `${t.club.name} (${t.club.identifier})`))).join(' | '),
             location.tournaments.map(t =>
             (typeof t.endowment === 'number' && t.endowment > 0
@@ -512,7 +506,7 @@ const App: React.FC = () => {
               ? `${location.tournaments[0].address.disambiguatingDescription ? location.tournaments[0].address.disambiguatingDescription + ' ' : ''}${location.tournaments[0].address.streetAddress}, ${location.tournaments[0].address.postalCode} ${location.tournaments[0].address.addressLocality}`
               : 'Adresse non disponible',
             location.tournaments.map(t => t.rules?.url || 'Pas encore de règlement').join(' | '),
-            `${formatPostcode(location.tournaments[0].address.postalCode)}`,
+            Array.from(new Set<string>(location.tournaments.map(t => formatPostcode(t.address.postalCode)))).join(' | '),
             formatCityName(location.tournaments[0].address.addressLocality),
             location.count,
             location.count > 1 ? location.count.toString() : '',
@@ -564,6 +558,7 @@ const App: React.FC = () => {
           mapboxApiAccessToken={MAPBOX_TOKEN}
           localeMessages={{ en: fr }}
         />
+        <p>test</p>
       </div>
     </Provider>
   );

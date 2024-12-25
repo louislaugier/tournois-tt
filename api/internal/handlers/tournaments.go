@@ -158,8 +158,13 @@ func TournamentsHandler(c *gin.Context) {
 	queryParams := c.Request.URL.Query()
 	log.Printf("Query params: %v", queryParams)
 
+	// Log specific postcode parameter if present
+	if postcode := queryParams.Get("address.postalCode"); postcode != "" {
+		log.Printf("Filtering by postcode: %s", postcode)
+	}
+
 	// Call FFTT API
-	log.Printf("Calling FFTT API")
+	log.Printf("Calling FFTT API with URL-encoded params: %s", queryParams.Encode())
 	resp, err := fftt.GetClient().GetTournaments(queryParams)
 	if err != nil {
 		log.Printf("Error fetching from FFTT API: %v", err)
@@ -207,11 +212,21 @@ func TournamentsHandler(c *gin.Context) {
 
 	// Convert to our internal type
 	tournaments := make([]Tournament, len(ffttTournaments))
+	log.Printf("Processing %d tournaments", len(ffttTournaments))
+
 	for i, t := range ffttTournaments {
 		tournaments[i] = t
 
+		// Log postcode for each tournament if we're filtering by postcode
+		if queryParams.Get("address.postalCode") != "" {
+			log.Printf("Tournament %s postcode: %s", t.Name, t.Address.PostalCode)
+		}
+
 		// Map the tournament type to full form
 		tournaments[i].Type = mapTournamentType(t.Type)
+
+		// Append a dot to the postal code
+		tournaments[i].Address.PostalCode = tournaments[i].Address.PostalCode + "\u200e"
 
 		// Debug logging for rules URL
 		if tournaments[i].Rules != nil {
@@ -232,18 +247,18 @@ func TournamentsHandler(c *gin.Context) {
 			continue
 		} else {
 			// Attempt to geocode if not in cache
-			// coords, err := geocoding.GetCoordinates(t.Address)
-			// if err != nil {
-			// 	log.Printf("Warning: Failed to get coordinates for tournament %s: %v", t.Name, err)
-			// 	continue
-			// }
+			coords, err := geocoding.GetCoordinates(t.Address)
+			if err != nil {
+				log.Printf("Warning: Failed to get coordinates for tournament %s: %v", t.Name, err)
+				continue
+			}
 
-			// if !coords.Failed {
-			// 	tournaments[i].Address.Latitude = coords.Lat
-			// 	tournaments[i].Address.Longitude = coords.Lon
-			// } else {
-			// 	tournaments[i].Address.Failed = true
-			// }
+			if !coords.Failed {
+				tournaments[i].Address.Latitude = coords.Lat
+				tournaments[i].Address.Longitude = coords.Lon
+			} else {
+				tournaments[i].Address.Failed = true
+			}
 		}
 	}
 

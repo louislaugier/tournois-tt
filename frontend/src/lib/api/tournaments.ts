@@ -125,17 +125,22 @@ export class TournamentQueryBuilder {
     }
 
     inPostalCode(postalCode: string): this {
+        console.log('Filtering by postal code:', postalCode);
         this.params['address.postalCode'] = postalCode;
         return this;
     }
 
     inLocality(locality: string): this {
+        console.log('Filtering by locality:', locality);
         this.params['address.addressLocality'] = locality;
         return this;
     }
 
     async execute(): Promise<Tournament[]> {
-        return fetchTournaments(this.params);
+        console.log('Executing tournament query with params:', this.params);
+        const results = await fetchTournaments(this.params);
+        console.log('Query results:', results);
+        return results;
     }
 
     async executeAndLogAll(): Promise<Tournament[]> {

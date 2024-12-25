@@ -1,6 +1,7 @@
 package fftt
 
 import (
+	"log"
 	"net/http"
 	"net/url"
 	"sync"
@@ -28,7 +29,14 @@ func (c *Client) GetTournaments(params url.Values) (*http.Response, error) {
 		return nil, err
 	}
 
+	log.Printf("FFTT API raw query params: %v", params)
+
+	if postcode := params.Get("address.postalCode"); postcode != "" {
+		log.Printf("FFTT API postcode filter: %s", postcode)
+	}
+
 	req.URL.RawQuery = params.Encode()
+	log.Printf("FFTT API final URL: %s", req.URL.String())
 
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("Referer", "https://monclub.fftt.com/")
