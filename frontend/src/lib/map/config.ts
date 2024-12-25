@@ -12,7 +12,7 @@ export const DEFAULT_MAP_CONFIG = {
                         { name: 'Type de tournoi', format: null },
                         { name: 'Club organisateur', format: null },
                         { name: 'Dotation totale (€)', format: null },
-                        { name: 'Dates', format: null },
+                        { name: 'Date(s)', format: null },
                         {
                             name: 'Adresse',
                             format: 'Voir sur Google Maps',

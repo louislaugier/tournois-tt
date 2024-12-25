@@ -53,7 +53,7 @@ const CustomMapPopover: React.FC<any> = ({ data }) => {
         <p><strong>Type:</strong> {point.Type}</p>
         <p><strong>Club:</strong> {point.Club}</p>
         <p><strong>Dotation:</strong> {point.Dotation}</p>
-        <p><strong>Dates:</strong> {point.Dates}</p>
+        <p><strong>Date(s):</strong> {point.Dates}</p>
         <p><strong>Adresse:</strong> {point.Adresse}</p>
         {point.Règlement && (
           <p>
@@ -152,7 +152,7 @@ const App: React.FC = () => {
                     { name: 'Type de tournoi', format: null },
                     { name: 'Club organisateur', format: null },
                     { name: 'Dotation totale (€)', format: null },
-                    { name: 'Dates', format: null },
+                    { name: 'Date(s)', format: null },
                     { name: 'Adresse', format: null },
                     { name: 'Règlement', format: null }
                   ],
@@ -204,7 +204,7 @@ const App: React.FC = () => {
               {
                 id: 'date_filter',
                 dataId: ['tournoi'],
-                name: ['Date de début du tournoi'],
+                name: ['Dates de début des tournois'],
                 type: 'timeRange',
                 value: [
                   Math.min(...tournaments.map(t => new Date(t.startDate).getTime())),
@@ -215,7 +215,7 @@ const App: React.FC = () => {
                 layerId: undefined,
                 field: {
                   type: 'timestamp',
-                  name: 'Date de début du tournoi'
+                  name: 'Dates de début des tournois'
                 }
               },
               {
@@ -257,34 +257,36 @@ const App: React.FC = () => {
                   color: [31, 186, 214] as [number, number, number],
                   columns: {
                     lat: 'latitude',
-                    lng: 'longitude',
-                    altitude: 'Dotation'
+                    lng: 'longitude'
                   } as { [key: string]: string },
                   isVisible: true,
                   visConfig: {
-                    radius: 13,
-                    fillColor: [31, 186, 214] as [number, number, number],
-                    opacity: 0.8
+                    radius: 20,
+                    fixedRadius: false,
+                    opacity: 0.8,
+                    outline: false,
+                    filled: true,
+                    radiusRange: [20, 30]
                   },
                   textLabel: {
-                    field: { name: '', type: 'string' },
+                    field: { name: 'count_display', type: 'string' },
                     color: [255, 255, 255] as [number, number, number],
-                    size: 12,
+                    size: 14,
                     offset: [0, 0] as [number, number],
-                    anchor: 'start',
+                    anchor: 'middle',
                     alignment: 'center',
+                    background: false,
                     outlineWidth: 0,
                     outlineColor: [0, 0, 0, 0] as [number, number, number, number],
-                    background: false,
                     backgroundColor: [0, 0, 0, 0] as [number, number, number, number]
                   }
                 },
                 visualChannels: {
-                  colorField: { name: '', type: 'string' },
+                  colorField: null,
                   colorScale: 'quantile',
-                  sizeField: { name: '', type: 'string' },
+                  sizeField: { name: 'size_multiplier', type: 'real' },
                   sizeScale: 'linear',
-                  strokeColorField: { name: '', type: 'string' },
+                  strokeColorField: null,
                   strokeColorScale: 'quantile'
                 }
               },
@@ -385,26 +387,53 @@ const App: React.FC = () => {
             { name: 'Type de tournoi', type: 'string' },
             { name: 'Club organisateur', type: 'string' },
             { name: 'Dotation totale (€)', type: 'real', analyzerType: 'INT' },
-            { name: 'Dates', type: 'date' },
-            { name: 'Date de début du tournoi', type: 'date' },
+            { name: 'Date(s)', type: 'date' },
+            { name: 'Dates de début des tournois', type: 'date' },
             { name: 'Adresse', type: 'string' },
-            { name: 'Règlement', type: 'string' }
+            { name: 'Règlement', type: 'string' },
+            { name: 'count', type: 'integer' },
+            { name: 'count_display', type: 'string' },
+            { name: 'size_multiplier', type: 'real' }
           ],
-          rows: allTournamentsForMap.map(t => [
-            t.address.latitude,
-            t.address.longitude,
-            t.name || 'Tournoi sans nom',
-            t.type || 'Non spécifié',
-            t.club.name ? `${t.club.name}${t.club.identifier ? ` (${t.club.identifier})` : ''}` : 'Club non spécifié',
-            typeof t.endowment === 'number' && t.endowment > 0
-              ? Math.floor(t.endowment / 100)
-              : (t.tables?.reduce((sum, table) => sum + (table.endowment || 0), 0) || 0) / 100,
-            `${formatDateDDMMYYYY(t.startDate)} - ${formatDateDDMMYYYY(t.endDate)}`,
-            new Date(t.startDate).getTime(),
-            t.address.streetAddress
-              ? `${t.address.disambiguatingDescription ? t.address.disambiguatingDescription + ' ' : ''}${t.address.streetAddress}, ${t.address.postalCode} ${t.address.addressLocality}`
+          rows: Object.values(
+            allTournamentsForMap.reduce((acc, t) => {
+              const key = `${t.address.latitude},${t.address.longitude}`;
+              if (!acc[key]) {
+                acc[key] = {
+                  latitude: t.address.latitude,
+                  longitude: t.address.longitude,
+                  tournaments: [],
+                  count: 0
+                };
+              }
+              acc[key].tournaments.push(t);
+              acc[key].count++;
+              return acc;
+            }, {} as Record<string, any>)
+          ).map(location => [
+            location.latitude,
+            location.longitude,
+            location.tournaments.map(t => t.name).join(' | '),
+            location.tournaments.map(t => t.type).join(' | '),
+            Array.from(new Set<string>(location.tournaments.map(t => `${t.club.name} (${t.club.identifier})`))).join(' | '),
+            location.tournaments.map(t => 
+              (typeof t.endowment === 'number' && t.endowment > 0
+                ? Math.floor(t.endowment / 100)
+                : (t.tables?.reduce((sum, table) => sum + (table.endowment || 0), 0) || 0) / 100)
+            ).join(' | '),
+            location.tournaments.map(t => 
+              t.startDate === t.endDate 
+                ? formatDateDDMMYYYY(t.startDate)
+                : `${formatDateDDMMYYYY(t.startDate)} - ${formatDateDDMMYYYY(t.endDate)}`
+            ).join(' | '),
+            Math.min(...location.tournaments.map(t => new Date(t.startDate).getTime())),
+            location.tournaments[0].address.streetAddress
+              ? `${location.tournaments[0].address.disambiguatingDescription ? location.tournaments[0].address.disambiguatingDescription + ' ' : ''}${location.tournaments[0].address.streetAddress}, ${location.tournaments[0].address.postalCode} ${location.tournaments[0].address.addressLocality}`
               : 'Adresse non disponible',
-            t.rules?.url || 'Pas encore de règlement'
+            location.tournaments.map(t => t.rules?.url || 'Pas encore de règlement').join(' | '),
+            location.count,
+            location.count > 1 ? location.count.toString() : '',
+            location.count > 1 ? 1.5 : 1
           ])
         };
 
