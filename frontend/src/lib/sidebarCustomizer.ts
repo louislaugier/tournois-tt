@@ -1,5 +1,5 @@
 export function initializeSidebarCustomizer(): void {
-  function cloneSidebarClose(): void {
+  function cloneSidebarClose(): boolean {
     console.log('Attempting to find .side-bar__close element...');
     const originalElement = document.querySelector('.side-bar__close');
     console.log('Original element found:', originalElement);
@@ -28,15 +28,10 @@ export function initializeSidebarCustomizer(): void {
           const opacity = isOpen ? '0' : '1';
           
           sideBar.style.width = width;
-
           sidePanel.style.width = width;
-
           content.style.opacity = opacity;
-
         }
       });
-      
-      console.log('Clone created and modified:', cleanCopy);
       
       if (originalElement.parentNode) {
         console.log('Parent node found, inserting clone...');
@@ -44,21 +39,42 @@ export function initializeSidebarCustomizer(): void {
         // Remove the original element
         originalElement.remove();
         console.log('Clone inserted successfully and original removed');
+        return true;
       } else {
         console.warn('No parent node found for the original element');
+        return false;
       }
     } else {
       console.warn('Could not find .side-bar__close element in the DOM');
+      return false;
     }
   }
 
-  // Initial formatting and cloning
+  // Initial formatting and cloning with retry mechanism
   console.log('Starting initialization...');
   
+  let retryCount = 0;
+  const maxRetries = 5;
+  const retryInterval = 1000; // 1 second
+
+  function attemptClone() {
+    if (retryCount >= maxRetries) {
+      console.warn('Max retries reached for sidebar cloning');
+      return;
+    }
+
+    console.log(`Attempting to clone sidebar (attempt ${retryCount + 1})...`);
+    const success = cloneSidebarClose();
+    if (!success) {
+      retryCount++;
+      setTimeout(attemptClone, retryInterval);
+    }
+  }
+
   // Wait for DOM to be ready before cloning
-  setTimeout(() => {
-    console.log('Attempting to clone sidebar after delay...');
-    cloneSidebarClose();
-  }, 1000);
- 
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', attemptClone);
+  } else {
+    attemptClone();
+  }
 } 
