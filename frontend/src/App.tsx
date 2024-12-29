@@ -600,7 +600,7 @@ const MapView: React.FC = () => {
 
   return (
     <div style={{ position: 'absolute', width: '100%', height: '100%' }}>
-      <div aria-hidden="true" style={{ 
+      <div aria-hidden="true" style={{
         position: 'absolute',
         width: '1px',
         height: '1px',
@@ -613,7 +613,7 @@ const MapView: React.FC = () => {
       }}>
         <h1>Carte Interactive des Tournois de Tennis de Table en France</h1>
         <p>
-          Bienvenue sur la carte interactive des tournois de tennis de table en France. 
+          Bienvenue sur la carte interactive des tournois de tennis de table en France.
           Trouvez facilement les tournois FFTT près de chez vous grâce à notre carte interactive.
           Visualisez tous les tournois homologués par la Fédération Française de Tennis de Table.
         </p>
@@ -629,16 +629,16 @@ const MapView: React.FC = () => {
         </ul>
         <h2>Prochains Tournois de Tennis de Table en France</h2>
         <p>
-          Découvrez les prochains tournois de tennis de table homologués par la FFTT. 
+          Découvrez les prochains tournois de tennis de table homologués par la FFTT.
           Notre carte est mise à jour en temps réel avec les dernières informations des clubs.
           Filtrez par région, date ou type de compétition pour trouver le tournoi qui vous convient.
         </p>
         <h2>Compétitions de Tennis de Table par Région</h2>
         <p>
           Explorez les tournois de ping-pong dans toute la France :
-          Île-de-France, Auvergne-Rhône-Alpes, Nouvelle-Aquitaine, Occitanie, 
-          Hauts-de-France, Grand Est, Provence-Alpes-Côte d'Azur, 
-          Normandie, Bretagne, Pays de la Loire, Bourgogne-Franche-Comté, 
+          Île-de-France, Auvergne-Rhône-Alpes, Nouvelle-Aquitaine, Occitanie,
+          Hauts-de-France, Grand Est, Provence-Alpes-Côte d'Azur,
+          Normandie, Bretagne, Pays de la Loire, Bourgogne-Franche-Comté,
           Centre-Val de Loire, Corse et départements d'Outre-mer.
         </p>
         <h2>Informations sur les Tournois</h2>
@@ -697,6 +697,17 @@ const App: React.FC = () => {
             <meta property="og:title" content="Carte des Tournois de Tennis de Table en France | FFTT" />
             <meta property="og:description" content="Découvrez tous les tournois de tennis de table en France sur une carte interactive. Filtrez par date, région, et catégorie." />
             <meta property="og:type" content="website" />
+            <meta property="og:url" content="https://tournois-tt.fr" />
+            <meta property="og:image" content="https://tournois-tt.fr/og-image.jpg" />
+            <meta property="og:site_name" content="Carte des Tournois FFTT" />
+            <meta name="twitter:card" content="summary_large_image" />
+            <meta name="twitter:title" content="Carte des Tournois de Tennis de Table en France" />
+            <meta name="twitter:description" content="Découvrez tous les tournois de tennis de table en France sur une carte interactive. Filtrez par date, région, et catégorie." />
+            <meta name="twitter:image" content="https://tournois-tt.fr/og-image.jpg" />
+            <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+            <meta name="theme-color" content="#242730" />
+            <meta name="robots" content="index, follow" />
+            <link rel="canonical" href="https://tournois-tt.fr" />
             <script type="application/ld+json">
               {`
                 {
@@ -708,13 +719,46 @@ const App: React.FC = () => {
                   "location": {
                     "@type": "Country",
                     "name": "France"
+                  },
+                  "organizer": {
+                    "@type": "Organization",
+                    "name": "Fédération Française de Tennis de Table",
+                    "alternateName": "FFTT"
+                  },
+                  "eventStatus": "EventScheduled",
+                  "eventAttendanceMode": "OfflineEventAttendanceMode",
+                  "offers": {
+                    "@type": "Offer",
+                    "availability": "https://schema.org/InStock",
+                    "price": "0",
+                    "priceCurrency": "EUR"
                   }
                 }
               `}
             </script>
+            <style>
+              {
+                `
+                  body {
+                    overflow: hidden;
+                  }
+                `
+              }
+            </style>
           </Helmet>
           <Routes>
-            <Route path="/" element={<MapView />} />
+            <Route path="/" element={
+              <>
+                <style>
+                  {`
+                    body {
+                      overflow: hidden;
+                    }
+                  `}
+                </style>
+                <MapView />
+              </>
+            } />
             <Route path="/cookies" element={<Cookies />} />
           </Routes>
         </div>
