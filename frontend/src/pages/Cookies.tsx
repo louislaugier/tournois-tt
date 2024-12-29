@@ -47,8 +47,8 @@ const Cookies: React.FC = () => {
           </p>
           <ul style={{ marginLeft: '20px', lineHeight: '1.5' }}>
             <li>Informations sur votre navigateur</li>
+            <li>Adresse IP</li>
             <li>Durée de visite</li>
-            <li>Pages visitées</li>
             <li>Localisation approximative</li>
             <li>Centres d'intérêt pour la publicité</li>
           </ul>
@@ -62,21 +62,6 @@ const Cookies: React.FC = () => {
             pour fournir une visualisation des tournois.
           </p>
         </section>
-
-        <section style={{ marginBottom: '30px' }}>
-          <h2>Vos droits</h2>
-          <p>
-            Conformément au RGPD (Règlement Général sur la Protection des Données), vous disposez des droits suivants :
-          </p>
-          <ul style={{ marginLeft: '20px', lineHeight: '1.5' }}>
-            <li>Droit d'accès à vos données personnelles</li>
-            <li>Droit de rectification des données inexactes</li>
-            <li>Droit d'opposition au traitement des données</li>
-            <li>Droit à l'effacement de vos données</li>
-            <li>Droit à la limitation du traitement</li>
-          </ul>
-        </section>
-
         <a 
           href="/"
           style={{
