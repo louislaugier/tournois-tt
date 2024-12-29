@@ -276,7 +276,7 @@ const App: React.FC = () => {
                 type: 'timeRange',
                 value: [
                   Math.min(...tournaments.map(t => new Date(t.startDate).getTime())),
-                  Math.max(...tournaments.map(t => new Date(t.startDate).getTime()))
+                  Math.max(...tournaments.map(t => new Date(t.endDate).getTime()))
                 ],
                 enlarged: true,
                 plotType: 'histogram',

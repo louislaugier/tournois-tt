@@ -131,6 +131,7 @@ func LogClubEmailAddresses() {
 	clubIDRegex := regexp.MustCompile(`structures/by-number\?number_id=(\d+)`)
 
 	for _, dept := range departments {
+		logger.Printf("Processing department: %s", dept)
 		// Create form data
 		formData := url.Values{}
 		formData.Set("plugins_controller", "structures")

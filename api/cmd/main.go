@@ -10,6 +10,10 @@ func main() {
 	// test.LogClubEmailAddresses()
 	// test.LogCommitteeAndLeagueEmailAddresses()
 
+	// crons.Schedule()
+
+	////////////////////////////////////////////////////////
+
 	go func() {
 		log.Printf("Preloading tournament geocoding data...")
 		if err := geocoding.PreloadTournaments(); err != nil {
