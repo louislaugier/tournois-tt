@@ -702,7 +702,7 @@ const AppContent: React.FC = () => {
   return (
     <div>
       <Helmet>
-        <title>Carte des Tournois de Tennis de Table en France | FFTT</title>
+        <title>Carte des Tournois de Tennis de Table homologués FFTT</title>
         <meta name="description" content="Découvrez tous les tournois de tennis de table en France sur une carte interactive. Filtrez par date, région, et catégorie. Informations détaillées sur les règlements, dates et lieux des compétitions FFTT." />
         <meta name="keywords" content="tennis de table, tournois, FFTT, ping pong, France, carte interactive, compétitions" />
         <meta property="og:title" content="Carte des Tournois de Tennis de Table en France | FFTT" />
