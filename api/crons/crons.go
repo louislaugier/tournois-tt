@@ -38,11 +38,13 @@ func sendCampaign() {
 	campaignID, err := strconv.Atoi(os.Getenv("BREVO_CAMPAIGN_ID"))
 	if err != nil {
 		log.Println(err)
+		return
 	}
 
 	err = brevo.SendCampaign(cl, campaignID)
 	if err != nil {
 		log.Println(err)
+		return
 	}
 
 	log.Println("Campaign sent successfully.")
