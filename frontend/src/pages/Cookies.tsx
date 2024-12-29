@@ -50,7 +50,7 @@ const Cookies: React.FC = () => {
             <li>Adresse IP</li>
             <li>Durée de visite</li>
             <li>Localisation approximative</li>
-            <li>Centres d'intérêt pour la publicité</li>
+            <li>Intérêt pour la publicité</li>
           </ul>
         </section>
 
