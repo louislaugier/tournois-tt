@@ -699,7 +699,6 @@ const AppContent: React.FC = () => {
     };
   }, [location]);
 
-  alert('test');
   return (
     <div>
       <Helmet>
