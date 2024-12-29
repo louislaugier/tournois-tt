@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"tournois-tt/api/crons"
 	"tournois-tt/api/internal/router"
 	"tournois-tt/api/pkg/geocoding"
 )
@@ -10,7 +11,7 @@ func main() {
 	// test.LogClubEmailAddresses()
 	// test.LogCommitteeAndLeagueEmailAddresses()
 
-	// crons.Schedule()
+	crons.Schedule()
 
 	////////////////////////////////////////////////////////
 
