@@ -287,17 +287,31 @@ const App: React.FC = () => {
                 }
               },
               {
-                id: 'type_filter',
+                id: 'endowment_filter',
                 dataId: ['tournoi'],
-                name: ['Type de tournoi'],
-                type: 'select',
-                value: [],
+                name: ['Dotation totale (€)'],
+                type: 'range',
+                value: null,
+                enlarged: false,
+                plotType: 'histogram',
+                layerId: undefined,
+                field: {
+                  type: 'real',
+                  name: 'Dotation totale (€)'
+                }
+              },
+              {
+                id: 'name_filter',
+                dataId: ['tournoi'],
+                name: ['Nom du tournoi'],
+                type: 'input',
+                value: '',
                 enlarged: false,
                 plotType: 'histogram',
                 layerId: undefined,
                 field: {
                   type: 'string',
-                  name: 'Type de tournoi'
+                  name: 'Nom du tournoi'
                 }
               },
               {
@@ -315,17 +329,15 @@ const App: React.FC = () => {
                 }
               },
               {
-                id: 'endowment_filter',
+                id: 'city_filter',
                 dataId: ['tournoi'],
-                name: ['Dotation totale (€)'],
-                type: 'range',
-                value: null,
+                name: ['Ville'],
+                type: 'multiSelect',
+                value: [],
                 enlarged: false,
-                plotType: 'histogram',
-                layerId: undefined,
                 field: {
-                  type: 'real',
-                  name: 'Dotation totale (€)'
+                  type: 'string',
+                  name: 'Ville'
                 }
               },
               {
@@ -343,29 +355,17 @@ const App: React.FC = () => {
                 }
               },
               {
-                id: 'city_filter',
+                id: 'type_filter',
                 dataId: ['tournoi'],
-                name: ['Ville'],
-                type: 'multiSelect',
+                name: ['Type de tournoi'],
+                type: 'select',
                 value: [],
-                enlarged: false,
-                field: {
-                  type: 'string',
-                  name: 'Ville'
-                }
-              },
-              {
-                id: 'name_filter',
-                dataId: ['tournoi'],
-                name: ['Nom du tournoi'],
-                type: 'input',
-                value: '',
                 enlarged: false,
                 plotType: 'histogram',
                 layerId: undefined,
                 field: {
                   type: 'string',
-                  name: 'Nom du tournoi'
+                  name: 'Type de tournoi'
                 }
               },
             ],
@@ -546,7 +546,7 @@ const App: React.FC = () => {
               : (t.tables?.reduce((sum, table) => sum + (table.endowment || 0), 0) || 0) / 100)
             ).join(' | '),
             location.tournaments.map(t =>
-              `${formatDateDDMMYYYY(t.startDate)} au ${formatDateDDMMYYYY(t.endDate)}`
+              `${formatDateDDMMYYYY(t.startDate)}${t.startDate !== t.endDate ? ` au ${formatDateDDMMYYYY(t.endDate)}` : ''}`
             ).join(' | '),
             Math.min(...location.tournaments.map(t => new Date(t.startDate).getTime())),
             location.tournaments[0].address.streetAddress

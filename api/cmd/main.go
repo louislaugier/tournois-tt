@@ -2,12 +2,14 @@ package main
 
 import (
 	"log"
-
 	"tournois-tt/api/internal/router"
 	"tournois-tt/api/pkg/geocoding"
 )
 
 func main() {
+	// test.LogClubEmailAddresses()
+	// test.LogCommitteeAndLeagueEmailAddresses()
+
 	go func() {
 		log.Printf("Preloading tournament geocoding data...")
 		if err := geocoding.PreloadTournaments(); err != nil {
