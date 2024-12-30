@@ -31,7 +31,7 @@ func Schedule() {
 		}
 
 		// Reset executedToday flag after 12:30 PM
-		if now.Hour() != 12 || now.Minute() != 30 {
+		if !isTwelveThirty {
 			executedToday = false
 		}
 
