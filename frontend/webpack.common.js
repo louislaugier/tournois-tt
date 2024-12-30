@@ -63,7 +63,8 @@ module.exports = {
     new CopyWebpackPlugin({
       patterns: [
         { from: 'public/favicon.ico', to: 'favicon.ico' },
-        { from: 'public/ads.txt', to: 'ads.txt' }
+        { from: 'public/ads.txt', to: 'ads.txt' },
+        { from: 'public/sw.js', to: 'sw.js' }
       ]
     }),
     new webpack.ProvidePlugin({
