@@ -1,6 +1,7 @@
 package crons
 
 import (
+	"fmt"
 	"log"
 	"os"
 	"strconv"
@@ -11,25 +12,33 @@ import (
 var executedToday bool
 
 func Schedule() {
-	// location := time.FixedZone("UTC+5", 5*60*60)  // UTC +5 hours
-	location := time.FixedZone("UTC+5:30", 5*60*60+30*60) // UTC +5 hours 30 minutes
+	// Get the France timezone (handles both CET and CEST automatically)
+	location, err := time.LoadLocation("Europe/Paris")
+	if err != nil {
+		fmt.Println("Error loading location:", err)
+		return
+	}
 
 	for {
 		now := time.Now().In(location)
-		isEightOClock := now.Hour() == 8 && now.Minute() == 00
 
-		if isEightOClock && !executedToday {
+		// Check if it's 12:30 PM local French time
+		isTwelveThirty := now.Hour() == 12 && now.Minute() == 30
+
+		if isTwelveThirty && !executedToday {
 			executedToday = true
 			go sendCampaign()
 		}
-		if now.Hour() != 8 || now.Minute() != 0 {
+
+		// Reset executedToday flag after 12:30 PM
+		if now.Hour() != 12 || now.Minute() != 30 {
 			executedToday = false
 		}
 
+		// Sleep for 55 seconds before checking again
 		time.Sleep(55 * time.Second)
 	}
 }
-
 func sendCampaign() {
 	log.Println("Sending campaign now.")
 
