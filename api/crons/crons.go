@@ -23,7 +23,7 @@ func Schedule() {
 		now := time.Now().In(location)
 
 		// Check if it's 12:30 PM local French time
-		isTwelveThirty := now.Hour() == 12 && now.Minute() == 30
+		isTwelveThirty := now.Hour() == 13 && now.Minute() == 15
 
 		if isTwelveThirty && !executedToday {
 			executedToday = true
