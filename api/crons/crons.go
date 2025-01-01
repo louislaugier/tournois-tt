@@ -7,6 +7,8 @@ import (
 	"time"
 	"tournois-tt/api/pkg/brevo"
 
+	_ "time/tzdata"
+
 	"github.com/robfig/cron/v3"
 )
 
