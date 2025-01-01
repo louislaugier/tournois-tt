@@ -6,6 +6,7 @@ import { addDataToMap } from '@kepler.gl/actions';
 import '@kepler.gl/styles';
 import { initializeDateFormatter } from './lib/dateFormatter';
 import { initializeSidebarCustomizer } from './lib/sidebarCustomizer';
+import { initializeDOMCleaner } from './lib/domCleaner';
 import Cookies from './pages/Cookies';
 
 // Disable error overlay in production
@@ -141,8 +142,9 @@ const MapView: React.FC = () => {
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
 
   useEffect(() => {
-    initializeDateFormatter();
     initializeSidebarCustomizer();
+    initializeDateFormatter();
+    initializeDOMCleaner();
   }, []);
 
   useEffect(() => {
