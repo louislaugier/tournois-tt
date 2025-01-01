@@ -1,44 +1,36 @@
 package crons
 
 import (
-	"fmt"
 	"log"
 	"os"
 	"strconv"
 	"time"
 	"tournois-tt/api/pkg/brevo"
+
+	"github.com/robfig/cron/v3"
 )
 
-var executedToday bool
-
 func Schedule() {
-	// Get the France timezone (handles both CET and CEST automatically)
 	location, err := time.LoadLocation("Europe/Paris")
 	if err != nil {
-		fmt.Println("Error loading location:", err)
-		return
+		log.Fatal("Error loading Paris time zone:", err)
 	}
 
-	for {
-		now := time.Now().In(location)
+	// Initialize a new cron scheduler with the Paris time zone
+	c := cron.New(cron.WithLocation(location))
 
-		// Check if it's 12:30 PM local French time
-		isTwelveThirty := now.Hour() == 13 && now.Minute() == 15
-
-		if isTwelveThirty && !executedToday {
-			executedToday = true
-			go sendCampaign()
-		}
-
-		// Reset executedToday flag after 12:30 PM
-		if !isTwelveThirty {
-			executedToday = false
-		}
-
-		// Sleep for 55 seconds before checking again
-		time.Sleep(55 * time.Second)
+	// Schedule the cron job to run every day at 1 PM
+	_, err = c.AddFunc("0 13 * * *", sendCampaign)
+	if err != nil {
+		log.Fatal("Error adding cron job:", err)
 	}
+
+	// Start the cron scheduler in a separate goroutine
+	go func() {
+		c.Start()
+	}()
 }
+
 func sendCampaign() {
 	log.Println("Sending campaign now.")
 

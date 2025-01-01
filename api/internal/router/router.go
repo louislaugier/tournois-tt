@@ -15,7 +15,6 @@ func NewRouter() *gin.Engine {
 	// Only trust nginx reverse proxy
 	router.SetTrustedProxies([]string{"nginx"})
 
-	router.Use(middleware.Logger())
 	router.Use(gin.Recovery())
 	router.Use(middleware.RateLimiter())
 	router.Use(corsMiddleware())
@@ -40,6 +39,6 @@ func setupRoutes(router *gin.Engine) {
 	v1 := router.Group("/v1")
 	{
 		v1.GET("/healthz", handlers.HealthzHandler)
-		v1.GET("/tournaments", handlers.TournamentsHandler)
+		v1.GET("/tournaments", middleware.Logger(), handlers.TournamentsHandler)
 	}
 }

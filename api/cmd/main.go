@@ -11,7 +11,7 @@ func main() {
 	// test.LogClubEmailAddresses()
 	// test.LogCommitteeAndLeagueEmailAddresses()
 
-	go crons.Schedule()
+	crons.Schedule()
 
 	////////////////////////////////////////////////////////
 
