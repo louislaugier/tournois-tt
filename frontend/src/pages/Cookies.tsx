@@ -14,7 +14,7 @@ const Cookies: React.FC = () => {
       <Helmet>
         <title>Politique de Confidentialité et Cookies | Carte des Tournois FFTT</title>
         <meta name="description" content="Politique de confidentialité et utilisation des cookies pour la carte des tournois de tennis de table. Informations sur l'utilisation de Google Analytics et la protection de vos données." />
-        <meta name="robots" content="noindex" />
+        <meta name="robots" content="index, follow" />
         <link rel="canonical" href="https://tournois-tt.fr/cookies" />
       </Helmet>
       <div style={{
