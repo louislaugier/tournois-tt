@@ -150,9 +150,11 @@ const MapView: React.FC = () => {
   useEffect(() => {
     const loadTournaments = async () => {
       try {
-        const today = new Date();
+        var oneDayAgo = new Date();
+        oneDayAgo.setDate(oneDayAgo.getDate() - 1);
+
         const query = new TournamentQueryBuilder()
-          .startDateRange(today)
+          .startDateRange(oneDayAgo)
           .orderByStartDate('asc')
           .itemsPerPage(999999);
 
@@ -280,7 +282,7 @@ const MapView: React.FC = () => {
                 name: ['Dates de début des tournois'],
                 type: 'timeRange',
                 value: [
-                  Math.min(...tournaments.map(t => new Date(t.startDate).getTime())),
+                  Math.max(...tournaments.map(t => new Date(t.startDate).getTime())),
                   Math.max(...tournaments.map(t => new Date(t.endDate).getTime()))
                 ],
                 enlarged: true,

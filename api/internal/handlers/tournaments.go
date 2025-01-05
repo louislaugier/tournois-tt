@@ -228,6 +228,11 @@ func TournamentsHandler(c *gin.Context) {
 		// Append a dot to the postal code
 		tournaments[i].Address.PostalCode = tournaments[i].Address.PostalCode + "\u200e"
 
+		// Append 23:59 to endDate if it doesn't already have a time
+		if !strings.Contains(tournaments[i].EndDate, ":") {
+			tournaments[i].EndDate = tournaments[i].EndDate + " 23:59"
+		}
+
 		// Debug logging for rules URL
 		if tournaments[i].Rules != nil {
 			log.Printf("Tournament %s - Rules URL: %s", t.Name, tournaments[i].Rules.URL)
