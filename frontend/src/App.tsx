@@ -152,6 +152,7 @@ const MapView: React.FC = () => {
       try {
         var oneDayAgo = new Date();
         oneDayAgo.setDate(oneDayAgo.getDate() - 1);
+        oneDayAgo.setHours(23, 59, 59, 0);
 
         const query = new TournamentQueryBuilder()
           .startDateRange(oneDayAgo)
