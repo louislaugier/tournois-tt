@@ -5,3 +5,133 @@ body {
     Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
 }
 
+.map-container {
+  width: 100vw;
+  height: 100vh;
+  position: fixed;
+  top: 0;
+  left: 0;
+}
+
+.side-side-panel__header__bottom {
+  display: none !important;
+}
+
+.filter-manager>div:first-child,
+.filter-manager>div:nth-child(2),
+.filter-manager>div:nth-child(3) {
+  display: none;
+}
+
+.layer-manager-header {
+  margin-top: 0 !important;
+}
+
+.layer-manager-header>button {
+  display: none;
+}
+
+.side-panel__top__actions {
+  display: none !important;
+}
+
+.side-panel__panel-header.side-side-panel__header.side-panel__panel-header {
+  display: none;
+}
+
+.sc-cVzyXs {
+  display: none !important;
+}
+
+.bottom-widget__y-axis {
+  display: none !important;
+}
+
+.playback-controls {
+  display: none !important;
+}
+
+.animation-control__time-display__bottom {
+  display: none !important;
+}
+
+.maplibre-attribution-container {
+  display: none !important;
+}
+
+.timeline-container {
+  width: 100% !important;
+}
+
+.sc-ikkxIA.fOZEjb:nth-child(2) {
+  display: none !important;
+}
+
+.map-control {
+  display: none !important;
+}
+
+.data-source-selector.side-panel-section.data-source-selector {
+  display: none !important;
+}
+
+/* hide date filter in sidebar */
+.side-panel-section>div:nth-child(7) {
+  display: none !important;
+}
+
+.side-panel-panel__label {
+  display: none !important;
+}
+
+.edit-feature.toolbar-item.edit-feature {
+  display: none !important;
+}
+
+.panel--header__action {
+  display: none !important;
+}
+
+.filter-panel__header {
+  border-image: none !important;
+  border-left: 3px solid #1FBAD6 !important;
+}
+
+.select-geometry {
+  display: none !important;
+}
+
+.popover-arrow-left,
+.popover-pin {
+  display: none !important;
+}
+
+.item-selector__dropdown:hover,
+.item-selector__dropdown,
+.item-selector__dropdown:focus,
+.field-selector:hover,
+.field-selector,
+.field-selector:focus,
+.item-selector,
+.item-selector:hover,
+.item-selector:focus {
+  pointer-events: none !important;
+}
+
+.item-selector__dropdown {
+  background-color: #242730 !important;
+  border: none !important;
+}
+
+.map-popover>div:nth-child(2) {
+  margin-top: 0 !important;
+}
+
+.map-popover{
+  padding-top: 7.5px !important;
+  padding-bottom: 1.5px !important;
+}
+
+.map-popover__layer-info>div:last-child {
+  display: none !important;
+}
