@@ -1,8 +1,8 @@
 export function initializeDOMCleaner(): void {
   const selectors = [
-    '.bottom-widget__y-axis',
-    '.playback-controls',
-    '.animation-control__time-display__bottom',
+    // '.bottom-widget__y-axis',
+    // '.playback-controls',
+    // '.animation-control__time-display__bottom',
     '.maplibre-attribution-container',
     '.map-control',
     '.select-geometry',
