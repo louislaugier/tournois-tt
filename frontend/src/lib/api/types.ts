@@ -55,6 +55,7 @@ export interface Organization {
 }
 
 export interface Tournament {
+  affiche?: string;
   '@id': string;
   '@type': string;
   club: Club;
