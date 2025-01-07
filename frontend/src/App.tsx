@@ -490,7 +490,7 @@ const MapView: React.FC = () => {
                     alignment: 'center',
                     background: true,
                     backgroundColor: [0, 0, 0, 0.5] as [number, number, number, number],
-                    outlineWidth: 1,
+                    outlineWidth: 0,
                     outlineColor: [0, 0, 0, 0.5] as [number, number, number, number]
                   }
                 },
@@ -551,7 +551,7 @@ const MapView: React.FC = () => {
                     alignment: 'center',
                     background: true,
                     backgroundColor: [0, 0, 0, 0.5] as [number, number, number, number],
-                    outlineWidth: 1,
+                    outlineWidth: 0,
                     outlineColor: [0, 0, 0, 0.5] as [number, number, number, number]
                   }
                 },
