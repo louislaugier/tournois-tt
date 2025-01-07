@@ -6,7 +6,8 @@ export default {
     },
     sidebar: {
         panels: {
-            filter: 'Filtres'
+            filter: 'Filtres',
+            layer: 'Points'
         }
     }
 }

@@ -27,7 +27,7 @@ var DefaultGeocodeConfig = GeocodeConfig{
 }
 
 // PreloadTournaments fetches and processes tournament addresses
-func PreloadTournaments() error {
+func PreloadTournaments(startDateAfter, startDateBefore *time.Time) error {
 	log.Printf("Starting tournament preloading...")
 
 	// Load existing cache
@@ -39,7 +39,10 @@ func PreloadTournaments() error {
 
 	// Create query params for future tournaments
 	queryParams := url.Values{}
-	queryParams.Set("startDate[after]", time.Now().Format("2006-01-02T15:04:05"))
+	queryParams.Set("startDate[after]", startDateAfter.Format("2006-01-02T15:04:05"))
+	if startDateBefore != nil {
+		queryParams.Set("startDate[before]", startDateBefore.Format("2006-01-02T15:04:05"))
+	}
 	queryParams.Set("itemsPerPage", "999999")
 	queryParams.Set("order[startDate]", "asc")
 

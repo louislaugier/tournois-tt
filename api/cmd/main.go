@@ -5,6 +5,7 @@ import (
 	"tournois-tt/api/crons"
 	"tournois-tt/api/internal/router"
 	"tournois-tt/api/pkg/geocoding"
+	"tournois-tt/api/pkg/utils"
 )
 
 func main() {
@@ -17,7 +18,9 @@ func main() {
 
 	go func() {
 		log.Printf("Preloading tournament geocoding data...")
-		if err := geocoding.PreloadTournaments(); err != nil {
+
+		lastSeasonStart, _ := utils.GetLatestFinishedSeason()
+		if err := geocoding.PreloadTournaments(&lastSeasonStart, nil); err != nil {
 			log.Printf("Warning: Failed to preload tournament data: %v", err)
 		}
 	}()

@@ -140,6 +140,7 @@ CustomMapPopoverFactory.deps = MapPopoverFactory.deps;
 
 const MapView: React.FC = () => {
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
+  const [pastTournaments, setPastTournaments] = useState<Tournament[]>([]);
 
   useEffect(() => {
     initializeSidebarCustomizer();
@@ -161,6 +162,38 @@ const MapView: React.FC = () => {
 
         const tournamentData = await query.executeAndLogAll();
         setTournaments(tournamentData || []);
+
+        // Get the current date and determine the latest finished season
+        const now = new Date();
+        const currentYear = now.getFullYear();
+        const currentMonth = now.getMonth() + 1; // JavaScript months are 0-based
+
+        let seasonStartYear, seasonEndYear;
+        if (currentMonth >= 7) { // July or later
+          seasonStartYear = currentYear;
+          seasonEndYear = currentYear + 1;
+        } else {
+          seasonStartYear = currentYear - 1;
+          seasonEndYear = currentYear;
+        }
+
+        // For past tournaments, we want the season BEFORE the current season
+        const pastSeasonStartYear = seasonStartYear - 1;
+        const pastSeasonEndYear = seasonStartYear;
+
+        const lastCompletedSeasonStartDate = new Date(pastSeasonStartYear, 6, 1); // July 1st of past season start year
+        lastCompletedSeasonStartDate.setHours(0, 0, 0, 0);
+
+        const lastCompletedSeasonEndDate = new Date(pastSeasonEndYear, 5, 30); // June 30th of past season end year
+        lastCompletedSeasonEndDate.setHours(23, 59, 59, 999);
+
+        const pastTournamentsQuery = new TournamentQueryBuilder()
+          .startDateRange(lastCompletedSeasonStartDate, lastCompletedSeasonEndDate)
+          .orderByStartDate('asc')
+          .itemsPerPage(999999);
+
+        const pastTournamentsData = await pastTournamentsQuery.executeAndLogAll();
+        setPastTournaments(pastTournamentsData || []);
       } catch (error) {
         console.error('Failed to load tournaments:', error);
       }
@@ -214,6 +247,22 @@ const MapView: React.FC = () => {
     return () => observer.disconnect();
   }, []);
 
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const currentMonth = now.getMonth(); // JavaScript months are 0-based
+
+  // Match Go function's logic
+  let seasonStartYear, seasonEndYear;
+  if (currentMonth >= 6) { // July or later (0-based, so 6 is July)
+    // Current season started this year, so last finished season was previous year
+    seasonStartYear = currentYear;
+    seasonEndYear = currentYear + 1;
+  } else {
+    // We're in January-June, so current season started previous year
+    seasonStartYear = currentYear - 1;
+    seasonEndYear = currentYear;
+  }
+
   useEffect(() => {
     if (tournaments?.length > 0) {
       const tournamentsWithCoordinates = tournaments.filter(
@@ -241,6 +290,35 @@ const MapView: React.FC = () => {
           postalCode: formatPostcode(t.address.postalCode)
         }
       }));
+
+      let allPastTournamentsForMap: Tournament[] = [];
+      if (pastTournaments?.length > 0) {
+        const pastTournamentsWithCoordinates = pastTournaments.filter(
+          t => t.address?.latitude && t.address?.longitude
+        );
+        const pastTournamentsWithoutCoordinates = pastTournaments.filter(
+          t => !t.address?.latitude || !t.address?.longitude
+        );
+
+        allPastTournamentsForMap = [
+          ...pastTournamentsWithCoordinates,
+          ...pastTournamentsWithoutCoordinates.map(t => ({
+            ...t,
+            address: {
+              ...t.address,
+              latitude: 46.777138,
+              longitude: 2.804568,
+              approximate: true
+            }
+          }))
+        ].map(t => ({
+          ...t,
+          address: {
+            ...t.address,
+            postalCode: formatPostcode(t.address.postalCode)
+          }
+        }));
+      }
 
       if (allTournamentsForMap.length > 0) {
         const enhancedMapConfig = {
@@ -280,7 +358,7 @@ const MapView: React.FC = () => {
               {
                 id: 'date_filter',
                 dataId: ['tournoi'],
-                name: ['Dates de début des tournois'],
+                name: [`Tournois à venir pour la saison en cours (${seasonStartYear}-${seasonEndYear})`],
                 type: 'timeRange',
                 value: [
                   Math.max(...tournaments.map(t => new Date(t.startDate).getTime())),
@@ -291,7 +369,7 @@ const MapView: React.FC = () => {
                 layerId: undefined,
                 field: {
                   type: 'timestamp',
-                  name: 'Dates de début des tournois'
+                  name: `Tournois à venir pour la saison en cours (${seasonStartYear}-${seasonEndYear})`
                 }
               },
               {
@@ -383,7 +461,9 @@ const MapView: React.FC = () => {
                 type: 'point',
                 config: {
                   dataId: 'tournoi',
-                  label: 'Tournoi',
+                  label: (() => {
+                    return `Saison en cours (${seasonStartYear}-${seasonEndYear})`;
+                  })(),
                   color: [31, 186, 214] as [number, number, number],
                   columns: {
                     lat: 'latitude',
@@ -392,6 +472,67 @@ const MapView: React.FC = () => {
                   isVisible: true,
                   visConfig: {
                     radius: 20,
+                    fixedRadius: false,
+                    opacity: 0.8,
+                    outline: false,
+                    filled: true,
+                    radiusRange: [20, 30]
+                  },
+                  textLabel: {
+                    field: { name: 'count_display', type: 'string' },
+                    color: [255, 255, 255] as [number, number, number],
+                    size: 14,
+                    offset: [0, 0] as [number, number],
+                    anchor: 'middle',
+                    alignment: 'center',
+                    background: false,
+                    outlineWidth: 0,
+                    outlineColor: [0, 0, 0, 0] as [number, number, number, number],
+                    backgroundColor: [0, 0, 0, 0] as [number, number, number, number]
+                  }
+                },
+                visualChannels: {
+                  colorField: null,
+                  colorScale: 'quantile',
+                  sizeField: { name: 'size_multiplier', type: 'real' },
+                  sizeScale: 'linear',
+                  strokeColorField: null,
+                  strokeColorScale: 'quantile'
+                }
+              },
+              {
+                id: 'past_tournament_points',
+                type: 'point',
+                config: {
+                  dataId: 'tournoi_passe',
+                  label: (() => {
+                    const now = new Date();
+                    const currentYear = now.getFullYear();
+                    const currentMonth = now.getMonth() + 1; // JavaScript months are 0-based
+
+                    let seasonStartYear, seasonEndYear;
+                    if (currentMonth >= 7) { // July or later
+                      seasonStartYear = currentYear;
+                      seasonEndYear = currentYear + 1;
+                    } else {
+                      seasonStartYear = currentYear - 1;
+                      seasonEndYear = currentYear;
+                    }
+
+                    // For past tournaments, we want the season BEFORE the current season
+                    const pastSeasonStartYear = seasonStartYear - 1;
+                    const pastSeasonEndYear = seasonStartYear;
+
+                    return `Saison précédente (${pastSeasonStartYear}-${pastSeasonEndYear})`;
+                  })(),
+                  color: [155, 89, 182] as [number, number, number],
+                  columns: {
+                    lat: 'latitude',
+                    lng: 'longitude'
+                  } as { [key: string]: string },
+                  isVisible: true,
+                  visConfig: {
+                    radius: 22,
                     fixedRadius: false,
                     opacity: 0.8,
                     outline: false,
@@ -509,24 +650,25 @@ const MapView: React.FC = () => {
           }
         };
 
+        const tournamentFields = [
+          { name: 'latitude', type: 'real' },
+          { name: 'longitude', type: 'real' },
+          { name: 'Nom du tournoi', type: 'string' },
+          { name: 'Type de tournoi', type: 'string' },
+          { name: 'Club organisateur', type: 'string' },
+          { name: 'Dotation totale (€)', type: 'real', analyzerType: 'INT' },
+          { name: 'Date(s)', type: 'date' },
+          { name: `Tournois à venir pour la saison en cours (${seasonStartYear}-${seasonEndYear})`, type: 'date' },
+          { name: 'Adresse', type: 'string' },
+          { name: 'Règlement', type: 'string' },
+          { name: 'Code postal', type: 'string' },
+          { name: 'Ville', type: 'string' },
+          { name: 'count', type: 'integer' },
+          { name: 'count_display', type: 'string' },
+          { name: 'size_multiplier', type: 'real' }
+        ]
         const tournamentsDataset = {
-          fields: [
-            { name: 'latitude', type: 'real' },
-            { name: 'longitude', type: 'real' },
-            { name: 'Nom du tournoi', type: 'string' },
-            { name: 'Type de tournoi', type: 'string' },
-            { name: 'Club organisateur', type: 'string' },
-            { name: 'Dotation totale (€)', type: 'real', analyzerType: 'INT' },
-            { name: 'Date(s)', type: 'date' },
-            { name: 'Dates de début des tournois', type: 'date' },
-            { name: 'Adresse', type: 'string' },
-            { name: 'Règlement', type: 'string' },
-            { name: 'Code postal', type: 'string' },
-            { name: 'Ville', type: 'string' },
-            { name: 'count', type: 'integer' },
-            { name: 'count_display', type: 'string' },
-            { name: 'size_multiplier', type: 'real' }
-          ],
+          fields: tournamentFields,
           rows: Object.values(
             allTournamentsForMap.reduce((acc, t) => {
               const key = `${t.address.latitude},${t.address.longitude}`;
@@ -569,16 +711,64 @@ const MapView: React.FC = () => {
           ])
         };
 
+        const pastTournamentsDataset = {
+          fields: [
+            { name: 'latitude', type: 'real' },
+            { name: 'longitude', type: 'real' },
+            { name: 'Nom du tournoi', type: 'string' },
+            { name: 'Type de tournoi', type: 'string' },
+            { name: 'Club organisateur', type: 'string' },
+            { name: 'Dotation totale (€)', type: 'real', analyzerType: 'INT' },
+            { name: 'Date(s)', type: 'date' },
+            { name: 'Adresse', type: 'string' },
+            { name: 'Règlement', type: 'string' },
+            { name: 'count', type: 'integer' },
+            { name: 'count_display', type: 'string' },
+            { name: 'size_multiplier', type: 'real' }
+          ],
+          rows: Object.values(
+            allPastTournamentsForMap.reduce((acc, t) => {
+              const key = `${t.address.latitude},${t.address.longitude}`;
+              if (!acc[key]) {
+                acc[key] = {
+                  latitude: t.address.latitude,
+                  longitude: t.address.longitude,
+                  // longitude: (t.address.longitude || 0) + 0.0001,
+                  tournaments: [],
+                  count: 0
+                };
+              }
+              acc[key].tournaments.push(t);
+              acc[key].count++;
+              return acc;
+            }, {} as Record<string, any>)
+          ).map(location => [
+            location.latitude,
+            location.longitude,
+            location.tournaments.map(t => t.name).join(' | '),
+            Array.from(new Set<string>(location.tournaments.map(t => t.type))).join(' | '),
+            Array.from(new Set<string>(location.tournaments.map(t => `${t.club.name} (${t.club.identifier})`))).join(' | '),
+            location.tournaments.map(t =>
+            (typeof t.endowment === 'number' && t.endowment > 0
+              ? Math.floor(t.endowment / 100)
+              : (t.tables?.reduce((sum, table) => sum + (table.endowment || 0), 0) || 0) / 100)
+            ).join(' | '),
+            location.tournaments.map(t =>
+              `${formatDateDDMMYYYY(t.startDate)}${t.startDate !== t.endDate ? ` au ${formatDateDDMMYYYY(t.endDate)}` : ''}`
+            ).join(' | '),
+            location.tournaments[0].address.streetAddress
+              ? `${location.tournaments[0].address.disambiguatingDescription ? location.tournaments[0].address.disambiguatingDescription + ' ' : ''}${location.tournaments[0].address.streetAddress}, ${location.tournaments[0].address.postalCode} ${location.tournaments[0].address.addressLocality}`
+              : 'Adresse non disponible',
+            location.tournaments.map(t => t.rules?.url || 'Pas encore de règlement').join(' | '),
+            location.count,
+            location.count > 1 ? location.count.toString() : '',
+            location.count > 1 ? 1.5 : 1
+          ])
+        };
+
         store.dispatch(
           addDataToMap({
             datasets: [
-              {
-                info: {
-                  label: 'Tournois FFTT',
-                  id: 'tournoi'
-                },
-                data: tournamentsDataset
-              },
               {
                 info: {
                   label: 'France',
@@ -590,7 +780,13 @@ const MapView: React.FC = () => {
                   ],
                   rows: [[franceBorders]]
                 }
-              }
+              },
+              {
+                info: {
+                  id: 'tournoi'
+                },
+                data: tournamentsDataset
+              },
             ],
             options: {
               centerMap: false,
@@ -599,9 +795,54 @@ const MapView: React.FC = () => {
             config: enhancedMapConfig
           })
         );
+
+        if (pastTournaments?.length > 0) {
+          store.dispatch(
+            addDataToMap({
+              datasets: [
+                {
+                  info: {
+                    id: 'tournoi_passe'
+                  },
+                  data: pastTournamentsDataset
+                }
+              ]
+            })
+          );
+        }
       }
     }
-  }, [tournaments]);
+  }, [tournaments, pastTournaments]);
+
+  useEffect(() => {
+    const hideFranceLayer = () => {
+      const franceLayers = document.querySelectorAll(
+        '.sortable-layer-item input[id="france_borders:input-layer-label"]'
+      );
+
+      franceLayers.forEach(input => {
+        const layerItem = input.closest('.sortable-layer-item');
+        if (layerItem) {
+          (layerItem as HTMLElement).style.display = 'none';
+        }
+      });
+    };
+
+    // Run immediately and also on potential dynamic content loads
+    hideFranceLayer();
+
+    // Optional: Add a MutationObserver for dynamic content
+    const observer = new MutationObserver(hideFranceLayer);
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true
+    });
+
+    // Cleanup
+    return () => {
+      observer.disconnect();
+    };
+  }, []);
 
   return (
     <div style={{ position: 'absolute', width: '100%', height: '100%' }}>

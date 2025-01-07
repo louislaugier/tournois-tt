@@ -21,8 +21,9 @@ export function initializeSidebarCustomizer(): void {
         const sidePanel = document.querySelector('.side-panel--container') as HTMLElement;
         const sideBar = document.querySelector('.side-bar') as HTMLElement;
         const content = document.querySelector('.side-panel__content') as HTMLElement;
+        const headerBottom = document.querySelector('.side-side-panel__header__bottom') as HTMLElement;
         
-        if (sidePanel && sideBar && content) {
+        if (sidePanel && sideBar && content && headerBottom) {
           const isOpen = sidePanel.style.width !== '0px';
           const width = isOpen ? '0px' : '340px';
           const opacity = isOpen ? '0' : '1';
@@ -30,6 +31,9 @@ export function initializeSidebarCustomizer(): void {
           sideBar.style.width = width;
           sidePanel.style.width = width;
           content.style.opacity = opacity;
+          
+          // Toggle visibility of header bottom
+          headerBottom.style.visibility = isOpen ? 'hidden' : 'visible';
         }
       });
       
