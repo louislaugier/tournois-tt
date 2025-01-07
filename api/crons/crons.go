@@ -19,10 +19,10 @@ func Schedule() {
 	c := cron.New(cron.WithLocation(location))
 
 	// Schedule the cron job to run every day at 1 PM
-	_, err = c.AddFunc("0 13 * * *", sendCurrentCampaign)
-	if err != nil {
-		log.Fatal("Error adding cron job:", err)
-	}
+	// _, err = c.AddFunc("0 13 * * *", sendCurrentCampaign)
+	// if err != nil {
+	// 	log.Fatal("Error adding cron job:", err)
+	// }
 
 	// Start the cron scheduler in a separate goroutine
 	go func() {
