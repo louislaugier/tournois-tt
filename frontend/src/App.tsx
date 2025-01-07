@@ -484,14 +484,14 @@ const MapView: React.FC = () => {
                   textLabel: {
                     field: { name: 'count_display', type: 'string' },
                     color: [255, 255, 255] as [number, number, number],
-                    size: 14,
+                    size: 16,
                     offset: [0, 0] as [number, number],
                     anchor: 'middle',
                     alignment: 'center',
-                    background: false,
-                    outlineWidth: 0,
-                    outlineColor: [0, 0, 0, 0] as [number, number, number, number],
-                    backgroundColor: [0, 0, 0, 0] as [number, number, number, number]
+                    background: true,
+                    backgroundColor: [0, 0, 0, 0.5] as [number, number, number, number],
+                    outlineWidth: 1,
+                    outlineColor: [0, 0, 0, 0.5] as [number, number, number, number]
                   }
                 },
                 visualChannels: {
@@ -549,10 +549,10 @@ const MapView: React.FC = () => {
                     offset: [0, 0] as [number, number],
                     anchor: 'middle',
                     alignment: 'center',
-                    background: false,
-                    outlineWidth: 0,
-                    outlineColor: [0, 0, 0, 0] as [number, number, number, number],
-                    backgroundColor: [0, 0, 0, 0] as [number, number, number, number]
+                    background: true,
+                    backgroundColor: [0, 0, 0, 0.5] as [number, number, number, number],
+                    outlineWidth: 1,
+                    outlineColor: [0, 0, 0, 0.5] as [number, number, number, number]
                   }
                 },
                 visualChannels: {
@@ -687,31 +687,34 @@ const MapView: React.FC = () => {
               acc[key].count++;
               return acc;
             }, {} as Record<string, any>)
-          ).map(location => [
-            location.latitude,
-            location.longitude,
-            location.tournaments.map(t => t.name).join(' | '),
-            Array.from(new Set<string>(location.tournaments.map(t => t.type))).join(' | '),
-            Array.from(new Set<string>(location.tournaments.map(t => `${t.club.name} (${t.club.identifier})`))).join(' | '),
-            location.tournaments.map(t =>
-            (typeof t.endowment === 'number' && t.endowment > 0
-              ? Math.floor(t.endowment / 100)
-              : (t.tables?.reduce((sum, table) => sum + (table.endowment || 0), 0) || 0) / 100)
-            ).join(' | '),
-            location.tournaments.map(t =>
-              `${formatDateDDMMYYYY(t.startDate)}${t.startDate !== t.endDate ? ` au ${formatDateDDMMYYYY(t.endDate)}` : ''}`
-            ).join(' | '),
-            Math.min(...location.tournaments.map(t => new Date(t.startDate).getTime())),
-            location.tournaments[0].address.streetAddress
-              ? `${location.tournaments[0].address.disambiguatingDescription ? location.tournaments[0].address.disambiguatingDescription + ' ' : ''}${location.tournaments[0].address.streetAddress}, ${location.tournaments[0].address.postalCode} ${location.tournaments[0].address.addressLocality}`
-              : 'Adresse non disponible',
-            location.tournaments.map(t => t.rules?.url || 'Pas encore de règlement').join(' | '),
-            Array.from(new Set<string>(location.tournaments.map(t => formatPostcode(t.address.postalCode)))).join(' | '),
-            formatCityName(location.tournaments[0].address.addressLocality),
-            location.count,
-            location.count > 1 ? location.count.toString() : '',
-            location.count > 1 ? 1.5 : 1
-          ])
+          ).map(location => {
+            console.log('Location data:', location);
+            return [
+              location.latitude,
+              location.longitude,
+              location.tournaments.map(t => t.name).join(' | '),
+              Array.from(new Set<string>(location.tournaments.map(t => t.type))).join(' | '),
+              Array.from(new Set<string>(location.tournaments.map(t => `${t.club.name} (${t.club.identifier})`))).join(' | '),
+              location.tournaments.map(t =>
+              (typeof t.endowment === 'number' && t.endowment > 0
+                ? Math.floor(t.endowment / 100)
+                : (t.tables?.reduce((sum, table) => sum + (table.endowment || 0), 0) || 0) / 100)
+              ).join(' | '),
+              location.tournaments.map(t =>
+                `${formatDateDDMMYYYY(t.startDate)}${t.startDate !== t.endDate ? ` au ${formatDateDDMMYYYY(t.endDate)}` : ''}`
+              ).join(' | '),
+              Math.min(...location.tournaments.map(t => new Date(t.startDate).getTime())),
+              location.tournaments[0].address.streetAddress
+                ? `${location.tournaments[0].address.disambiguatingDescription ? location.tournaments[0].address.disambiguatingDescription + ' ' : ''}${location.tournaments[0].address.streetAddress}, ${location.tournaments[0].address.postalCode} ${location.tournaments[0].address.addressLocality}`
+                : 'Adresse non disponible',
+              location.tournaments.map(t => t.rules?.url || 'Pas encore de règlement').join(' | '),
+              Array.from(new Set<string>(location.tournaments.map(t => formatPostcode(t.address.postalCode)))).join(' | '),
+              formatCityName(location.tournaments[0].address.addressLocality),
+              location.count,
+              location.count > 1 ? location.count.toString() : '',
+              location.count > 1 ? 1.5 : 1
+            ]
+          })
         };
 
         const pastTournamentsDataset = {
@@ -738,7 +741,6 @@ const MapView: React.FC = () => {
                 acc[key] = {
                   latitude: t.address.latitude,
                   longitude: t.address.longitude,
-                  // longitude: (t.address.longitude || 0) + 0.0001,
                   tournaments: [],
                   count: 0
                 };
@@ -747,28 +749,33 @@ const MapView: React.FC = () => {
               acc[key].count++;
               return acc;
             }, {} as Record<string, any>)
-          ).map(location => [
-            location.latitude,
-            location.longitude,
-            location.tournaments.map(t => t.name).join(' | '),
-            Array.from(new Set<string>(location.tournaments.map(t => t.type))).join(' | '),
-            Array.from(new Set<string>(location.tournaments.map(t => `${t.club.name} (${t.club.identifier})`))).join(' | '),
-            location.tournaments.map(t =>
-            (typeof t.endowment === 'number' && t.endowment > 0
-              ? Math.floor(t.endowment / 100)
-              : (t.tables?.reduce((sum, table) => sum + (table.endowment || 0), 0) || 0) / 100)
-            ).join(' | '),
-            location.tournaments.map(t =>
-              `${formatDateDDMMYYYY(t.startDate)}${t.startDate !== t.endDate ? ` au ${formatDateDDMMYYYY(t.endDate)}` : ''}`
-            ).join(' | '),
-            location.tournaments[0].address.streetAddress
-              ? `${location.tournaments[0].address.disambiguatingDescription ? location.tournaments[0].address.disambiguatingDescription + ' ' : ''}${location.tournaments[0].address.streetAddress}, ${location.tournaments[0].address.postalCode} ${location.tournaments[0].address.addressLocality}`
-              : 'Adresse non disponible',
-            location.tournaments.map(t => t.rules?.url || 'Pas encore de règlement').join(' | '),
-            location.count,
-            location.count > 1 ? location.count.toString() : '',
-            location.count > 1 ? 1.5 : 1
-          ])
+          ).map(location => {
+            console.log('Past Location data:', location);
+            return [
+              location.latitude,
+              location.longitude,
+              location.tournaments.map(t => t.name).join(' | '),
+              Array.from(new Set<string>(location.tournaments.map(t => t.type))).join(' | '),
+              Array.from(new Set<string>(location.tournaments.map(t => `${t.club.name} (${t.club.identifier})`))).join(' | '),
+              location.tournaments.map(t =>
+              (typeof t.endowment === 'number' && t.endowment > 0
+                ? Math.floor(t.endowment / 100)
+                : (t.tables?.reduce((sum, table) => sum + (table.endowment || 0), 0) || 0) / 100)
+              ).join(' | '),
+              location.tournaments.map(t =>
+                `${formatDateDDMMYYYY(t.startDate)}${t.startDate !== t.endDate ? ` au ${formatDateDDMMYYYY(t.endDate)}` : ''}`
+              ).join(' | '),
+              location.tournaments[0].address.streetAddress
+                ? `${location.tournaments[0].address.disambiguatingDescription ? location.tournaments[0].address.disambiguatingDescription + ' ' : ''}${location.tournaments[0].address.streetAddress}, ${location.tournaments[0].address.postalCode} ${location.tournaments[0].address.addressLocality}`
+                : 'Adresse non disponible',
+              location.tournaments.map(t => t.rules?.url || 'Pas de règlement').join(' | '),
+              Array.from(new Set<string>(location.tournaments.map(t => formatPostcode(t.address.postalCode)))).join(' | '),
+              formatCityName(location.tournaments[0].address.addressLocality),
+              location.count,
+              location.count > 1 ? location.count.toString() : '',
+              location.count > 1 ? 1.5 : 1
+            ]
+          })
         };
 
         store.dispatch(
