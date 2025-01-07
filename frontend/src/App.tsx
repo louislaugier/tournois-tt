@@ -321,6 +321,16 @@ const MapView: React.FC = () => {
       }
 
       if (allTournamentsForMap.length > 0) {
+        const tooltipFields = [
+          { name: 'Nom du tournoi', format: null },
+          { name: 'Type de tournoi', format: null },
+          { name: 'Club organisateur', format: null },
+          { name: 'Dotation totale (€)', format: null },
+          { name: 'Date(s)', format: null },
+          { name: 'Adresse', format: null },
+          { name: 'Règlement', format: null }
+        ];
+
         const enhancedMapConfig = {
           ...DEFAULT_MAP_CONFIG,
           visState: {
@@ -329,15 +339,8 @@ const MapView: React.FC = () => {
               ...DEFAULT_MAP_CONFIG.visState.interactionConfig,
               tooltip: {
                 fieldsToShow: {
-                  tournoi: [
-                    { name: 'Nom du tournoi', format: null },
-                    { name: 'Type de tournoi', format: null },
-                    { name: 'Club organisateur', format: null },
-                    { name: 'Dotation totale (€)', format: null },
-                    { name: 'Date(s)', format: null },
-                    { name: 'Adresse', format: null },
-                    { name: 'Règlement', format: null }
-                  ],
+                  tournoi: tooltipFields,
+                  tournoi_passe: tooltipFields,
                   france: []
                 },
                 enabled: true,
@@ -722,6 +725,8 @@ const MapView: React.FC = () => {
             { name: 'Date(s)', type: 'date' },
             { name: 'Adresse', type: 'string' },
             { name: 'Règlement', type: 'string' },
+            { name: 'Code postal', type: 'string' },
+            { name: 'Ville', type: 'string' },
             { name: 'count', type: 'integer' },
             { name: 'count_display', type: 'string' },
             { name: 'size_multiplier', type: 'real' }
@@ -806,9 +811,46 @@ const MapView: React.FC = () => {
                   },
                   data: pastTournamentsDataset
                 }
-              ]
+              ],
+              options: {
+                centerMap: false,
+                readOnly: false
+              }
             })
           );
+
+          // Manually update the tooltip configuration
+          const currentState = (store.getState().keplerGl as Record<string, any>).paris as {
+            visState: Record<string, any>
+          };
+          const updatedConfig = {
+            ...currentState.visState,
+            interactionConfig: {
+              ...currentState.visState.interactionConfig,
+              tooltip: {
+                ...currentState.visState.interactionConfig.tooltip,
+                fieldsToShow: {
+                  ...currentState.visState.interactionConfig.tooltip.fieldsToShow,
+                  tournoi_passe: [
+                    { name: 'Nom du tournoi', format: null },
+                    { name: 'Type de tournoi', format: null },
+                    { name: 'Club organisateur', format: null },
+                    { name: 'Dotation totale (€)', format: null },
+                    { name: 'Date(s)', format: null },
+                    { name: 'Adresse', format: null },
+                    { name: 'Règlement', format: null }
+                  ]
+                }
+              }
+            }
+          };
+
+          store.dispatch({
+            type: 'keplerGl/LAYER_CONFIG_CHANGE',
+            payload: {
+              config: updatedConfig
+            }
+          });
         }
       }
     }
