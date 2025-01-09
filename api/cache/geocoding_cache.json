@@ -4740,7 +4740,9 @@
       "postalCode": "93200",
       "addressLocality": "SAINT-DENIS"
     },
-    "failed": true,
+    "failed": false,
+    "latitude": 48.9478278,
+    "longitude": 2.3736666,
     "timestamp": "2025-01-09T15:31:21.146648209Z"
   },
   {
@@ -4749,7 +4751,9 @@
       "postalCode": "51000",
       "addressLocality": "51000 - CHALONS EN CHAMPAGNE"
     },
-    "failed": true,
+    "failed": false,
+    "latitude": 48.9394972,
+    "longitude": 4.377445,
     "timestamp": "2025-01-09T15:31:23.826506169Z"
   },
   {
@@ -4781,7 +4785,9 @@
       "postalCode": "76190",
       "addressLocality": "Yvetot"
     },
-    "failed": true,
+    "latitude": 49.6174999,
+    "longitude": 0.7648513,
+    "failed": false,
     "timestamp": "2025-01-09T15:31:29.306341838Z"
   },
   {

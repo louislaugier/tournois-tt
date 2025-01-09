@@ -151,73 +151,74 @@ const MapView: React.FC = () => {
   useEffect(() => {
     const loadTournaments = async () => {
       try {
-        var oneDayAgo = new Date();
-        oneDayAgo.setDate(oneDayAgo.getDate() - 1);
-        oneDayAgo.setHours(23, 59, 59, 0);
+        // Get current date at start of day
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
 
         const query = new TournamentQueryBuilder()
-          .startDateRange(oneDayAgo)
+          .startDateRange(today)  // Only get tournaments starting from today
           .orderByStartDate('asc')
           .itemsPerPage(999999);
 
         const tournamentData = await query.executeAndLogAll();
         
         // Add mock tournament
-        const mockTournament: Tournament = {
-          affiche: 'https://scontent-cdg4-2.xx.fbcdn.net/v/t51.75761-15/470087536_18042947348180686_8221961367883295165_n.jpg?_nc_cat=100&ccb=1-7&_nc_sid=127cfc&_nc_ohc=2myBWCsHZ-UQ7kNvgGC_eil&_nc_zt=23&_nc_ht=scontent-cdg4-2.xx&_nc_gid=AltYYquEi9_H1QZpl9ACIaF&oh=00_AYC8g6SsDLL3sTd-s5afDRUB0W9ILdlbJofjMsbknc2VNA&oe=678322A9',
-          '@id': '/tournaments/mock-igny-2025',
-          '@type': 'Tournament',
-          id: 999999, // Unique mock ID
-          identifier: 'MOCK-IGNY-2025',
-          name: 'TOURNOI NATIONAL B D\'IGNY',
-          type: 'National B',
-          club: {
-            '@id': '/clubs/cttv69',
-            '@type': 'Club',
-            id: 69, // Unique mock ID
-            name: 'IGNY T.T.',
-            identifier: '08910861'
-          },
-          startDate: new Date('2025-02-22').toISOString(),
-          endDate: new Date('2025-02-23').toISOString(),
-          address: {
-            '@id': '/addresses/igny-gymnase',
-            '@type': 'PostalAddress',
-            id: 999999, // Unique mock ID
-            postalCode: '91430',
-            streetAddress: 'Rue de Lovenich',
-            disambiguatingDescription: 'Gymnase Guéric Kervadec',
-            addressCountry: 'FR',
-            addressRegion: 'Ile-de-France',
-            addressLocality: 'Igny',
-            areaServed: null,
-            latitude: 48.7380584,
-            longitude: 2.2203543,
-            name: 'Gymnase Guéric Kervadec',
-            identifier: null,
-            openingHours: null,
-            main: false,
-            approximate: false
-          },
-          contacts: [], // Empty contacts array
-          rules: {
-            url: ""
-          },
-          endowment: 394000, // Total endowment in cents
-          status: 1, // Assuming 1 means active/upcoming
-          organization: undefined, // Optional field
-          responses: [], // Optional field
-          engagmentSheet: undefined, // Optional field
-          decision: undefined, // Optional field
-          page: null, // Optional field
-          '@permissions': {
-            canUpdate: true,
-            canDelete: false
-          }
-        };
+        // const mockTournament: Tournament = {
+        //   affiche: 'https://scontent-cdg4-2.xx.fbcdn.net/v/t51.75761-15/470087536_18042947348180686_8221961367883295165_n.jpg?_nc_cat=100&ccb=1-7&_nc_sid=127cfc&_nc_ohc=2myBWCsHZ-UQ7kNvgGC_eil&_nc_zt=23&_nc_ht=scontent-cdg4-2.xx&_nc_gid=AltYYquEi9_H1QZpl9ACIaF&oh=00_AYC8g6SsDLL3sTd-s5afDRUB0W9ILdlbJofjMsbknc2VNA&oe=678322A9',
+        //   '@id': '/tournaments/mock-igny-2025',
+        //   '@type': 'Tournament',
+        //   id: 999999, // Unique mock ID
+        //   identifier: 'MOCK-IGNY-2025',
+        //   name: 'TOURNOI NATIONAL B D\'IGNY',
+        //   type: 'National B',
+        //   club: {
+        //     '@id': '/clubs/cttv69',
+        //     '@type': 'Club',
+        //     id: 69, // Unique mock ID
+        //     name: 'IGNY T.T.',
+        //     identifier: '08910861'
+        //   },
+        //   startDate: new Date('2025-02-22').toISOString(),
+        //   endDate: new Date('2025-02-23').toISOString(),
+        //   address: {
+        //     '@id': '/addresses/igny-gymnase',
+        //     '@type': 'PostalAddress',
+        //     id: 999999, // Unique mock ID
+        //     postalCode: '91430',
+        //     streetAddress: 'Rue de Lovenich',
+        //     disambiguatingDescription: 'Gymnase Guéric Kervadec',
+        //     addressCountry: 'FR',
+        //     addressRegion: 'Ile-de-France',
+        //     addressLocality: 'Igny',
+        //     areaServed: null,
+        //     latitude: 48.7380584,
+        //     longitude: 2.2203543,
+        //     name: 'Gymnase Guéric Kervadec',
+        //     identifier: null,
+        //     openingHours: null,
+        //     main: false,
+        //     approximate: false
+        //   },
+        //   contacts: [], // Empty contacts array
+        //   rules: {
+        //     url: ""
+        //   },
+        //   endowment: 394000, // Total endowment in cents
+        //   status: 1, // Assuming 1 means active/upcoming
+        //   organization: undefined, // Optional field
+        //   responses: [], // Optional field
+        //   engagmentSheet: undefined, // Optional field
+        //   decision: undefined, // Optional field
+        //   page: null, // Optional field
+        //   '@permissions': {
+        //     canUpdate: true,
+        //     canDelete: false
+        //   }
+        // };
 
         // Add mock tournament to tournament data
-        const updatedTournamentData = tournamentData ? [...tournamentData, mockTournament] : [mockTournament];
+        // const updatedTournamentData = tournamentData ? [...tournamentData, mockTournament] : [mockTournament];
+        const updatedTournamentData = tournamentData ? [...tournamentData] : [];
         setTournaments(updatedTournamentData);
 
         // Get the current date and determine the latest finished season
@@ -421,7 +422,7 @@ const MapView: React.FC = () => {
                 name: [`Tournois à venir pour la saison en cours (${seasonStartYear}-${seasonEndYear})`],
                 type: 'timeRange',
                 value: [
-                  Math.max(...tournaments.map(t => new Date(t.startDate).getTime())),
+                  Math.min(...tournaments.map(t => new Date(t.startDate).getTime())),
                   Math.max(...tournaments.map(t => new Date(t.endDate).getTime()))
                 ],
                 enlarged: true,
@@ -731,6 +732,13 @@ const MapView: React.FC = () => {
           fields: tournamentFields,
           rows: Object.values(
             allTournamentsForMap.reduce((acc, t) => {
+              // Skip tournaments that have already ended
+              const endDate = new Date(t.endDate);
+              const now = new Date();
+              if (endDate < now) {
+                return acc;
+              }
+
               const key = `${t.address.latitude},${t.address.longitude}`;
               if (!acc[key]) {
                 acc[key] = {
