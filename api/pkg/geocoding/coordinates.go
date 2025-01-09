@@ -4,10 +4,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"math/rand"
 	"net"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -15,11 +18,31 @@ const (
 	nominatimBaseURL  = "https://nominatim.openstreetmap.org/search"
 	defaultMaxRetries = 3
 	retryDelay        = 5 * time.Second
-	rateLimitDelay    = 1 * time.Second
+	// Nominatim usage policy requires 1 request per second
+	rateLimitDelay       = 1500 * time.Millisecond // Add buffer to be safe
+	maxConsecutiveErrors = 5
 )
 
-var httpClient = &http.Client{
-	Timeout: 10 * time.Second,
+var (
+	httpClient = &http.Client{
+		Timeout: 10 * time.Second,
+	}
+	consecutiveErrors = 0
+	lastRequestTime   time.Time
+	mutex             sync.Mutex
+)
+
+// waitForRateLimit ensures we respect the rate limit
+func waitForRateLimit() {
+	mutex.Lock()
+	defer mutex.Unlock()
+
+	// Wait until enough time has passed since the last request
+	elapsed := time.Since(lastRequestTime)
+	if elapsed < rateLimitDelay {
+		time.Sleep(rateLimitDelay - elapsed)
+	}
+	lastRequestTime = time.Now()
 }
 
 // BulkGeocodeAddresses performs geocoding for multiple addresses with rate limiting
@@ -27,8 +50,18 @@ func BulkGeocodeAddresses(addresses []Address) []Location {
 	results := make([]Location, len(addresses))
 
 	for i, addr := range addresses {
+		// Check circuit breaker
+		mutex.Lock()
+		if consecutiveErrors >= maxConsecutiveErrors {
+			log.Printf("Circuit breaker triggered - too many consecutive errors")
+			mutex.Unlock()
+			results[i] = Location{Failed: true}
+			continue
+		}
+		mutex.Unlock()
+
 		// Rate limit between requests
-		time.Sleep(rateLimitDelay)
+		waitForRateLimit()
 
 		// Construct full address string
 		fullAddress := constructFullAddress(addr)
@@ -44,8 +77,14 @@ func BulkGeocodeAddresses(addresses []Address) []Location {
 
 		if err != nil {
 			log.Printf("Failed to geocode address: %s - %v", fullAddress, err)
+			mutex.Lock()
+			consecutiveErrors++
+			mutex.Unlock()
 			results[i] = Location{Failed: true}
 		} else {
+			mutex.Lock()
+			consecutiveErrors = 0 // Reset on success
+			mutex.Unlock()
 			results[i] = location
 		}
 	}
@@ -84,6 +123,7 @@ func geocodeWithRetry(fullAddress string, params url.Values) (Location, error) {
 			continue
 		}
 		req.Header.Set("User-Agent", "TournoisTT/1.0")
+		req.Header.Set("Accept-Language", "fr") // Add French language preference
 
 		resp, err := httpClient.Do(req)
 		if err != nil {
@@ -96,19 +136,29 @@ func geocodeWithRetry(fullAddress string, params url.Values) (Location, error) {
 				log.Printf("Temporary: %v", netErr.Temporary())
 			}
 
-			// Log system network information
-			ifaces, _ := net.Interfaces()
-			for _, iface := range ifaces {
-				addrs, _ := iface.Addrs()
-				log.Printf("Interface %s addresses: %v", iface.Name, addrs)
-			}
-
-			time.Sleep(retryDelay * time.Duration(attempt+1)) // Exponential backoff
+			// Exponential backoff with jitter
+			backoff := retryDelay * time.Duration(attempt+1)
+			jitter := time.Duration(float64(backoff) * (0.5 + rand.Float64())) // Add 50-150% jitter
+			time.Sleep(jitter)
 			continue
 		}
 		defer resp.Body.Close()
 
-		// Check for HTTP status code
+		// Check for rate limiting response
+		if resp.StatusCode == http.StatusTooManyRequests {
+			// Get retry-after header or use default
+			retryAfter := 60 * time.Second
+			if retryHeader := resp.Header.Get("Retry-After"); retryHeader != "" {
+				if seconds, err := strconv.Atoi(retryHeader); err == nil {
+					retryAfter = time.Duration(seconds) * time.Second
+				}
+			}
+			log.Printf("Rate limited. Waiting %v before retry", retryAfter)
+			time.Sleep(retryAfter)
+			continue
+		}
+
+		// Check for other HTTP errors
 		if resp.StatusCode != http.StatusOK {
 			lastErr = fmt.Errorf("HTTP error: %s", resp.Status)
 			log.Printf("HTTP error for address %s: %s", fullAddress, resp.Status)
