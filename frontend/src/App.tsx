@@ -151,12 +151,12 @@ const MapView: React.FC = () => {
   useEffect(() => {
     const loadTournaments = async () => {
       try {
-        // Get current date at start of day
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
+        const yesterday = new Date();
+        yesterday.setDate(yesterday.getDate() - 1);
+        yesterday.setHours(0, 0, 0, 0);
 
         const query = new TournamentQueryBuilder()
-          .startDateRange(today)  // Only get tournaments starting from today
+          .startDateRange(yesterday)
           .orderByStartDate('asc')
           .itemsPerPage(999999);
 
@@ -728,6 +728,7 @@ const MapView: React.FC = () => {
           { name: 'count_display', type: 'string' },
           { name: 'size_multiplier', type: 'real' }
         ]
+        console.log('Total tournaments before filtering:', allTournamentsForMap.length);
         const tournamentsDataset = {
           fields: tournamentFields,
           rows: Object.values(
@@ -735,6 +736,10 @@ const MapView: React.FC = () => {
               // Skip tournaments that have already ended
               const endDate = new Date(t.endDate);
               const now = new Date();
+              // Set both dates to start of day for fair comparison
+              endDate.setHours(0, 0, 0, 0);
+              now.setHours(0, 0, 0, 0);
+              console.log(`Tournament: ${t.name}, End Date: ${endDate.toISOString()}, Now: ${now.toISOString()}, Filtered: ${endDate < now}`);
               if (endDate < now) {
                 return acc;
               }
