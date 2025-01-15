@@ -433,20 +433,20 @@ const MapView: React.FC = () => {
                   name: `Tournois à venir pour la saison en cours (${seasonStartYear}-${seasonEndYear})`
                 }
               },
-              {
-                id: 'endowment_filter',
-                dataId: ['tournoi'],
-                name: ['Dotation totale (€)'],
-                type: 'range',
-                value: null,
-                enlarged: false,
-                plotType: 'histogram',
-                layerId: undefined,
-                field: {
-                  type: 'real',
-                  name: 'Dotation totale (€)'
-                }
-              },
+              // {
+              //   id: 'endowment_filter',
+              //   dataId: ['tournoi'],
+              //   name: ['Dotation totale (€)'],
+              //   type: 'range',
+              //   value: null,
+              //   enlarged: false,
+              //   plotType: 'histogram',
+              //   layerId: undefined,
+              //   field: {
+              //     type: 'real',
+              //     name: 'Dotation totale (€)'
+              //   }
+              // },
               {
                 id: 'name_filter',
                 dataId: ['tournoi'],

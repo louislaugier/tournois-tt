@@ -82,7 +82,8 @@ body {
   display: none !important;
 }
 
-.side-panel-section>div:nth-child(7) {
+/* date filter */
+.side-panel-section>div:nth-child(6) {
   display: none !important;
 }
 
