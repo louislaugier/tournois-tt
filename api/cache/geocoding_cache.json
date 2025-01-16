@@ -4841,7 +4841,9 @@
       "postalCode": "31130",
       "addressLocality": "QUINT-FONSEGRIVES"
     },
-    "failed": true,
+    "latitude": 43.5803232,
+    "longitude": 1.5346909,
+    "failed": false,
     "timestamp": "2025-01-16T00:26:07.145471167Z"
   },
   {
@@ -4874,7 +4876,9 @@
       "postalCode": "56300",
       "addressLocality": "Pontivy"
     },
-    "failed": true,
+    "failed": false,
+    "latitude": 48.0586554,
+    "longitude": -2.9541248,
     "timestamp": "2025-01-16T00:26:12.299719045Z"
   }
 ]
