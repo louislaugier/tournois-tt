@@ -84,6 +84,47 @@ const formatCityName = (city: string): string => {
   return result.join('');
 };
 
+const getRegionFromPostalCode = (postalCode: string): string => {
+  const prefix = postalCode.substring(0, 2);
+  const prefixNum = parseInt(prefix, 10);
+
+  // Handle special cases for overseas departments
+  if (['971', '972', '973', '974', '976'].includes(postalCode.substring(0, 3))) {
+    return 'Outre-Mer';
+  }
+
+  // Map department prefixes to regions
+  if ([1, 3, 7, 15, 26, 38, 42, 43, 63, 69, 73, 74].includes(prefixNum)) {
+    return 'Auvergne-Rhône-Alpes';
+  } else if ([21, 25, 39, 58, 70, 71, 89, 90].includes(prefixNum)) {
+    return 'Bourgogne-Franche-Comté';
+  } else if ([22, 29, 35, 56].includes(prefixNum)) {
+    return 'Bretagne';
+  } else if ([18, 28, 36, 37, 41, 45].includes(prefixNum)) {
+    return 'Centre-Val de Loire';
+  } else if ([20].includes(prefixNum)) {
+    return 'Corse';
+  } else if ([8, 10, 51, 52, 54, 55, 57, 67, 68, 88].includes(prefixNum)) {
+    return 'Grand Est';
+  } else if ([2, 59, 60, 62, 80].includes(prefixNum)) {
+    return 'Hauts-de-France';
+  } else if ([75, 77, 78, 91, 92, 93, 94, 95].includes(prefixNum)) {
+    return 'Île-de-France';
+  } else if ([14, 27, 50, 61, 76].includes(prefixNum)) {
+    return 'Normandie';
+  } else if ([16, 17, 19, 23, 24, 33, 40, 47, 64, 79, 86, 87].includes(prefixNum)) {
+    return 'Nouvelle-Aquitaine';
+  } else if ([9, 11, 12, 30, 31, 32, 34, 46, 48, 65, 66, 81, 82].includes(prefixNum)) {
+    return 'Occitanie';
+  } else if ([44, 49, 53, 72, 85].includes(prefixNum)) {
+    return 'Pays de la Loire';
+  } else if ([4, 5, 6, 13, 83, 84].includes(prefixNum)) {
+    return 'Provence-Alpes-Côte d\'Azur';
+  }
+
+  return 'Région inconnue';
+};
+
 const CustomMapPopover: React.FC<any> = ({ data }) => {
   if (!data || data.length === 0) return null;
 
@@ -163,7 +204,7 @@ const MapView: React.FC = () => {
           .itemsPerPage(999999);
 
         const tournamentData = await query.executeAndLogAll();
-        
+
         // Add mock tournament
         // const mockTournament: Tournament = {
         //   affiche: 'https://scontent-cdg4-2.xx.fbcdn.net/v/t51.75761-15/470087536_18042947348180686_8221961367883295165_n.jpg?_nc_cat=100&ccb=1-7&_nc_sid=127cfc&_nc_ohc=2myBWCsHZ-UQ7kNvgGC_eil&_nc_zt=23&_nc_ht=scontent-cdg4-2.xx&_nc_gid=AltYYquEi9_H1QZpl9ACIaF&oh=00_AYC8g6SsDLL3sTd-s5afDRUB0W9ILdlbJofjMsbknc2VNA&oe=678322A9',
@@ -435,32 +476,33 @@ const MapView: React.FC = () => {
                   name: `Tournois à venir pour la saison en cours (${seasonStartYear}-${seasonEndYear})`
                 }
               },
-              // {
-              //   id: 'endowment_filter',
-              //   dataId: ['tournoi'],
-              //   name: ['Dotation totale (€)'],
-              //   type: 'range',
-              //   value: null,
-              //   enlarged: false,
-              //   plotType: 'histogram',
-              //   layerId: undefined,
-              //   field: {
-              //     type: 'real',
-              //     name: 'Dotation totale (€)'
-              //   }
-              // },
               {
-                id: 'name_filter',
+                id: 'region_filter',
                 dataId: ['tournoi'],
-                name: ['Nom du tournoi'],
-                type: 'input',
-                value: '',
+                name: ['Région'],
+                type: 'multiSelect',
+                value: [],
                 enlarged: false,
                 plotType: 'histogram',
                 layerId: undefined,
                 field: {
                   type: 'string',
-                  name: 'Nom du tournoi'
+                  name: 'Région',
+                  defaultValue: [
+                    'Auvergne-Rhône-Alpes',
+                    'Bourgogne-Franche-Comté',
+                    'Bretagne',
+                    'Centre-Val de Loire',
+                    'Corse',
+                    'Grand Est',
+                    'Hauts-de-France',
+                    'Île-de-France',
+                    'Normandie',
+                    'Nouvelle-Aquitaine',
+                    'Occitanie',
+                    'Pays de la Loire',
+                    'Provence-Alpes-Côte d\'Azur'
+                  ]
                 }
               },
               {
@@ -501,6 +543,20 @@ const MapView: React.FC = () => {
                 field: {
                   type: 'string',
                   name: 'Club organisateur'
+                }
+              },
+              {
+                id: 'name_filter',
+                dataId: ['tournoi'],
+                name: ['Nom du tournoi'],
+                type: 'input',
+                value: '',
+                enlarged: false,
+                plotType: 'histogram',
+                layerId: undefined,
+                field: {
+                  type: 'string',
+                  name: 'Nom du tournoi'
                 }
               },
               {
@@ -732,6 +788,7 @@ const MapView: React.FC = () => {
           { name: 'Règlement', type: 'string' },
           { name: 'Code postal', type: 'string' },
           { name: 'Ville', type: 'string' },
+          { name: 'Région', type: 'string' },
           { name: 'count', type: 'integer' },
           { name: 'count_display', type: 'string' },
           { name: 'size_multiplier', type: 'real' }
@@ -767,6 +824,7 @@ const MapView: React.FC = () => {
             }, {} as Record<string, any>)
           ).map(location => {
             console.log('Location data:', location);
+            const postalCode = Array.from(new Set<string>(location.tournaments.map(t => formatPostcode(t.address.postalCode)))).join(' | ');
             return [
               location.latitude,
               location.longitude,
@@ -786,8 +844,9 @@ const MapView: React.FC = () => {
                 ? `${location.tournaments[0].address.disambiguatingDescription ? location.tournaments[0].address.disambiguatingDescription + ' ' : ''}${location.tournaments[0].address.streetAddress}, ${location.tournaments[0].address.postalCode} ${location.tournaments[0].address.addressLocality}`
                 : 'Adresse non disponible',
               location.tournaments.map(t => t.rules?.url || `Pas encore de règlement${t.affiche ? ` - Affiche: ${t.affiche}` : ''}`).join(' | '),
-              Array.from(new Set<string>(location.tournaments.map(t => formatPostcode(t.address.postalCode)))).join(' | '),
+              postalCode,
               formatCityName(location.tournaments[0].address.addressLocality),
+              getRegionFromPostalCode(postalCode.split(' | ')[0]),
               location.count,
               location.count > 1 ? location.count.toString() : '',
               location.count > 1 ? 1.5 : 1
@@ -808,6 +867,7 @@ const MapView: React.FC = () => {
             { name: 'Règlement', type: 'string' },
             { name: 'Code postal', type: 'string' },
             { name: 'Ville', type: 'string' },
+            { name: 'Région', type: 'string' },
             { name: 'count', type: 'integer' },
             { name: 'count_display', type: 'string' },
             { name: 'size_multiplier', type: 'real' }
@@ -829,6 +889,7 @@ const MapView: React.FC = () => {
             }, {} as Record<string, any>)
           ).map(location => {
             console.log('Past Location data:', location);
+            const postalCode = Array.from(new Set<string>(location.tournaments.map(t => formatPostcode(t.address.postalCode)))).join(' | ');
             return [
               location.latitude,
               location.longitude,
@@ -847,8 +908,9 @@ const MapView: React.FC = () => {
                 ? `${location.tournaments[0].address.disambiguatingDescription ? location.tournaments[0].address.disambiguatingDescription + ' ' : ''}${location.tournaments[0].address.streetAddress}, ${location.tournaments[0].address.postalCode} ${location.tournaments[0].address.addressLocality}`
                 : 'Adresse non disponible',
               location.tournaments.map(t => t.rules?.url || 'Pas de règlement').join(' | '),
-              Array.from(new Set<string>(location.tournaments.map(t => formatPostcode(t.address.postalCode)))).join(' | '),
+              postalCode,
               formatCityName(location.tournaments[0].address.addressLocality),
+              getRegionFromPostalCode(postalCode.split(' | ')[0]),
               location.count,
               location.count > 1 ? location.count.toString() : '',
               location.count > 1 ? 1.5 : 1
