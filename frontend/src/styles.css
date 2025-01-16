@@ -131,8 +131,8 @@ body {
 }
 
 .map-popover{
-  padding-top: 7.5px !important;
-  padding-bottom: 7.5px !important;
+  /* padding-top: 7.5px !important; */
+  /* padding-bottom: 7.5px !important; */
 }
 
 .map-popover__layer-info>div:last-child {

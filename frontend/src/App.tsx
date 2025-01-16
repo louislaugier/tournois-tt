@@ -52,6 +52,8 @@ const formatCityName = (city: string): string => {
   // Special case for VILLENEUVE D ASCQ
   if (upperCity === 'VILLENEUVE D ASCQ') {
     return "VILLENEUVE D'ASCQ";
+  } else if (upperCity === '51000 - CHALONS EN CHAMPAGNE') {
+    return "CHALONS-EN-CHAMPAGNE";
   }
 
   // Replace STE and ST with full words
@@ -643,21 +645,23 @@ const MapView: React.FC = () => {
                     pickable: false,
                     fixedRadius: false,
                     radiusRange: [0, 0],
-                    clusterRadius: 0
+                    clusterRadius: 0,
+                    strokeOpacity: 0.8
                   },
+                  hidden: true,
                   textLabel: {
-                    field: { name: '', type: 'string' },
-                    color: [255, 255, 255] as [number, number, number],
-                    size: 12,
+                    field: null,
+                    color: [0, 0, 0] as [number, number, number],
+                    size: 0,
                     offset: [0, 0] as [number, number],
                     anchor: 'start',
                     alignment: 'center',
-                    outlineWidth: 0,
-                    outlineColor: [0, 0, 0, 0] as [number, number, number, number],
                     background: false,
-                    backgroundColor: [0, 0, 0, 0] as [number, number, number, number]
+                    backgroundColor: [0, 0, 0, 0] as [number, number, number, number],
+                    outlineWidth: 0,
+                    outlineColor: [0, 0, 0, 0] as [number, number, number, number]
                   },
-                  isConfigActive: true,
+                  isConfigActive: false,
                   colorUI: {
                     color: {
                       type: 'none',
@@ -667,24 +671,28 @@ const MapView: React.FC = () => {
                   interaction: {
                     tooltip: {
                       enabled: false,
+                      compareMode: false,
+                      compareType: 'absolute',
                       fieldsToShow: {}
                     },
                     brush: {
-                      enabled: false
+                      enabled: false,
+                      size: 0.5
                     },
                     coordinate: {
                       enabled: false
                     },
-                    clicked: false,
-                    hovered: false
+                    geocoder: {
+                      enabled: false
+                    }
                   }
                 },
                 visualChannels: {
-                  colorField: { name: '', type: 'string' },
+                  colorField: null,
                   colorScale: 'quantile',
-                  sizeField: { name: '', type: 'string' },
+                  sizeField: null,
                   sizeScale: 'linear',
-                  strokeColorField: { name: '', type: 'string' },
+                  strokeColorField: null,
                   strokeColorScale: 'quantile'
                 }
               }
