@@ -5,6 +5,8 @@ import (
 	"os"
 	"strconv"
 	"tournois-tt/api/pkg/brevo"
+	"tournois-tt/api/pkg/geocoding"
+	"tournois-tt/api/pkg/utils"
 )
 
 func sendCurrentCampaign() {
@@ -25,4 +27,11 @@ func sendCurrentCampaign() {
 	}
 
 	log.Println("Campaign sent successfully.")
+}
+
+func refreshTournaments() {
+	lastSeasonStart, _ := utils.GetLatestFinishedSeason()
+	if err := geocoding.PreloadTournaments(&lastSeasonStart, nil); err != nil {
+		log.Printf("Warning: Failed to refresh tournament data: %v", err)
+	}
 }

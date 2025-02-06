@@ -252,18 +252,18 @@ func TournamentsHandler(c *gin.Context) {
 			continue
 		} else {
 			// Attempt to geocode if not in cache
-			coords, err := geocoding.GetCoordinates(t.Address)
-			if err != nil {
-				log.Printf("Warning: Failed to get coordinates for tournament %s: %v", t.Name, err)
-				continue
-			}
+			// coords, err := geocoding.GetCoordinates(t.Address)
+			// if err != nil {
+			// 	log.Printf("Warning: Failed to get coordinates for tournament %s: %v", t.Name, err)
+			// 	continue
+			// }
 
-			if !coords.Failed {
-				tournaments[i].Address.Latitude = coords.Lat
-				tournaments[i].Address.Longitude = coords.Lon
-			} else {
-				tournaments[i].Address.Failed = true
-			}
+			// if !coords.Failed {
+			// 	tournaments[i].Address.Latitude = coords.Lat
+			// 	tournaments[i].Address.Longitude = coords.Lon
+			// } else {
+			tournaments[i].Address.Failed = true
+			// }
 		}
 	}
 
