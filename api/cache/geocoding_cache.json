@@ -5541,7 +5541,9 @@
       "addressLocality": "Aubenas",
       "disambiguatingDescription": "Gymnase Roqua"
     },
-    "failed": true,
+    "latitude": 44.6283751,
+    "longitude": 4.3811115,
+    "failed": false,
     "timestamp": "2025-02-26T17:43:48.01235Z"
   },
   {
