@@ -258,6 +258,58 @@ const MapView: React.FC = () => {
               canUpdate: true,
               canDelete: false
             }
+          },
+          {
+            affiche: 'https://www.esvitrytt.fr/kcfinder/upload/files/ES%20VITRY%20TT%20TOURNOI%20NATIONAL%20B.pdf',
+            '@id': '/tournaments/mock-vitry-2025',
+            '@type': 'Tournament',
+            id: 999998, // Unique mock ID
+            identifier: 'MOCK-VITRY-2025',
+            name: 'ES VITRY TENNIS DE TABLE TOURNOI NATIONAL B',
+            type: 'National B',
+            club: {
+              '@id': '/clubs/esvitry',
+              '@type': 'Club',
+              id: 68, // Unique mock ID
+              name: 'VITRY ES',
+              identifier: '08940448'
+            },
+            startDate: new Date('2025-04-26').toISOString(),
+            endDate: new Date('2025-04-27').toISOString(),
+            address: {
+              '@id': '/addresses/vitry-gymnase',
+              '@type': 'PostalAddress',
+              id: 999998, // Unique mock ID
+              postalCode: '94400',
+              streetAddress: '36 Rue Carpeaux',
+              disambiguatingDescription: 'COLLEGE GUSTAVE MONOD',
+              addressCountry: 'FR',
+              addressRegion: 'Ile-de-France',
+              addressLocality: 'Vitry-sur-Seine',
+              areaServed: null,
+              latitude: 48.7895367,
+              longitude: 2.3776064,
+              name: 'COLLEGE GUSTAVE MONOD',
+              identifier: null,
+              openingHours: null,
+              main: false,
+              approximate: false
+            },
+            contacts: [], // Empty contacts array
+            rules: {
+              url: ""
+            },
+            endowment: 131000, // Total endowment in cents
+            status: 1, // Assuming 1 means active/upcoming
+            organization: undefined, // Optional field
+            responses: [], // Optional field
+            engagmentSheet: undefined, // Optional field
+            decision: undefined, // Optional field
+            page: null, // Optional field
+            '@permissions': {
+              canUpdate: true,
+              canDelete: false
+            }
           }
         ];
 
@@ -268,15 +320,15 @@ const MapView: React.FC = () => {
         };
         const isSameDay = (t: Tournament) => normalizeDate(t.startDate) === normalizeDate(mockTournaments[0].startDate);
 
-        let updatedTournamentData: Tournament[] = tournamentData;
-        // for each mock tournament, check if the start date is the same as the tournament data
+        let tournamentDataToSet = tournamentData || [];
         mockTournaments.forEach(mockTournament => {
           // Add mock tournament to tournament data only if it's not already in the data (check club identifier & if on the same date)
-          const existingTournament = tournamentData.find(t => t.club.identifier === mockTournament.club.identifier && isSameDay(t));
-          if (!existingTournament) updatedTournamentData = tournamentData ? [...tournamentData, mockTournament] : [mockTournament];
+          const existingTournament = tournamentDataToSet.find(t => t.club.identifier === mockTournament.club.identifier && isSameDay(t));
+          if (!existingTournament) {
+            tournamentDataToSet = [...tournamentDataToSet, mockTournament];
+          }
         });
-        // const updatedTournamentData = tournamentData ? [...tournamentData] : [];
-        setTournaments(updatedTournamentData);
+        setTournaments(tournamentDataToSet);
 
         // Get the current date and determine the latest finished season
         const now = new Date();
