@@ -281,15 +281,15 @@ const MapView: React.FC = () => {
               '@type': 'PostalAddress',
               id: 999998, // Unique mock ID
               postalCode: '94400',
-              streetAddress: '36 Rue Carpeaux',
-              disambiguatingDescription: 'COLLEGE GUSTAVE MONOD',
+              streetAddress: '4 Avenue du Colonel Fabien',
+              disambiguatingDescription: 'GYMNASE GOSNAT',
               addressCountry: 'FR',
               addressRegion: 'Ile-de-France',
               addressLocality: 'Vitry-sur-Seine',
               areaServed: null,
-              latitude: 48.7895367,
-              longitude: 2.3776064,
-              name: 'COLLEGE GUSTAVE MONOD',
+              latitude: 48.7815592,
+              longitude: 2.3802291,
+              name: 'GYMNASE GOSNAT',
               identifier: null,
               openingHours: null,
               main: false,
@@ -323,7 +323,10 @@ const MapView: React.FC = () => {
         let tournamentDataToSet = tournamentData || [];
         mockTournaments.forEach(mockTournament => {
           // Add mock tournament to tournament data only if it's not already in the data (check club identifier & if on the same date)
-          const existingTournament = tournamentDataToSet.find(t => t.club.identifier === mockTournament.club.identifier && isSameDay(t));
+          const existingTournament = tournamentDataToSet.find(t => 
+            t.club.identifier === mockTournament.club.identifier && 
+            normalizeDate(t.startDate) === normalizeDate(mockTournament.startDate)
+          );
           if (!existingTournament) {
             tournamentDataToSet = [...tournamentDataToSet, mockTournament];
           }
