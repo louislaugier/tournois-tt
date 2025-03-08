@@ -60,5 +60,13 @@ module.exports = merge(common, {
     maxEntrypointSize: 512000,
     maxAssetSize: 512000,
     hints: 'warning'
+  },
+  devServer: {
+    historyApiFallback: {
+      index: '/index.html',
+      rewrites: [
+        { from: /.*/, to: '/index.html' }
+      ]
+    }
   }
 }); 

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Helmet } from 'react-helmet';
 import { Provider } from 'react-redux';
-import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, useLocation, Navigate } from 'react-router-dom';
 import { addDataToMap } from '@kepler.gl/actions';
 import '@kepler.gl/styles';
 import { initializeDateFormatter } from './lib/dateFormatter';
@@ -1257,6 +1257,7 @@ const AppContent: React.FC = () => {
       <Routes>
         <Route path="/" element={<MapView />} />
         <Route path="/cookies" element={<Cookies />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </div>
   );

@@ -33,7 +33,12 @@ module.exports = merge(common, {
     hot: true,
     host: '0.0.0.0',
     allowedHosts: 'all',
-    historyApiFallback: true,
+    historyApiFallback: {
+      index: '/index.html',
+      rewrites: [
+        { from: /.*/, to: '/index.html' }
+      ]
+    },
     client: {
       webSocketURL: 'ws://localhost/ws',
       progress: true,
