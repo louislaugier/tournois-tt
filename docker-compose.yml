@@ -43,6 +43,7 @@ services:
       - 8080
     environment:
       - GIN_MODE=debug
+      - GOOGLE_GEOCODING_API_KEY=${GOOGLE_GEOCODING_API_KEY}
     networks:
       - vpc_local
 

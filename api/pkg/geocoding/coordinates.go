@@ -1,95 +1,33 @@
 package geocoding
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"math/rand"
 	"net"
 	"net/http"
 	"net/url"
+	"os"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 )
 
 const (
-	nominatimBaseURL  = "https://nominatim.openstreetmap.org/search"
-	defaultMaxRetries = 3
-	retryDelay        = 5 * time.Second
+	nominatimBaseURL     = "https://nominatim.openstreetmap.org/search"
+	googleGeocodeBaseURL = "https://maps.googleapis.com/maps/api/geocode/json"
+	defaultMaxRetries    = 3
+	retryDelay           = 5 * time.Second
 	// Nominatim usage policy requires 1 request per second
 	rateLimitDelay       = 1500 * time.Millisecond // Add buffer to be safe
 	maxConsecutiveErrors = 5
 )
 
-var (
-	httpClient = &http.Client{
-		Timeout: 10 * time.Second,
-	}
-	consecutiveErrors = 0
-	lastRequestTime   time.Time
-	mutex             sync.Mutex
-)
-
-// waitForRateLimit ensures we respect the rate limit
-func waitForRateLimit() {
-	mutex.Lock()
-	defer mutex.Unlock()
-
-	// Wait until enough time has passed since the last request
-	elapsed := time.Since(lastRequestTime)
-	if elapsed < rateLimitDelay {
-		time.Sleep(rateLimitDelay - elapsed)
-	}
-	lastRequestTime = time.Now()
-}
-
-// BulkGeocodeAddresses performs geocoding for multiple addresses with rate limiting
-func BulkGeocodeAddresses(addresses []Address) []Location {
-	results := make([]Location, len(addresses))
-
-	for i, addr := range addresses {
-		// Check circuit breaker
-		mutex.Lock()
-		if consecutiveErrors >= maxConsecutiveErrors {
-			log.Printf("Circuit breaker triggered - too many consecutive errors")
-			mutex.Unlock()
-			results[i] = Location{Failed: true}
-			continue
-		}
-		mutex.Unlock()
-
-		// Rate limit between requests
-		waitForRateLimit()
-
-		// Construct full address string
-		fullAddress := constructFullAddress(addr)
-
-		// Prepare Nominatim request
-		params := url.Values{}
-		params.Add("q", fullAddress)
-		params.Add("format", "json")
-		params.Add("limit", "1")
-
-		// Attempt geocoding with retries
-		location, err := geocodeWithRetry(fullAddress, params)
-
-		if err != nil {
-			log.Printf("Failed to geocode address: %s - %v", fullAddress, err)
-			mutex.Lock()
-			consecutiveErrors++
-			mutex.Unlock()
-			results[i] = Location{Failed: true}
-		} else {
-			mutex.Lock()
-			consecutiveErrors = 0 // Reset on success
-			mutex.Unlock()
-			results[i] = location
-		}
-	}
-
-	return results
+var httpClient = &http.Client{
+	Timeout: 10 * time.Second,
 }
 
 // constructFullAddress creates a standardized address string
@@ -211,15 +149,122 @@ func geocodeWithRetry(fullAddress string, params url.Values) (Location, error) {
 	return Location{Failed: true}, lastErr
 }
 
+// geocodeWithGoogle attempts to geocode an address using Google Geocoding API
+func geocodeWithGoogle(fullAddress string) (Location, error) {
+	// Get API key from environment
+	apiKey := os.Getenv("GOOGLE_GEOCODING_API_KEY")
+	if apiKey == "" {
+		log.Printf("DEBUG: Google Geocoding API key is empty")
+		return Location{Failed: true}, fmt.Errorf("Google Geocoding API key not set")
+	}
+
+	// Prepare URL
+	params := url.Values{}
+	params.Add("address", fullAddress)
+	params.Add("key", apiKey)
+
+	log.Printf("DEBUG: Attempting to geocode address via Google API: %s", fullAddress)
+	log.Printf("DEBUG: Full request URL: %s", googleGeocodeBaseURL+"?"+params.Encode())
+
+	// Create request
+	req, err := http.NewRequest("GET", googleGeocodeBaseURL+"?"+params.Encode(), nil)
+	if err != nil {
+		log.Printf("DEBUG: Request creation error: %v", err)
+		return Location{Failed: true}, fmt.Errorf("request creation error: %v", err)
+	}
+
+	// Send request
+	resp, err := httpClient.Do(req)
+	if err != nil {
+		log.Printf("DEBUG: Network error: %v", err)
+		return Location{Failed: true}, fmt.Errorf("network error: %v", err)
+	}
+	defer resp.Body.Close()
+
+	// Log response status
+	log.Printf("DEBUG: Response status code: %d", resp.StatusCode)
+
+	// Read raw response body
+	bodyBytes, err := io.ReadAll(resp.Body)
+	if err != nil {
+		log.Printf("DEBUG: Error reading response body: %v", err)
+		return Location{Failed: true}, fmt.Errorf("error reading response body: %v", err)
+	}
+	bodyString := string(bodyBytes)
+	log.Printf("DEBUG: Raw response body: %s", bodyString)
+
+	// Recreate response body reader as it was consumed
+	resp.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
+
+	// Check response status
+	if resp.StatusCode != http.StatusOK {
+		log.Printf("DEBUG: HTTP error status: %s", resp.Status)
+		return Location{Failed: true}, fmt.Errorf("HTTP error: %s", resp.Status)
+	}
+
+	// Parse response
+	var googleResp struct {
+		Results []struct {
+			Geometry struct {
+				Location struct {
+					Lat float64 `json:"lat"`
+					Lng float64 `json:"lng"`
+				} `json:"location"`
+			} `json:"geometry"`
+			Status string `json:"status"`
+		} `json:"results"`
+		Status string `json:"status"`
+		Error  string `json:"error_message,omitempty"`
+	}
+
+	log.Printf("DEBUG: Attempting to decode JSON response")
+	if err := json.NewDecoder(resp.Body).Decode(&googleResp); err != nil {
+		log.Printf("DEBUG: JSON parsing error: %v", err)
+		return Location{Failed: true}, fmt.Errorf("parsing error: %v", err)
+	}
+
+	// Log detailed decoding results
+	log.Printf("DEBUG: Decoded response - Status: %s, Results count: %d",
+		googleResp.Status, len(googleResp.Results))
+	if googleResp.Error != "" {
+		log.Printf("DEBUG: Google API Error Message: %s", googleResp.Error)
+	}
+
+	// Check response status
+	if googleResp.Status != "OK" || len(googleResp.Results) == 0 {
+		log.Printf("DEBUG: No coordinates found for address: %s", fullAddress)
+		return Location{Failed: true}, fmt.Errorf("no coordinates found for address: %s", fullAddress)
+	}
+
+	log.Printf("DEBUG: Geocoded address via Google API: %s -> (%.6f, %.6f)",
+		fullAddress,
+		googleResp.Results[0].Geometry.Location.Lat,
+		googleResp.Results[0].Geometry.Location.Lng)
+
+	return Location{
+		Lat:    googleResp.Results[0].Geometry.Location.Lat,
+		Lon:    googleResp.Results[0].Geometry.Location.Lng,
+		Failed: false,
+	}, nil
+}
+
 // GetCoordinates attempts to geocode a single address
 func GetCoordinates(address Address) (Location, error) {
 	fullAddress := constructFullAddress(address)
 
+	// First try Nominatim
 	params := url.Values{}
 	params.Add("q", fullAddress)
 	params.Add("format", "json")
 	params.Add("limit", "1")
 
 	location, err := geocodeWithRetry(fullAddress, params)
+
+	// If Nominatim fails, try Google Geocoding API
+	if err != nil {
+		log.Printf("Nominatim geocoding failed, falling back to Google Geocoding API: %v", err)
+		location, err = geocodeWithGoogle(fullAddress)
+	}
+
 	return location, err
 }
