@@ -976,7 +976,9 @@ const MapView: React.FC = () => {
               location.tournaments[0].address.streetAddress
                 ? `${location.tournaments[0].address.disambiguatingDescription ? location.tournaments[0].address.disambiguatingDescription + ' ' : ''}${location.tournaments[0].address.streetAddress}, ${location.tournaments[0].address.postalCode} ${location.tournaments[0].address.addressLocality}`
                 : 'Adresse non disponible',
-              location.tournaments.map(t => t.rules?.url || 'Pas de règlement').join(' | '),
+              location.tournaments.map(t => t.rules?.url || 'Pas de règlement')
+                .map(url => location.count > 1 ? url.replace('https://', '') : url)
+                .join(' | '),
               postalCode,
               formatCityName(location.tournaments[0].address.addressLocality),
               getRegionFromPostalCode(postalCode.split(' | ')[0]),
