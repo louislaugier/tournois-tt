@@ -1065,10 +1065,12 @@ const MapView: React.FC = () => {
       >
         <div 
           style={{
-            width: '200px', 
-            height: '200px', 
-            border: '20px solid #1FBAD6', // Turquoise from map
-            borderTop: '20px solid #9B59B6', // Purple from map
+            width: '100px', 
+            height: '100px', 
+            border: '10px solid #1FBAD6', // Base turquoise
+            borderTop: '10px solid rgba(31, 186, 214, 0.3)', // Lighter turquoise for spinning effect
+            borderRight: '10px solid rgba(31, 186, 214, 0.6)', // Slightly darker turquoise
+            borderBottom: '10px solid rgba(31, 186, 214, 0.8)', // Even darker turquoise
             borderRadius: '50%', 
             animation: 'spin 1s linear infinite'
           }}
