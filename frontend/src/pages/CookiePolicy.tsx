@@ -1,7 +1,7 @@
 import React from 'react';
 import { Helmet } from 'react-helmet';
 
-const Cookies: React.FC = () => {
+const CookiePolicy: React.FC = () => {
   return (
     <>
       <style>
@@ -81,4 +81,4 @@ const Cookies: React.FC = () => {
   );
 };
 
-export default Cookies; 
+export default CookiePolicy; 

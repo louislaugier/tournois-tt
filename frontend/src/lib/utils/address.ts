@@ -1,5 +1,5 @@
 export const formatPostcode = (postcode: string | undefined): string => {
-    if (!postcode) return '';  // Return empty string for undefined/null
+    if (!postcode) return '';
     return postcode.toString();
 };
 
@@ -9,6 +9,7 @@ export const formatCityName = (city: string): string => {
     // Special case for VILLENEUVE D ASCQ
     if (upperCity === 'VILLENEUVE D ASCQ') {
         return "VILLENEUVE D'ASCQ";
+    // Special case for 51000 - CHALONS EN CHAMPAGNE
     } else if (upperCity === '51000 - CHALONS EN CHAMPAGNE') {
         return "CHALONS-EN-CHAMPAGNE";
     }

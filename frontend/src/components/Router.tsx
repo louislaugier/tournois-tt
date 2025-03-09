@@ -1,5 +1,5 @@
 import { Routes, Route, Navigate, useLocation, BrowserRouter } from "react-router-dom";
-import Cookies from "../pages/Cookies";
+import Cookies from "../pages/CookiePolicy";
 import { Map } from "../pages/Map";
 import { useEffect } from "react";
 import React from "react";

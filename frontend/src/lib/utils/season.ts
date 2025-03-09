@@ -1,7 +1,7 @@
 import { getCurrentMonth, getCurrentYear } from "./date";
 
 export function getLastCompletedSeasonDates() {
-    const { seasonStartYear } = getLastCompletedSeasonYears()
+    const { seasonStartYear } = getCurrentSeasonYears()
 
     // For past tournaments, we want the season BEFORE the current season
     const pastSeasonStartYear = seasonStartYear - 1;
@@ -16,7 +16,7 @@ export function getLastCompletedSeasonDates() {
     return { lastCompletedSeasonStartDate, lastCompletedSeasonEndDate }
 }
 
-export function getLastCompletedSeasonYears() {
+export function getCurrentSeasonYears() {
     // Get the current date and determine the latest finished season
     const currentMonth = getCurrentMonth()
     const currentYear = getCurrentYear()
