@@ -2,6 +2,7 @@ import React from 'react';
 import { createRoot } from 'react-dom/client';
 import './styles.css';
 import App from './App';
+import { handleErrorOverlayForEnv } from './lib/errors';
 
 // Enhanced error logging and debugging
 const initializeApp = () => {
@@ -23,9 +24,13 @@ const initializeApp = () => {
 
   try {
     const root = createRoot(container);
+
+    // Disable error overlay in production
+    handleErrorOverlayForEnv()
+
     root.render(
       // <React.StrictMode>
-        <App />
+      <App />
       // </React.StrictMode>
     );
   } catch (error) {
@@ -47,7 +52,6 @@ const initializeApp = () => {
       <pre>${error?.toString()}</pre>
     `;
 
-    document.body.appendChild(errorDisplay);
     throw error;
   }
 };

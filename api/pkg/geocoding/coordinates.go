@@ -17,13 +17,13 @@ import (
 )
 
 const (
+	// Nominatim usage policy requires 1 request per second
+	RateLimitDelay = 1500 * time.Millisecond // Add buffer to be safe
+
 	nominatimBaseURL     = "https://nominatim.openstreetmap.org/search"
 	googleGeocodeBaseURL = "https://maps.googleapis.com/maps/api/geocode/json"
 	defaultMaxRetries    = 3
 	retryDelay           = 5 * time.Second
-	// Nominatim usage policy requires 1 request per second
-	rateLimitDelay       = 1500 * time.Millisecond // Add buffer to be safe
-	maxConsecutiveErrors = 5
 )
 
 var httpClient = &http.Client{

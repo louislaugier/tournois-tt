@@ -33,3 +33,17 @@ type GeocodeResult struct {
 func (a Address) IsValid() bool {
 	return a.PostalCode != "" && a.AddressLocality != ""
 }
+
+// GeocodeConfig allows configuring geocoding behavior
+type GeocodeConfig struct {
+	Enabled             bool
+	MaxGeocodeAttempts  int
+	SkipFailedAddresses bool
+}
+
+// DefaultGeocodeConfig provides default geocoding configuration
+var DefaultGeocodeConfig = GeocodeConfig{
+	Enabled:             false,
+	MaxGeocodeAttempts:  3,
+	SkipFailedAddresses: true,
+}

@@ -117,19 +117,11 @@ func loadGeocodeCache() (map[string]geocoding.GeocodeResult, error) {
 
 	cacheMap := make(map[string]geocoding.GeocodeResult)
 	for _, result := range cachedResults {
-		key := generateCacheKey(result.Address)
+		key := geocoding.GenerateCacheKey(result.Address)
 		cacheMap[key] = result
 	}
 
 	return cacheMap, nil
-}
-
-// generateCacheKey creates a unique key for an address
-func generateCacheKey(addr geocoding.Address) string {
-	return fmt.Sprintf("%s|%s|%s",
-		strings.TrimSpace(addr.StreetAddress),
-		strings.TrimSpace(addr.PostalCode),
-		strings.TrimSpace(addr.AddressLocality))
 }
 
 func min(a, b int) int {
@@ -239,7 +231,7 @@ func TournamentsHandler(c *gin.Context) {
 		}
 
 		// Check if address is in geocoding cache
-		cacheKey := generateCacheKey(t.Address)
+		cacheKey := geocoding.GenerateCacheKey(t.Address)
 		if cachedResult, exists := geocodingCache[cacheKey]; exists {
 			log.Printf("Using cached geocoding result for tournament: %s", t.Name)
 

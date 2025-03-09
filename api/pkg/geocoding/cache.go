@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 )
 
@@ -56,8 +57,8 @@ func getCacheDirectory() string {
 	return filepath.Join(execDir, "cache")
 }
 
-// saveGeocodeResultsToCache saves geocoding results to a JSON file
-func saveGeocodeResultsToCache(results []GeocodeResult) error {
+// SaveGeocodeResultsToCache saves geocoding results to a JSON file
+func SaveGeocodeResultsToCache(results []GeocodeResult) error {
 	// Get cache directory
 	cacheDir := getCacheDirectory()
 	if err := os.MkdirAll(cacheDir, 0755); err != nil {
@@ -82,8 +83,8 @@ func saveGeocodeResultsToCache(results []GeocodeResult) error {
 	return nil
 }
 
-// loadGeocodeResultsFromCache loads existing geocoding results from JSON file
-func loadGeocodeResultsFromCache() (map[string]GeocodeResult, error) {
+// LoadGeocodeResultsFromCache loads existing geocoding results from JSON file
+func LoadGeocodeResultsFromCache() (map[string]GeocodeResult, error) {
 	cacheFilePath := filepath.Join(getCacheDirectory(), "geocoding_cache.json")
 
 	// Check if cache file exists
@@ -105,10 +106,18 @@ func loadGeocodeResultsFromCache() (map[string]GeocodeResult, error) {
 	// Convert to map for faster lookup
 	cacheMap := make(map[string]GeocodeResult)
 	for _, result := range cachedResults {
-		key := generateCacheKey(result.Address)
+		key := GenerateCacheKey(result.Address)
 		cacheMap[key] = result
 	}
 
 	log.Printf("Loaded %d geocoding results from cache at %s", len(cacheMap), cacheFilePath)
 	return cacheMap, nil
+}
+
+// GenerateCacheKey creates a unique key for an address
+func GenerateCacheKey(addr Address) string {
+	return fmt.Sprintf("%s|%s|%s",
+		strings.TrimSpace(addr.StreetAddress),
+		strings.TrimSpace(addr.PostalCode),
+		strings.TrimSpace(addr.AddressLocality))
 }

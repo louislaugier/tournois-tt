@@ -5,11 +5,11 @@ import (
 	_ "time/tzdata"
 )
 
-// GetLatestFinishedSeason returns the latest completed season year.
+// GetLastFinishedSeason returns the last completed season year.
 // A season starts on July 1st and ends on June 30th of the following year.
-// For example, if current date is May 2024, it will return 2022-2023 as the latest finished season.
+// For example, if current date is May 2024, it will return 2022-2023 as the last finished season.
 // Returns the start and end of the season in France time zone.
-func GetLatestFinishedSeason() (time.Time, time.Time) {
+func GetLastFinishedSeason() (time.Time, time.Time) {
 	loc, err := time.LoadLocation("Europe/Paris")
 	if err != nil {
 		// Fallback to UTC if timezone loading fails

@@ -25,7 +25,7 @@ func Schedule() {
 	// }
 
 	// Schedule the cron job to run every day at 1 PM
-	_, err = c.AddFunc("0 13 * * *", refreshTournaments)
+	_, err = c.AddFunc("0 13 * * *", RefreshTournaments)
 	if err != nil {
 		log.Fatal("Error adding cron job:", err)
 	}

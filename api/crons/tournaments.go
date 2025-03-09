@@ -1,4 +1,4 @@
-package geocoding
+package crons
 
 import (
 	"encoding/json"
@@ -8,33 +8,27 @@ import (
 	"net/url"
 	"strings"
 	"time"
-
 	"tournois-tt/api/pkg/fftt"
+	"tournois-tt/api/pkg/geocoding"
+	"tournois-tt/api/pkg/utils"
 )
 
-// GeocodeConfig allows configuring geocoding behavior
-type GeocodeConfig struct {
-	Enabled             bool
-	MaxGeocodeAttempts  int
-	SkipFailedAddresses bool
+func RefreshTournaments() {
+	lastSeasonStart, _ := utils.GetLastFinishedSeason()
+	if err := refresh(&lastSeasonStart, nil); err != nil {
+		log.Printf("Warning: Failed to refresh tournament data: %v", err)
+	}
 }
 
-// DefaultGeocodeConfig provides default geocoding configuration
-var DefaultGeocodeConfig = GeocodeConfig{
-	Enabled:             false,
-	MaxGeocodeAttempts:  3,
-	SkipFailedAddresses: true,
-}
-
-// PreloadTournaments fetches and processes tournament addresses
-func PreloadTournaments(startDateAfter, startDateBefore *time.Time) error {
-	log.Printf("Starting tournament preloading...")
+// refresh fetches and processes tournament addresses
+func refresh(startDateAfter, startDateBefore *time.Time) error {
+	log.Printf("Starting tournament refreshing...")
 
 	// Load existing cache
-	existingCache, err := loadGeocodeResultsFromCache()
+	existingCache, err := geocoding.LoadGeocodeResultsFromCache()
 	if err != nil {
 		log.Printf("Warning: Failed to load existing cache: %v", err)
-		existingCache = make(map[string]GeocodeResult)
+		existingCache = make(map[string]geocoding.GeocodeResult)
 	}
 
 	// Create query params for future tournaments
@@ -58,7 +52,7 @@ func PreloadTournaments(startDateAfter, startDateBefore *time.Time) error {
 	}
 
 	var tournaments []struct {
-		Address Address `json:"address"`
+		Address geocoding.Address `json:"address"`
 	}
 
 	if err := json.NewDecoder(resp.Body).Decode(&tournaments); err != nil {
@@ -68,15 +62,15 @@ func PreloadTournaments(startDateAfter, startDateBefore *time.Time) error {
 	log.Printf("Found %d tournaments to process", len(tournaments))
 
 	// Prepare addresses for geocoding
-	addressesToGeocode := make([]Address, 0)
-	geocodeResults := make([]GeocodeResult, 0, len(tournaments))
+	addressesToGeocode := make([]geocoding.Address, 0)
+	geocodeResults := make([]geocoding.GeocodeResult, 0, len(tournaments))
 	successCount := 0
 	failureCount := 0
 
 	for _, t := range tournaments {
 		if !t.Address.IsValid() {
 			log.Printf("Skipping invalid address: %+v", t.Address)
-			geocodeResults = append(geocodeResults, GeocodeResult{
+			geocodeResults = append(geocodeResults, geocoding.GeocodeResult{
 				Address:   t.Address,
 				Failed:    true,
 				Timestamp: time.Now(),
@@ -85,7 +79,7 @@ func PreloadTournaments(startDateAfter, startDateBefore *time.Time) error {
 		}
 
 		// Check if address is already in cache
-		cacheKey := generateCacheKey(t.Address)
+		cacheKey := geocoding.GenerateCacheKey(t.Address)
 		if cachedResult, exists := existingCache[cacheKey]; exists {
 			log.Printf("Using cached address: %s", cacheKey)
 			geocodeResults = append(geocodeResults, cachedResult)
@@ -97,16 +91,16 @@ func PreloadTournaments(startDateAfter, startDateBefore *time.Time) error {
 
 	// Perform individual geocoding
 	for _, addr := range addressesToGeocode {
-		result := GeocodeResult{
+		result := geocoding.GeocodeResult{
 			Address:   addr,
 			Timestamp: time.Now(),
 		}
 
 		// Rate limit between requests
-		time.Sleep(rateLimitDelay)
+		time.Sleep(geocoding.RateLimitDelay)
 
 		// Geocode individual address
-		location, err := GetCoordinates(addr)
+		location, err := geocoding.GetCoordinates(addr)
 		if err != nil {
 			log.Printf("Failed to geocode address: %s, %s %s",
 				strings.TrimSpace(addr.StreetAddress),
@@ -134,19 +128,11 @@ func PreloadTournaments(startDateAfter, startDateBefore *time.Time) error {
 
 	if len(addressesToGeocode) > 0 {
 		// Save geocoding results to cache
-		if err := saveGeocodeResultsToCache(geocodeResults); err != nil {
+		if err := geocoding.SaveGeocodeResultsToCache(geocodeResults); err != nil {
 			log.Printf("Warning: Failed to save geocoding cache: %v", err)
 		}
 	}
 
-	log.Printf("Preloading completed: %d successful, %d failed", successCount, failureCount)
+	log.Printf("Refreshing completed: %d successful, %d failed", successCount, failureCount)
 	return nil
-}
-
-// generateCacheKey creates a unique key for an address
-func generateCacheKey(addr Address) string {
-	return fmt.Sprintf("%s|%s|%s",
-		strings.TrimSpace(addr.StreetAddress),
-		strings.TrimSpace(addr.PostalCode),
-		strings.TrimSpace(addr.AddressLocality))
 }

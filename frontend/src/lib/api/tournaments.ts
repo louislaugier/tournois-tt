@@ -1,10 +1,11 @@
+import { formatDateQueryParam } from '../utils/date';
 import { API_BASE_URL, getDefaultHeaders } from './config';
 import { Tournament } from './types';
 
 export class APIError extends Error {
     constructor(message: string) {
         super(message);
-        this.name = 'APIError';
+        this.name = 'Internal API error';
     }
 }
 
@@ -52,10 +53,6 @@ export async function fetchTournaments(params: TournamentQueryParams = {}): Prom
             `Failed to fetch tournaments: ${error instanceof Error ? error.message : 'Unknown error'}`
         );
     }
-}
-
-export function formatDateParam(date: Date): string {
-    return date.toISOString().split('.')[0];
 }
 
 export async function fetchAllTournaments(params: TournamentQueryParams = {}): Promise<Tournament[]> {
@@ -106,20 +103,20 @@ export class TournamentQueryBuilder {
 
     startDateRange(after?: Date, before?: Date): this {
         if (after) {
-            this.params['startDate[after]'] = formatDateParam(after);
+            this.params['startDate[after]'] = formatDateQueryParam(after);
         }
         if (before) {
-            this.params['startDate[before]'] = formatDateParam(before);
+            this.params['startDate[before]'] = formatDateQueryParam(before);
         }
         return this;
     }
 
     endDateRange(after?: Date, before?: Date): this {
         if (after) {
-            this.params['endDate[after]'] = formatDateParam(after);
+            this.params['endDate[after]'] = formatDateQueryParam(after);
         }
         if (before) {
-            this.params['endDate[before]'] = formatDateParam(before);
+            this.params['endDate[before]'] = formatDateQueryParam(before);
         }
         return this;
     }

@@ -1,4 +1,5 @@
 export function initializeDateFormatter(): void {
+  
   function formatDate(element: HTMLElement): void {
     const text: string = element.textContent || '';
     // Split by space to separate date and time
