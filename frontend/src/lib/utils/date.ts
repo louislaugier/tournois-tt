@@ -100,7 +100,6 @@ export function initializeDateTranslator(): void {
   }
 
   // Initial formatting and cloning
-  console.log('Starting initialization...');
   formatAllDates();
 
   // Create an observer instance to watch for changes

@@ -14,6 +14,7 @@ import ErrorBoundary from "../components/ErrorBoundary";
 
 export const Map: React.FC = () => {
     const [currentTournaments, setCurrentTournaments] = useState<Tournament[]>([]);
+    const [pastCurrentTournaments, setPastCurrentTournaments] = useState<Tournament[]>([]);
     const [pastTournaments, setPastTournaments] = useState<Tournament[]>([]);
     const [isLoading, setIsLoading] = useState<boolean>(true);
 
@@ -24,7 +25,7 @@ export const Map: React.FC = () => {
     }, []);
 
     useEffect(() => {
-        loadTournaments(setIsLoading, setCurrentTournaments, setPastTournaments);
+        loadTournaments(setIsLoading, setCurrentTournaments, setPastCurrentTournaments, setPastTournaments);
     }, []);
 
     useEffect(() => {
@@ -39,81 +40,69 @@ export const Map: React.FC = () => {
     }, []);
 
     useEffect(() => {
-
         if (!currentTournaments?.length) {
             return
         }
 
-        const tournamentsWithCoordinates = currentTournaments.filter(
-            t => t.address?.latitude && t.address?.longitude
-        );
         // const tournamentsWithoutCoordinates = currentTournaments.filter(
         //     t => !t.address?.latitude || !t.address?.longitude
         // );
 
-        const allCurrentTournamentsForMap = [
-            ...tournamentsWithCoordinates,
-            // ...tournamentsWithoutCoordinates.map(t => ({
-            //     ...t,
-            //     address: {
-            //         ...t.address,
-            //         latitude: 46.777138,
-            //         longitude: 2.804568,
-            //         approximate: true
-            //     }
-            // }))
-        ].map(t => ({
-            ...t,
-            address: {
-                ...t.address,
-                postalCode: formatPostcode(t.address.postalCode)
-            }
-        }));
-
         const tournamentsDataset = {
             fields: tournamentFields,
-            rows: getTournamentRows(allCurrentTournamentsForMap)
+            rows: getTournamentRows([
+                ...currentTournaments.filter(
+                    t => t.address?.latitude && t.address?.longitude
+                ),
+                // ...tournamentsWithoutCoordinates.map(t => ({
+                //     ...t,
+                //     address: {
+                //         ...t.address,
+                //         latitude: 46.777138,
+                //         longitude: 2.804568,
+                //         approximate: true
+                //     }
+                // }))
+            ].map(t => ({
+                ...t,
+                address: {
+                    ...t.address,
+                    postalCode: formatPostcode(t.address.postalCode)
+                }
+            })))
         };
 
-        if (!pastTournaments?.length) {
-            store.dispatch(
-                addDataToMap({
-                    datasets: [
-                        {
-                            info: {
-                                id: 'current_tournaments'
-                            },
-                            data: tournamentsDataset
-                        },
-                    ],
-                    options: {
-                        centerMap: false,
-                        readOnly: false
-                    },
-                    config: getMapConfig(currentTournaments)
-                })
-            );
-        }
-
-        const pastTournamentsWithCoordinates = pastTournaments.filter(
-            t => t.address?.latitude && t.address?.longitude
-        );
-
-        const allPastTournamentsForMap = [
-            ...pastTournamentsWithCoordinates,
-        ].map(t => ({
-            ...t,
-            address: {
-                ...t.address,
-                postalCode: formatPostcode(t.address.postalCode)
-            }
-        }));
+        const pastCurrentTournamentsDataset = {
+            fields: tournamentFields,
+            rows: getTournamentRows([
+                ...pastCurrentTournaments.filter(
+                    t => t.address?.latitude && t.address?.longitude
+                ),
+            ].map(t => ({
+                ...t,
+                address: {
+                    ...t.address,
+                    postalCode: formatPostcode(t.address.postalCode)
+                }
+            })))
+        };
 
         const pastTournamentsDataset = {
             fields: tournamentFields,
-            rows: getTournamentRows(allPastTournamentsForMap)
+            rows: getTournamentRows([
+                ...pastTournaments.filter(
+                    t => t.address?.latitude && t.address?.longitude
+                ),
+            ].map(t => ({
+                ...t,
+                address: {
+                    ...t.address,
+                    postalCode: formatPostcode(t.address.postalCode)
+                }
+            })))
         };
 
+        console.log(pastCurrentTournaments)
         store.dispatch(
             addDataToMap({
                 datasets: [
@@ -122,6 +111,12 @@ export const Map: React.FC = () => {
                             id: 'current_tournaments'
                         },
                         data: tournamentsDataset
+                    },
+                    {
+                        info: {
+                            id: 'past_current_tournaments'
+                        },
+                        data: pastCurrentTournamentsDataset
                     },
                     {
                         info: {

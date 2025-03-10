@@ -64,7 +64,6 @@ export async function fetchAllTournaments(params: TournamentQueryParams = {}): P
 
     try {
         const tournaments = await fetchTournaments(defaultParams);
-        console.log(`Fetched ${tournaments.length} tournaments`);
         return tournaments;
     } catch (error) {
         console.error('Error fetching tournaments:', error);
@@ -122,27 +121,22 @@ export class TournamentQueryBuilder {
     }
 
     inPostalCode(postalCode: string): this {
-        console.log('Filtering by postal code:', postalCode);
         this.params['address.postalCode'] = postalCode;
         return this;
     }
 
     inLocality(locality: string): this {
-        console.log('Filtering by locality:', locality);
         this.params['address.addressLocality'] = locality;
         return this;
     }
 
     async execute(): Promise<Tournament[]> {
-        console.log('Executing tournament query with params:', this.params);
         const results = await fetchTournaments(this.params);
-        console.log('Query results:', results);
         return results;
     }
 
     async executeAndLogAll(): Promise<Tournament[]> {
         const tournaments = await fetchAllTournaments(this.params);
-        console.log('All tournaments:', tournaments);
         return tournaments;
     }
 } 

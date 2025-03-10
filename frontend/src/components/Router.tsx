@@ -8,7 +8,7 @@ const Router: React.FC = () => {
     const location = useLocation();
 
     useEffect(() => {
-        if (location.pathname === '/') document.body.style.overflow = 'hidden';
+        if (location.pathname === '/') document.body.style.overflow = 'hidden'; // no scroll on map page
 
         return () => {
             document.body.style.overflow = '';

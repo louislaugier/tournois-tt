@@ -1,11 +1,8 @@
 export function initializeSidebarCustomizer(): void {
   function cloneSidebarClose(): boolean {
-    console.log('Attempting to find .side-bar__close element...');
     const originalElement = document.querySelector('.side-bar__close');
-    console.log('Original element found:', originalElement);
     
     if (originalElement) {
-      console.log('Creating clone of element...');
       const copy = originalElement.cloneNode(true) as HTMLElement;
       copy.classList.add('side-bar__close--cloned');
       
@@ -38,11 +35,9 @@ export function initializeSidebarCustomizer(): void {
       });
       
       if (originalElement.parentNode) {
-        console.log('Parent node found, inserting clone...');
         originalElement.parentNode.insertBefore(cleanCopy, originalElement);
         // Remove the original element
         originalElement.remove();
-        console.log('Clone inserted successfully and original removed');
         return true;
       } else {
         console.warn('No parent node found for the original element');
@@ -55,8 +50,6 @@ export function initializeSidebarCustomizer(): void {
   }
 
   // Initial formatting and cloning with retry mechanism
-  console.log('Starting initialization...');
-  
   let retryCount = 0;
   const maxRetries = 5;
   const retryInterval = 1000; // 1 second
@@ -67,7 +60,6 @@ export function initializeSidebarCustomizer(): void {
       return;
     }
 
-    console.log(`Attempting to clone sidebar (attempt ${retryCount + 1})...`);
     const success = cloneSidebarClose();
     if (!success) {
       retryCount++;

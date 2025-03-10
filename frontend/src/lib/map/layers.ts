@@ -7,16 +7,23 @@ export const getMapLayers = () => {
         createLayerConfig(
             'current_tournaments',
             [31, 186, 214],
-            `Saison en cours (${seasonStartYear}-${seasonEndYear})`,
+            `Saison en cours - tournoi à venir (${seasonStartYear}-${seasonEndYear})`,
             16,  // text label size
-            20   // radius
+            24   // radius
+        ),
+        createLayerConfig(
+            'past_current_tournaments',
+            [0, 0, 139],
+            `Saison en cours - tournoi terminé (${seasonStartYear}-${seasonEndYear})`,
+            16,  // text label size
+            22   // radius
         ),
         createLayerConfig(
             'past_tournaments',
             [155, 89, 182],
             `Saison précédente (${seasonStartYear - 1}-${seasonEndYear - 1})`,
-            14,  // text label size
-            22   // radius
+            16,  // text label size
+            26   // radius
         )
     ]
 }

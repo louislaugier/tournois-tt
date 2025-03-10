@@ -16,6 +16,12 @@ export function getLastCompletedSeasonDates() {
     return { lastCompletedSeasonStartDate, lastCompletedSeasonEndDate }
 }
 
+export function getCurrentSeasonStartDate() {
+    const { seasonStartYear } = getCurrentSeasonYears()
+
+    return new Date(seasonStartYear, 6, 1); // July 1st of current season start year
+}
+
 export function getCurrentSeasonYears() {
     // Get the current date and determine the latest finished season
     const currentMonth = getCurrentMonth()
