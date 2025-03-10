@@ -212,11 +212,15 @@ input.layer__title__editor {
   width: 120% !important;
 }
 
-.hQuvhR>div:first-child .layer-panel__header.sort--handle, .bMyRek {
+.hQuvhR>div:first-child .layer-panel__header.sort--handle, .inUwnR {
   border-left: 3px solid #1FBAD6 !important;
 }
 
-.hQuvhR>div:nth-child(2) .layer-panel__header.sort--handle, .bXBtJe {
+.hQuvhR>div:nth-child(2) .layer-panel__header.sort--handle, .bMyRek {
+  border-left: 3px solid rgba(0, 0, 139, 1) !important;
+}
+
+.hQuvhR>div:nth-child(3) .layer-panel__header.sort--handle, .bXBtJe {
   border-left: 3px solid rgba(155, 89, 182, 1) !important;
 }
 
