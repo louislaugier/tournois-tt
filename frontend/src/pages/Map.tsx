@@ -11,7 +11,6 @@ import { loadTournaments } from "../lib/tournament/load";
 import { CustomTooltipObserver } from "../components/CustomTooltipObserver";
 import { getTournamentRows, tournamentFields } from "../lib/map/datasets";
 import ErrorBoundary from "../components/ErrorBoundary";
-import { getCurrentSeasonYears } from "../lib/utils/season";
 
 export const Map: React.FC = () => {
     const [currentTournaments, setCurrentTournaments] = useState<Tournament[]>([]);

@@ -11,9 +11,9 @@ export const loadTournaments = async (setIsLoading: (value: React.SetStateAction
             .orderByStartDate('asc')
             .itemsPerPage(999999);
 
-        const tournamentData = await query.executeAndLogAll();
+        const currentTournamentsData = await query.executeAndLogAll();
 
-        setCurrentTournaments(upsertMocksIntoDataset(tournamentData));
+        setCurrentTournaments(upsertMocksIntoDataset(currentTournamentsData));
 
         const { lastCompletedSeasonStartDate, lastCompletedSeasonEndDate } = getLastCompletedSeasonDates()
 
