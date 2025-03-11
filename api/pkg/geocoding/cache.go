@@ -3,7 +3,6 @@ package geocoding
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -41,16 +40,11 @@ func (c *Cache) Set(key string, value interface{}) {
 // DefaultCache is the global cache instance
 var DefaultCache = NewCache()
 
-func init() {
-	fmt.Println("Geocoding cache initialized")
-}
-
 // getCacheDirectory returns the absolute path to the cache directory
 func getCacheDirectory() string {
 	// Get the executable's directory
 	execDir, err := os.Getwd()
 	if err != nil {
-		log.Printf("Warning: Failed to get working directory, falling back to relative path: %v", err)
 		return "cache"
 	}
 
@@ -79,7 +73,6 @@ func SaveGeocodeResultsToCache(results []GeocodeResult) error {
 		return fmt.Errorf("failed to write geocoding cache: %v", err)
 	}
 
-	log.Printf("Saved %d geocoding results to %s", len(results), cacheFilePath)
 	return nil
 }
 
@@ -110,7 +103,6 @@ func LoadGeocodeResultsFromCache() (map[string]GeocodeResult, error) {
 		cacheMap[key] = result
 	}
 
-	log.Printf("Loaded %d geocoding results from cache at %s", len(cacheMap), cacheFilePath)
 	return cacheMap, nil
 }
 
@@ -120,4 +112,32 @@ func GenerateCacheKey(addr Address) string {
 		strings.TrimSpace(addr.StreetAddress),
 		strings.TrimSpace(addr.PostalCode),
 		strings.TrimSpace(addr.AddressLocality))
+}
+
+func LoadGeocodeCache() (map[string]GeocodeResult, error) {
+	cacheFilePath := filepath.Join("cache", "geocoding_cache.json")
+
+	// Check if cache file exists
+	if _, err := os.Stat(cacheFilePath); os.IsNotExist(err) {
+		return nil, fmt.Errorf("geocoding cache file not found")
+	}
+
+	// Read cache file
+	data, err := os.ReadFile(cacheFilePath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read geocoding cache: %v", err)
+	}
+
+	var cachedResults []GeocodeResult
+	if err := json.Unmarshal(data, &cachedResults); err != nil {
+		return nil, fmt.Errorf("failed to parse geocoding cache: %v", err)
+	}
+
+	cacheMap := make(map[string]GeocodeResult)
+	for _, result := range cachedResults {
+		key := GenerateCacheKey(result.Address)
+		cacheMap[key] = result
+	}
+
+	return cacheMap, nil
 }

@@ -6,7 +6,6 @@ import (
 	"log"
 	"net/http"
 	"net/url"
-	"strings"
 	"time"
 	"tournois-tt/api/pkg/fftt"
 	"tournois-tt/api/pkg/geocoding"
@@ -22,12 +21,10 @@ func RefreshTournaments() {
 
 // refresh fetches and processes tournament addresses
 func refresh(startDateAfter, startDateBefore *time.Time) error {
-	log.Printf("Starting tournament refreshing...")
 
 	// Load existing cache
 	existingCache, err := geocoding.LoadGeocodeResultsFromCache()
 	if err != nil {
-		log.Printf("Warning: Failed to load existing cache: %v", err)
 		existingCache = make(map[string]geocoding.GeocodeResult)
 	}
 
@@ -59,8 +56,6 @@ func refresh(startDateAfter, startDateBefore *time.Time) error {
 		return fmt.Errorf("failed to decode tournaments: %v", err)
 	}
 
-	log.Printf("Found %d tournaments to process", len(tournaments))
-
 	// Prepare addresses for geocoding
 	addressesToGeocode := make([]geocoding.Address, 0)
 	geocodeResults := make([]geocoding.GeocodeResult, 0, len(tournaments))
@@ -69,7 +64,6 @@ func refresh(startDateAfter, startDateBefore *time.Time) error {
 
 	for _, t := range tournaments {
 		if !t.Address.IsValid() {
-			log.Printf("Skipping invalid address: %+v", t.Address)
 			geocodeResults = append(geocodeResults, geocoding.GeocodeResult{
 				Address:   t.Address,
 				Failed:    true,
@@ -81,7 +75,6 @@ func refresh(startDateAfter, startDateBefore *time.Time) error {
 		// Check if address is already in cache
 		cacheKey := geocoding.GenerateCacheKey(t.Address)
 		if cachedResult, exists := existingCache[cacheKey]; exists {
-			log.Printf("Using cached address: %s", cacheKey)
 			geocodeResults = append(geocodeResults, cachedResult)
 			continue
 		}
@@ -102,21 +95,9 @@ func refresh(startDateAfter, startDateBefore *time.Time) error {
 		// Geocode individual address
 		location, err := geocoding.GetCoordinates(addr)
 		if err != nil {
-			log.Printf("Failed to geocode address: %s, %s %s",
-				strings.TrimSpace(addr.StreetAddress),
-				strings.TrimSpace(addr.PostalCode),
-				strings.TrimSpace(addr.AddressLocality))
-
 			result.Failed = true
 			failureCount++
 		} else {
-			log.Printf("Processed address: %s, %s %s (%.6f, %.6f)",
-				strings.TrimSpace(addr.StreetAddress),
-				strings.TrimSpace(addr.PostalCode),
-				strings.TrimSpace(addr.AddressLocality),
-				location.Lat,
-				location.Lon)
-
 			result.Latitude = location.Lat
 			result.Longitude = location.Lon
 			result.Failed = false

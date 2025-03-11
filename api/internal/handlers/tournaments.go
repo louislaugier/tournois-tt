@@ -2,16 +2,12 @@ package handlers
 
 import (
 	"encoding/json"
-	"fmt"
 	"io"
-	"log"
 	"net/http"
-	"os"
-	"path/filepath"
 	"strings"
-	"time"
 	"tournois-tt/api/pkg/fftt"
 	"tournois-tt/api/pkg/geocoding"
+	"tournois-tt/api/pkg/utils"
 
 	"github.com/gin-gonic/gin"
 )
@@ -75,91 +71,20 @@ type Tournament struct {
 	Responses    []Response        `json:"responses,omitempty"`
 }
 
-// mapTournamentType converts single letter type to full name
-func mapTournamentType(t string) string {
-	switch t {
-	case "I":
-		return "International"
-	case "A":
-		return "National A"
-	case "B":
-		return "National B"
-	case "R":
-		return "Régional"
-	case "D":
-		return "Départemental"
-	case "P":
-		return "Promotionnel"
-	default:
-		return t
-	}
-}
-
-// Add a function to load geocoding cache
-func loadGeocodeCache() (map[string]geocoding.GeocodeResult, error) {
-	cacheFilePath := filepath.Join("cache", "geocoding_cache.json")
-
-	// Check if cache file exists
-	if _, err := os.Stat(cacheFilePath); os.IsNotExist(err) {
-		return nil, fmt.Errorf("geocoding cache file not found")
-	}
-
-	// Read cache file
-	data, err := os.ReadFile(cacheFilePath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read geocoding cache: %v", err)
-	}
-
-	var cachedResults []geocoding.GeocodeResult
-	if err := json.Unmarshal(data, &cachedResults); err != nil {
-		return nil, fmt.Errorf("failed to parse geocoding cache: %v", err)
-	}
-
-	cacheMap := make(map[string]geocoding.GeocodeResult)
-	for _, result := range cachedResults {
-		key := geocoding.GenerateCacheKey(result.Address)
-		cacheMap[key] = result
-	}
-
-	return cacheMap, nil
-}
-
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
-}
-
 // Modify TournamentsHandler to use geocoding cache
 func TournamentsHandler(c *gin.Context) {
-	start := time.Now()
-	log.Printf("Starting tournament request processing")
-
 	// Load geocoding cache
-	geocodingCache, err := loadGeocodeCache()
+	geocodingCache, err := geocoding.LoadGeocodeCache()
 	if err != nil {
-		log.Printf("Failed to load geocoding cache: %v", err)
-		log.Printf("Initializing empty geocoding cache")
 		geocodingCache = make(map[string]geocoding.GeocodeResult)
-	} else {
-		log.Printf("Successfully loaded %d cached geocoding results", len(geocodingCache))
 	}
 
 	// Get all query parameters
 	queryParams := c.Request.URL.Query()
-	log.Printf("Query params: %v", queryParams)
-
-	// Log specific postcode parameter if present
-	if postcode := queryParams.Get("address.postalCode"); postcode != "" {
-		log.Printf("Filtering by postcode: %s", postcode)
-	}
 
 	// Call FFTT API
-	log.Printf("Calling FFTT API with URL-encoded params: %s", queryParams.Encode())
 	resp, err := fftt.GetClient().GetTournaments(queryParams)
 	if err != nil {
-		log.Printf("Error fetching from FFTT API: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch data from FFTT API"})
 		return
 	}
@@ -167,55 +92,38 @@ func TournamentsHandler(c *gin.Context) {
 
 	// Check response status
 	if resp.StatusCode != http.StatusOK {
-		log.Printf("FFTT API returned non-200 status: %d", resp.StatusCode)
 		c.JSON(resp.StatusCode, gin.H{"error": "FFTT API returned an error"})
 		return
 	}
 
-	// Read and parse the response body
-	log.Printf("Reading FFTT API response body")
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		log.Printf("Error reading response body: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to read response body"})
 		return
 	}
 
-	// Debug log for raw response
-	log.Printf("Raw response sample (first 500 chars): %s", string(body)[:min(len(string(body)), 500)])
-
 	// Debug log first tournament raw data
 	var rawTournaments []map[string]interface{}
-	if err := json.Unmarshal(body, &rawTournaments); err != nil {
-		log.Printf("Error parsing raw tournaments: %v", err)
-	} else if len(rawTournaments) > 0 {
-		rawJSON, _ := json.MarshalIndent(rawTournaments[0], "", "  ")
-		log.Printf("First tournament raw data: %s", string(rawJSON))
+	json.Unmarshal(body, &rawTournaments)
+
+	if len(rawTournaments) > 0 {
+		json.MarshalIndent(rawTournaments[0], "", "  ")
 	}
 
-	log.Printf("Parsing tournaments data")
 	var ffttTournaments []Tournament
 	if err := json.Unmarshal(body, &ffttTournaments); err != nil {
-		log.Printf("Error parsing tournaments data: %v", err)
-		log.Printf("Raw response body: %s", string(body))
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to parse tournaments data"})
 		return
 	}
 
 	// Convert to our internal type
 	tournaments := make([]Tournament, len(ffttTournaments))
-	log.Printf("Processing %d tournaments", len(ffttTournaments))
 
 	for i, t := range ffttTournaments {
 		tournaments[i] = t
 
-		// Log postcode for each tournament if we're filtering by postcode
-		if queryParams.Get("address.postalCode") != "" {
-			log.Printf("Tournament %s postcode: %s", t.Name, t.Address.PostalCode)
-		}
-
 		// Map the tournament type to full form
-		tournaments[i].Type = mapTournamentType(t.Type)
+		tournaments[i].Type = utils.MapTournamentType(t.Type)
 
 		// Append a dot to the postal code
 		tournaments[i].Address.PostalCode = tournaments[i].Address.PostalCode + "\u200e"
@@ -225,16 +133,9 @@ func TournamentsHandler(c *gin.Context) {
 			tournaments[i].EndDate = tournaments[i].EndDate + " 23:59"
 		}
 
-		// Debug logging for rules URL
-		if tournaments[i].Rules != nil {
-			log.Printf("Tournament %s - Rules URL: %s", t.Name, tournaments[i].Rules.URL)
-		}
-
 		// Check if address is in geocoding cache
 		cacheKey := geocoding.GenerateCacheKey(t.Address)
 		if cachedResult, exists := geocodingCache[cacheKey]; exists {
-			log.Printf("Using cached geocoding result for tournament: %s", t.Name)
-
 			// Use cached coordinates or failed status
 			tournaments[i].Address.Latitude = cachedResult.Latitude
 			tournaments[i].Address.Longitude = cachedResult.Longitude
@@ -244,22 +145,30 @@ func TournamentsHandler(c *gin.Context) {
 			continue
 		} else {
 			// Attempt to geocode if not in cache
-			// coords, err := geocoding.GetCoordinates(t.Address)
-			// if err != nil {
-			// 	log.Printf("Warning: Failed to get coordinates for tournament %s: %v", t.Name, err)
-			// 	continue
-			// }
+			var coords geocoding.GeocodeResult
+			var err error
 
-			// if !coords.Failed {
-			// 	tournaments[i].Address.Latitude = coords.Lat
-			// 	tournaments[i].Address.Longitude = coords.Lon
-			// } else {
-			tournaments[i].Address.Failed = true
-			// }
+			// First try Nominatim
+			coords, err = geocoding.GetCoordinatesNominatim(t.Address)
+			if err != nil || coords.Failed {
+				// If Nominatim fails, try Google
+				coords, err = geocoding.GetCoordinatesGoogle(t.Address)
+				if err != nil || coords.Failed {
+					tournaments[i].Address.Failed = true
+					continue
+				}
+			}
+
+			// Update tournament address with geocoded coordinates
+			tournaments[i].Address.Latitude = coords.Latitude
+			tournaments[i].Address.Longitude = coords.Longitude
+			tournaments[i].Address.Failed = coords.Failed
+
+			// Cache the result
+			cacheKey := geocoding.GenerateCacheKey(t.Address)
+			geocodingCache[cacheKey] = coords
 		}
 	}
 
-	elapsed := time.Since(start)
-	log.Printf("Request processing completed in %v", elapsed)
 	c.JSON(http.StatusOK, tournaments)
 }

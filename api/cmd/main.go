@@ -15,7 +15,6 @@ func main() {
 	////////////////////////////////////////////////////////
 
 	go func() {
-		log.Printf("Refreshing tournament geocoding data...")
 		crons.RefreshTournaments()
 	}()
 
