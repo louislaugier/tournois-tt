@@ -3,9 +3,19 @@
 # API build stage
 FROM golang:1.23-alpine AS api-build
 WORKDIR /go/src/tournois-tt/api
+
+# Install build dependencies for Playwright
+RUN apk add --no-cache \
+    build-base \
+    python3
+
 COPY api/go.mod api/go.sum ./
 RUN go mod download
 COPY api ./
+
+# Install Playwright browsers during build
+RUN go run github.com/playwright-community/playwright-go/cmd/playwright install --with-deps chromium
+
 RUN CGO_ENABLED=0 GOOS=linux go build -o /go/bin/api ./cmd/main.go
 
 # Frontend build stage
@@ -41,8 +51,40 @@ RUN npm run build \
 FROM alpine:latest
 WORKDIR /app
 
-# Install necessary packages
-RUN apk add --no-cache nginx nodejs npm
+# Install necessary packages and Playwright dependencies
+RUN apk add --no-cache \
+    nginx \
+    nodejs \
+    npm \
+    chromium \
+    nss \
+    freetype \
+    freetype-dev \
+    harfbuzz \
+    ca-certificates \
+    ttf-freefont \
+    font-noto-emoji \
+    # Playwright dependencies
+    libx11 \
+    libxcomposite \
+    libxdamage \
+    libxext \
+    libxfixes \
+    libxi \
+    libxrandr \
+    libxrender \
+    libxss \
+    libxtst \
+    mesa-gbm \
+    pango \
+    cairo \
+    alsa-lib \
+    at-spi2-core \
+    dbus-libs \
+    eudev-libs \
+    libxcb \
+    libxkbcommon \
+    wayland-libs-client
 
 # Create /app/api directory
 RUN mkdir -p /app/api
@@ -58,8 +100,9 @@ RUN echo "Contents of /usr/share/nginx/html:" \
     && echo "Contents of index.html:" \
     && cat /usr/share/nginx/html/index.html
 
-# Copy built API binary
+# Copy built API binary and Playwright browsers
 COPY --from=api-build /go/bin/api /app/api
+COPY --from=api-build /root/.cache/ms-playwright /root/.cache/ms-playwright
 
 # Copy nginx configuration
 COPY nginx.conf /etc/nginx/nginx.conf
@@ -72,6 +115,10 @@ COPY api/cache/geocoding_cache.json /app/api/cache/
 # Create entrypoint script
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
+
+# Set environment variables for Playwright
+ENV PLAYWRIGHT_BROWSERS_PATH=/root/.cache/ms-playwright
+ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
 
 # Expose ports
 EXPOSE 80

@@ -1,27 +1,33 @@
 package main
 
 import (
+	"context"
 	"log"
-	"tournois-tt/api/crons"
-	"tournois-tt/api/internal/router"
+	"tournois-tt/api/pkg/scraper"
 )
 
 func main() {
-	// test.LogClubEmailAddresses()
-	// test.LogCommitteeAndLeagueEmailAddresses()
-
-	crons.Schedule()
-
-	////////////////////////////////////////////////////////
-
-	go func() {
-		crons.RefreshTournaments()
-	}()
-
-	r := router.NewRouter()
-
-	log.Printf("Server starting...")
-	if err := r.Run(":8080"); err != nil {
-		log.Fatalf("Error starting server: %v", err)
+	activities, err := scraper.SearchHelloAssoActivities(context.Background(), "tournoi tennis de table courbevoie")
+	if err != nil {
+		log.Println(err)
 	}
+	log.Println(activities)
+
+	// // test.LogClubEmailAddresses()
+	// // test.LogCommitteeAndLeagueEmailAddresses()
+
+	// crons.Schedule()
+
+	// ////////////////////////////////////////////////////////
+
+	// go func() {
+	// 	crons.RefreshTournaments()
+	// }()
+
+	// r := router.NewRouter()
+
+	// log.Printf("Server starting...")
+	// if err := r.Run(":8080"); err != nil {
+	// 	log.Fatalf("Error starting server: %v", err)
+	// }
 }
