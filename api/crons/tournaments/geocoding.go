@@ -1,4 +1,4 @@
-package crons
+package tournaments
 
 import (
 	"encoding/json"
@@ -12,15 +12,15 @@ import (
 	"tournois-tt/api/pkg/utils"
 )
 
-func RefreshTournaments() {
+func RefreshGeocoding() {
 	lastSeasonStart, _ := utils.GetLastFinishedSeason()
-	if err := refresh(&lastSeasonStart, nil); err != nil {
-		log.Printf("Warning: Failed to refresh tournament data: %v", err)
+	if err := refreshGeocoding(&lastSeasonStart, nil); err != nil {
+		log.Printf("Warning: Failed to refresh tournament geocoding data: %v", err)
 	}
 }
 
 // refresh fetches and processes tournament addresses
-func refresh(startDateAfter, startDateBefore *time.Time) error {
+func refreshGeocoding(startDateAfter, startDateBefore *time.Time) error {
 
 	// Load existing cache
 	existingCache, err := geocoding.LoadGeocodeResultsFromCache()

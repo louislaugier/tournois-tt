@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"tournois-tt/api/crons"
+	"tournois-tt/api/crons/tournaments"
 	"tournois-tt/api/internal/router"
 )
 
@@ -21,7 +22,7 @@ func main() {
 	////////////////////////////////////////////////////////
 
 	go func() {
-		crons.RefreshTournaments()
+		tournaments.RefreshGeocoding()
 	}()
 
 	r := router.NewRouter()
