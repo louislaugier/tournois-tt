@@ -1,18 +1,20 @@
 package main
 
 import (
+	"context"
 	"log"
 	"tournois-tt/api/crons"
 	"tournois-tt/api/crons/tournaments"
 	"tournois-tt/api/internal/router"
+	"tournois-tt/api/pkg/scraper/services/helloasso"
 )
 
 func main() {
-	// activities, err := helloasso.SearchActivities(context.Background(), "tournoi tennis de table courbevoie")
-	// if err != nil {
-	// 	log.Println(err)
-	// }
-	// log.Println(activities)
+	activities, err := helloasso.SearchActivities(context.Background(), "tournoi tennis de table courbevoie")
+	if err != nil {
+		log.Println(err)
+	}
+	log.Println(activities)
 
 	// test.LogClubEmailAddresses()
 	// test.LogCommitteeAndLeagueEmailAddresses()

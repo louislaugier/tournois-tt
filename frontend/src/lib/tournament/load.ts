@@ -6,34 +6,43 @@ import { upsertMocksIntoDataset } from "./mock";
 
 export const loadTournaments = async (setIsLoading: (value: React.SetStateAction<boolean>) => void, setCurrentTournaments: (value: React.SetStateAction<Tournament[]>) => void, setPastCurrentTournaments: (value: React.SetStateAction<Tournament[]>) => void, setPastTournaments: (value: React.SetStateAction<Tournament[]>) => void) => {
     try {
+        const { lastCompletedSeasonStartDate, lastCompletedSeasonEndDate } = getLastCompletedSeasonDates();
+
         const query = new TournamentQueryBuilder()
-            .startDateRange(getYesterdayMidnight())
+            .startDateRange(lastCompletedSeasonStartDate, undefined) // Fetch ALL tournaments
             .orderByStartDate('asc')
             .itemsPerPage(999999);
 
-        const currentTournamentsData = await query.executeAndLogAll();
+        const allTournamentsData = await query.executeAndLogAll();
 
-        setCurrentTournaments(upsertMocksIntoDataset(currentTournamentsData));
+        // Get date ranges
+        const yesterdayMidnight = getYesterdayMidnight();
+        const todayMidnight = getTodayMidnight();
+        const currentSeasonStartDate = getCurrentSeasonStartDate();
 
-        const pastCurrentTournamentsQuery = new TournamentQueryBuilder()
-            .startDateRange(getCurrentSeasonStartDate(), getTodayMidnight())
-            .orderByStartDate('asc')
-            .itemsPerPage(999999);
+        // Filter current tournaments (from yesterday onwards)
+        const currentTournamentsData = allTournamentsData.filter(tournament => {
+            const tournamentStartDate = new Date(tournament.startDate);
+            return tournamentStartDate >= yesterdayMidnight;
+        });
+        const currentTournamentsWithMocks = upsertMocksIntoDataset(currentTournamentsData);
+        setCurrentTournaments(currentTournamentsWithMocks);
 
-        const pastCurrentTournamentsData = await pastCurrentTournamentsQuery.executeAndLogAll();
+        // Filter past current tournaments (within current season)
+        const pastCurrentTournamentsData = allTournamentsData.filter(tournament => {
+            const tournamentStartDate = new Date(tournament.startDate);
+            return tournamentStartDate >= currentSeasonStartDate && 
+                   tournamentStartDate <= todayMidnight;
+        });
+        setPastCurrentTournaments(pastCurrentTournamentsData);
 
-        setPastCurrentTournaments(pastCurrentTournamentsData || []);
-
-        const { lastCompletedSeasonStartDate, lastCompletedSeasonEndDate } = getLastCompletedSeasonDates()
-
-        const pastTournamentsQuery = new TournamentQueryBuilder()
-            .startDateRange(lastCompletedSeasonStartDate, lastCompletedSeasonEndDate)
-            .orderByStartDate('asc')
-            .itemsPerPage(999999);
-
-        const pastTournamentsData = await pastTournamentsQuery.executeAndLogAll();
-
-        setPastTournaments(pastTournamentsData || []);
+        // Filter past tournaments (within last completed season)
+        const pastTournamentsData = allTournamentsData.filter(tournament => {
+            const tournamentStartDate = new Date(tournament.startDate);
+            return tournamentStartDate >= lastCompletedSeasonStartDate && 
+                   tournamentStartDate <= lastCompletedSeasonEndDate;
+        });
+        setPastTournaments(pastTournamentsData);
     } catch (error) {
         console.error('Failed to load tournaments:', error);
     } finally {

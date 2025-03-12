@@ -102,7 +102,6 @@ export const Map: React.FC = () => {
             })))
         };
 
-        console.log(pastCurrentTournaments)
         store.dispatch(
             addDataToMap({
                 datasets: [
