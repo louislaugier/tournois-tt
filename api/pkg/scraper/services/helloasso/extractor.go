@@ -1,14 +1,35 @@
-package extractor
+package helloasso
 
 import (
 	"fmt"
 	"log"
 	"strings"
-
-	"tournois-tt/api/pkg/scraper/models"
+	"tournois-tt/api/pkg/scraper/page"
 
 	pw "github.com/playwright-community/playwright-go"
 )
+
+const (
+	BaseURL           = "https://www.helloasso.com"
+	SearchURLTemplate = "https://www.helloasso.com/e/recherche?query=%s"
+)
+
+// Selectors contains all the CSS selectors used for HelloAsso scraping
+var Selectors = ActivitySelectors{
+	Title:        ".Thumbnail--Name",
+	Date:         ".Thumbnail--Date",
+	URL:          "a",
+	Price:        ".Thumbnail--ImagePill",
+	Organization: ".Thumbnail--OrganizationName",
+	Category:     ".Thumbnail--MetadataTag",
+	Location:     ".Thumbnail--MetadataLocation",
+}
+
+// Config contains all the configuration for HelloAsso scraping
+var Config = page.Config{
+	EmptyStateSelector: `[data-testid="empty-state"]`,
+	ResultsSelector:    ".Hits-Activity",
+}
 
 // ExtractionConfig holds the configuration for extracting activities
 type ExtractionConfig struct {
@@ -30,12 +51,12 @@ type ActivitySelectors struct {
 }
 
 // ExtractActivities extracts activities from the search results page
-func ExtractActivities(page pw.Page, cfg ExtractionConfig) ([]models.Activity, error) {
+func ExtractActivities(page pw.Page, cfg ExtractionConfig) ([]Activity, error) {
 	// Check if we have an empty state
 	emptyState, err := page.QuerySelector(cfg.EmptyStateSelector)
 	if err == nil && emptyState != nil {
 		log.Printf("Empty state found - no results available")
-		return []models.Activity{}, nil
+		return []Activity{}, nil
 	}
 
 	// Find activities using the provided selector
@@ -46,11 +67,11 @@ func ExtractActivities(page pw.Page, cfg ExtractionConfig) ([]models.Activity, e
 	}
 	log.Printf("Found %d activity elements", count)
 
-	activities := []models.Activity{}
+	activities := []Activity{}
 
 	for i := 0; i < count; i++ {
 		element := elements.Nth(i)
-		activity := models.Activity{}
+		activity := Activity{}
 
 		// Extract title
 		if title, err := element.Locator(cfg.Selectors.Title).TextContent(); err == nil && title != "" {

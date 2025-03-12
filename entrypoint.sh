@@ -5,6 +5,56 @@ echo "Starting entrypoint script..."
 echo "Contents of /usr/share/nginx/html:"
 ls -la /usr/share/nginx/html
 
+# Ensure Playwright directories exist
+mkdir -p /root/.cache/ms-playwright
+
+# Check Playwright installation
+echo "Checking Playwright installation..."
+echo "PLAYWRIGHT_BROWSERS_PATH: $PLAYWRIGHT_BROWSERS_PATH"
+echo "PLAYWRIGHT_DRIVER_VERSION: $PLAYWRIGHT_DRIVER_VERSION"
+echo "PLAYWRIGHT_CHROMIUM_EXECUTABLE: $PLAYWRIGHT_CHROMIUM_EXECUTABLE"
+
+# List Playwright cache directory contents recursively
+echo "Contents of Playwright cache (recursive):"
+find $PLAYWRIGHT_BROWSERS_PATH -type d | sort
+echo "Checking for browser executables:"
+find $PLAYWRIGHT_BROWSERS_PATH -name "chrome*" -o -name "chromium*" -type f -executable
+
+# Check permissions on Playwright directories
+echo "Checking permissions on Playwright directories:"
+ls -la $PLAYWRIGHT_BROWSERS_PATH
+CHROMIUM_DIR=$(find $PLAYWRIGHT_BROWSERS_PATH -name "chromium-*" -type d | head -n 1)
+if [ -n "$CHROMIUM_DIR" ]; then
+    ls -la $CHROMIUM_DIR
+    if [ -d "$CHROMIUM_DIR/chrome-linux" ]; then
+        echo "Ensuring chrome executable has proper permissions:"
+        ls -la $CHROMIUM_DIR/chrome-linux/chrome*
+        chmod +x $CHROMIUM_DIR/chrome-linux/chrome
+        chmod +x $CHROMIUM_DIR/chrome-linux/chrome_sandbox 2>/dev/null || true
+    fi
+else
+    echo "No chromium directory found"
+fi
+
+# Create symbolic links to ensure compatibility with expected versions
+echo "Creating compatibility symlinks for Playwright drivers..."
+mkdir -p /root/.cache/ms-playwright-go/1.50.1
+
+# Check if there's a browser to link
+CHROME_BINARY=$(find /root/.cache/ms-playwright -name chrome -type f -executable | head -n 1)
+if [ -n "$CHROME_BINARY" ]; then
+    echo "Linking browser binary: $CHROME_BINARY"
+    PARENT_DIR=$(dirname "$CHROME_BINARY")
+    ln -s "$PARENT_DIR" /root/.cache/ms-playwright-go/1.50.1/
+    echo "Created symlink: /root/.cache/ms-playwright-go/1.50.1/ -> $PARENT_DIR"
+else
+    echo "Warning: No Chrome binary found to link"
+fi
+
+# Set additional Playwright environment variables
+export PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS=1
+export DEBUG=pw:api
+
 # Start Nginx in the background with debug logging
 echo "Starting Nginx..."
 nginx -g "daemon off;" &
@@ -15,7 +65,7 @@ cd /app/api
 ./api &
 
 # Wait for any background process to exit
-wait -n
+wait %1
 
 # Exit with the status of the process that exited first
 exit $?

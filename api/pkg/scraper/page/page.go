@@ -56,11 +56,12 @@ func (h *Handler) WaitForResults(cfg Config) error {
 
 // HasEmptyState checks if the page shows an empty state
 func (h *Handler) HasEmptyState(emptyStateSelector string) (bool, error) {
-	emptyState, err := h.page.QuerySelector(emptyStateSelector)
+	emptyState := h.page.Locator(emptyStateSelector)
+	count, err := emptyState.Count()
 	if err != nil {
 		return false, fmt.Errorf("failed to check empty state: %v", err)
 	}
-	return emptyState != nil, nil
+	return count > 0, nil
 }
 
 // GetPage returns the underlying Playwright page

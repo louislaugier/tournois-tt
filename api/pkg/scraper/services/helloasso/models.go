@@ -1,4 +1,4 @@
-package models
+package helloasso
 
 // Activity represents a HelloAsso activity with its details
 type Activity struct {

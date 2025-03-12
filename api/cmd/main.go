@@ -8,7 +8,7 @@ import (
 )
 
 func main() {
-	// activities, err := scraper.SearchHelloAssoActivities(context.Background(), "tournoi tennis de table courbevoie")
+	// activities, err := helloasso.SearchActivities(context.Background(), "tournoi tennis de table courbevoie")
 	// if err != nil {
 	// 	log.Println(err)
 	// }
@@ -17,9 +17,9 @@ func main() {
 	// test.LogClubEmailAddresses()
 	// test.LogCommitteeAndLeagueEmailAddresses()
 
-	crons.Schedule()
-
 	////////////////////////////////////////////////////////
+
+	crons.Schedule()
 
 	go func() {
 		tournaments.RefreshGeocoding()

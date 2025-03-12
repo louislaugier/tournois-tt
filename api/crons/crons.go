@@ -13,7 +13,7 @@ import (
 func Schedule() {
 	location, err := time.LoadLocation("Europe/Paris")
 	if err != nil {
-		log.Fatal("Error loading Paris time zone:", err)
+		log.Fatal("Error loading Europe/Paris time zone:", err)
 	}
 
 	// Initialize a new cron scheduler with the Paris time zone
