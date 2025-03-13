@@ -9,7 +9,7 @@ export const loadTournaments = async (setIsLoading: (value: React.SetStateAction
         const { lastCompletedSeasonStartDate, lastCompletedSeasonEndDate } = getLastCompletedSeasonDates();
 
         const query = new TournamentQueryBuilder()
-            .startDateRange(lastCompletedSeasonStartDate, undefined) // Fetch ALL tournaments
+            .startDateRange(lastCompletedSeasonStartDate, undefined) // Fetch ALL tournaments at once
             .orderByStartDate('asc')
             .itemsPerPage(999999);
 

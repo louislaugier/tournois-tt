@@ -120,53 +120,47 @@ func TournamentsHandler(c *gin.Context) {
 	tournaments := make([]Tournament, len(ffttTournaments))
 
 	for i, t := range ffttTournaments {
-		tournaments[i] = t
-
+		tournament := t
 		// Map the tournament type to full form
-		tournaments[i].Type = utils.MapTournamentType(t.Type)
+		tournament.Type = utils.MapTournamentType(t.Type)
 
 		// Append a dot to the postal code
-		tournaments[i].Address.PostalCode = tournaments[i].Address.PostalCode + "\u200e"
+		tournament.Address.PostalCode = tournament.Address.PostalCode + "\u200e"
 
 		// Append 23:59 to endDate if it doesn't already have a time
-		if !strings.Contains(tournaments[i].EndDate, ":") {
-			tournaments[i].EndDate = tournaments[i].EndDate + " 23:59"
+		if !strings.Contains(tournament.EndDate, ":") {
+			tournament.EndDate = tournament.EndDate + " 23:59"
 		}
 
 		// Check if address is in geocoding cache
 		cacheKey := geocoding.GenerateCacheKey(t.Address)
-		if cachedResult, exists := geocodingCache[cacheKey]; exists {
+		if cachedResult, exists := geocodingCache[cacheKey]; exists && !cachedResult.Failed {
 			// Use cached coordinates or failed status
-			tournaments[i].Address.Latitude = cachedResult.Latitude
-			tournaments[i].Address.Longitude = cachedResult.Longitude
-			tournaments[i].Address.Failed = cachedResult.Failed
+			tournament.Address.Latitude = cachedResult.Latitude
+			tournament.Address.Longitude = cachedResult.Longitude
 
 			// Skip further geocoding if already processed
-			continue
+			tournaments[i] = tournament
 		} else {
-			// Attempt to geocode if not in cache
-			var coords geocoding.GeocodeResult
-			var err error
+			go func() {
+				// Attempt to geocode if not in cache
+				var coords geocoding.GeocodeResult
+				var err error
 
-			// First try Nominatim
-			coords, err = geocoding.GetCoordinatesNominatim(t.Address)
-			if err != nil || coords.Failed {
-				// If Nominatim fails, try Google
-				coords, err = geocoding.GetCoordinatesGoogle(t.Address)
+				// First try Nominatim
+				coords, err = geocoding.GetCoordinatesNominatim(t.Address)
 				if err != nil || coords.Failed {
-					tournaments[i].Address.Failed = true
-					continue
+					// If Nominatim fails, try Google
+					coords, err = geocoding.GetCoordinatesGoogle(t.Address)
+					if err != nil || coords.Failed {
+						return
+					}
 				}
-			}
 
-			// Update tournament address with geocoded coordinates
-			tournaments[i].Address.Latitude = coords.Latitude
-			tournaments[i].Address.Longitude = coords.Longitude
-			tournaments[i].Address.Failed = coords.Failed
-
-			// Cache the result
-			cacheKey := geocoding.GenerateCacheKey(t.Address)
-			geocodingCache[cacheKey] = coords
+				// Cache the result
+				cacheKey := geocoding.GenerateCacheKey(t.Address)
+				geocodingCache[cacheKey] = coords
+			}()
 		}
 	}
 

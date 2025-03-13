@@ -59,7 +59,6 @@ func geocodeWithRetry(fullAddress string, params url.Values) (Location, error) {
 			time.Sleep(retryDelay)
 			continue
 		}
-		req.Header.Set("User-Agent", "TournoisTT/1.0")
 		req.Header.Set("Accept-Language", "fr") // Add French language preference
 
 		resp, err := httpClient.Do(req)
