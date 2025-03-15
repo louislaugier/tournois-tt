@@ -9,10 +9,9 @@ import (
 	pw "github.com/playwright-community/playwright-go"
 )
 
-const (
-	BaseURL           = "https://www.helloasso.com"
-	SearchURLTemplate = "https://www.helloasso.com/e/recherche?query=%s"
-)
+const BaseURL = "https://www.helloasso.com"
+
+var SearchURLTemplate = fmt.Sprintf("%s/e/recherche?query=%%s", BaseURL)
 
 // Selectors contains all the CSS selectors used for HelloAsso scraping
 var Selectors = ActivitySelectors{
@@ -53,15 +52,16 @@ type ActivitySelectors struct {
 // ExtractActivities extracts activities from the search results page
 func ExtractActivities(page pw.Page, cfg ExtractionConfig) ([]Activity, error) {
 	// Check if we have an empty state
-	emptyState, err := page.QuerySelector(cfg.EmptyStateSelector)
-	if err == nil && emptyState != nil {
+	emptyStateLocator := page.Locator(cfg.EmptyStateSelector)
+	count, err := emptyStateLocator.Count()
+	if err == nil && count > 0 {
 		log.Printf("Empty state found - no results available")
 		return []Activity{}, nil
 	}
 
 	// Find activities using the provided selector
 	elements := page.Locator(cfg.ActivitySelector)
-	count, err := elements.Count()
+	count, err = elements.Count()
 	if err != nil {
 		return nil, fmt.Errorf("could not count activity elements: %v", err)
 	}

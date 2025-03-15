@@ -40,6 +40,62 @@ func (c *Cache) Set(key string, value interface{}) {
 // DefaultCache is the global cache instance
 var DefaultCache = NewCache()
 
+// GeocodeCache provides a thread-safe cache for geocoding results
+type GeocodeCache struct {
+	sync.RWMutex
+	items map[string]GeocodeResult
+}
+
+// NewGeocodeCache creates a new geocode cache instance
+func NewGeocodeCache() *GeocodeCache {
+	return &GeocodeCache{
+		items: make(map[string]GeocodeResult),
+	}
+}
+
+// Get retrieves a geocode result from the cache
+func (c *GeocodeCache) Get(key string) (GeocodeResult, bool) {
+	c.RLock()
+	defer c.RUnlock()
+	item, exists := c.items[key]
+	return item, exists
+}
+
+// Set adds a geocode result to the cache
+func (c *GeocodeCache) Set(key string, value GeocodeResult) {
+	c.Lock()
+	defer c.Unlock()
+	c.items[key] = value
+}
+
+// GetAll returns a copy of all items in the cache
+func (c *GeocodeCache) GetAll() map[string]GeocodeResult {
+	c.RLock()
+	defer c.RUnlock()
+
+	// Create a copy to avoid concurrent access issues
+	result := make(map[string]GeocodeResult, len(c.items))
+	for k, v := range c.items {
+		result[k] = v
+	}
+
+	return result
+}
+
+// SetAll replaces all items in the cache
+func (c *GeocodeCache) SetAll(items map[string]GeocodeResult) {
+	c.Lock()
+	defer c.Unlock()
+
+	c.items = make(map[string]GeocodeResult, len(items))
+	for k, v := range items {
+		c.items[k] = v
+	}
+}
+
+// DefaultGeocodeCache is the global instance of the geocode cache
+var DefaultGeocodeCache = NewGeocodeCache()
+
 // getCacheDirectory returns the absolute path to the cache directory
 func getCacheDirectory() string {
 	// Get the executable's directory
@@ -60,10 +116,23 @@ func SaveGeocodeResultsToCache(results []GeocodeResult) error {
 	}
 
 	// Prepare cache file path
-	cacheFilePath := filepath.Join(cacheDir, "geocoding_cache.json")
+	cacheFilePath := filepath.Join(cacheDir, "data.json")
+
+	// Add results to the in-memory cache
+	for _, result := range results {
+		key := GenerateCacheKey(result.Address)
+		DefaultGeocodeCache.Set(key, result)
+	}
+
+	// Get all cache entries for persistence
+	allCacheEntries := DefaultGeocodeCache.GetAll()
+	allResults := make([]GeocodeResult, 0, len(allCacheEntries))
+	for _, result := range allCacheEntries {
+		allResults = append(allResults, result)
+	}
 
 	// Marshal results to JSON
-	data, err := json.MarshalIndent(results, "", "  ")
+	data, err := json.MarshalIndent(allResults, "", "  ")
 	if err != nil {
 		return fmt.Errorf("failed to marshal geocoding results: %v", err)
 	}
@@ -78,7 +147,11 @@ func SaveGeocodeResultsToCache(results []GeocodeResult) error {
 
 // LoadGeocodeResultsFromCache loads existing geocoding results from JSON file
 func LoadGeocodeResultsFromCache() (map[string]GeocodeResult, error) {
-	cacheFilePath := filepath.Join(getCacheDirectory(), "geocoding_cache.json")
+	// Use mutex to ensure thread safety
+	DefaultGeocodeCache.RLock()
+	defer DefaultGeocodeCache.RUnlock()
+
+	cacheFilePath := filepath.Join(getCacheDirectory(), "data.json")
 
 	// Check if cache file exists
 	if _, err := os.Stat(cacheFilePath); os.IsNotExist(err) {
@@ -103,6 +176,9 @@ func LoadGeocodeResultsFromCache() (map[string]GeocodeResult, error) {
 		cacheMap[key] = result
 	}
 
+	// Update the in-memory cache
+	DefaultGeocodeCache.SetAll(cacheMap)
+
 	return cacheMap, nil
 }
 
@@ -114,8 +190,21 @@ func GenerateCacheKey(addr Address) string {
 		strings.TrimSpace(addr.AddressLocality))
 }
 
+// GetCachedGeocodeResult retrieves a geocoding result from the cache
+func GetCachedGeocodeResult(addr Address) (GeocodeResult, bool) {
+	key := GenerateCacheKey(addr)
+	return DefaultGeocodeCache.Get(key)
+}
+
+// SetCachedGeocodeResult stores a geocoding result in the cache
+func SetCachedGeocodeResult(result GeocodeResult) {
+	key := GenerateCacheKey(result.Address)
+	DefaultGeocodeCache.Set(key, result)
+}
+
+// Legacy function for backward compatibility
 func LoadGeocodeCache() (map[string]GeocodeResult, error) {
-	cacheFilePath := filepath.Join("cache", "geocoding_cache.json")
+	cacheFilePath := filepath.Join("cache", "data.json")
 
 	// Check if cache file exists
 	if _, err := os.Stat(cacheFilePath); os.IsNotExist(err) {

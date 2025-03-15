@@ -6,26 +6,18 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"sync"
 	"time"
 	"tournois-tt/api/pkg/fftt"
 	"tournois-tt/api/pkg/geocoding"
-	"tournois-tt/api/pkg/utils"
 )
-
-func RefreshGeocoding() {
-	lastSeasonStart, _ := utils.GetLastFinishedSeason()
-	if err := refreshGeocoding(&lastSeasonStart, nil); err != nil {
-		log.Printf("Warning: Failed to refresh tournament geocoding data: %v", err)
-	}
-}
 
 // refresh fetches and processes tournament addresses
 func refreshGeocoding(startDateAfter, startDateBefore *time.Time) error {
-
-	// Load existing cache
-	existingCache, err := geocoding.LoadGeocodeResultsFromCache()
+	// Load existing cache - no need to store it in a variable as we'll use the thread-safe methods
+	_, err := geocoding.LoadGeocodeResultsFromCache()
 	if err != nil {
-		existingCache = make(map[string]geocoding.GeocodeResult)
+		log.Printf("Warning: Failed to load geocoding cache: %v", err)
 	}
 
 	// Create query params for future tournaments
@@ -48,9 +40,7 @@ func refreshGeocoding(startDateAfter, startDateBefore *time.Time) error {
 		return fmt.Errorf("FFTT API returned status %d", resp.StatusCode)
 	}
 
-	var tournaments []struct {
-		Address geocoding.Address `json:"address"`
-	}
+	var tournaments []fftt.Tournament
 
 	if err := json.NewDecoder(resp.Body).Decode(&tournaments); err != nil {
 		return fmt.Errorf("failed to decode tournaments: %v", err)
@@ -62,25 +52,46 @@ func refreshGeocoding(startDateAfter, startDateBefore *time.Time) error {
 	successCount := 0
 	failureCount := 0
 
+	wg := sync.WaitGroup{}
+	mu := sync.Mutex{}
 	for _, t := range tournaments {
-		if !t.Address.IsValid() {
-			geocodeResults = append(geocodeResults, geocoding.GeocodeResult{
-				Address:   t.Address,
-				Failed:    true,
-				Timestamp: time.Now(),
-			})
-			continue
-		}
+		wg.Add(1)
 
-		// Check if address is already in cache
-		cacheKey := geocoding.GenerateCacheKey(t.Address)
-		if cachedResult, exists := existingCache[cacheKey]; exists {
-			geocodeResults = append(geocodeResults, cachedResult)
-			continue
-		}
+		go func(t fftt.Tournament) {
+			defer wg.Done()
 
-		addressesToGeocode = append(addressesToGeocode, t.Address)
+			if !t.Address.IsValid() {
+				result := geocoding.GeocodeResult{
+					Address:   t.Address,
+					Failed:    true,
+					Timestamp: time.Now(),
+				}
+
+				// Protect geocodeResults with a mutex for thread-safety
+				mu.Lock()
+				geocodeResults = append(geocodeResults, result)
+				geocoding.SetCachedGeocodeResult(result)
+				mu.Unlock()
+
+				return
+			}
+
+			// Check if address is already in cache using thread-safe method
+			cachedResult, exists := geocoding.GetCachedGeocodeResult(t.Address)
+			if exists {
+				// Protect geocodeResults with a mutex for thread-safety
+				mu.Lock()
+				geocodeResults = append(geocodeResults, cachedResult)
+				mu.Unlock()
+				return
+			}
+
+			mu.Lock()
+			addressesToGeocode = append(addressesToGeocode, t.Address)
+			mu.Unlock()
+		}(t)
 	}
+	wg.Wait()
 
 	// Perform individual geocoding
 	for _, addr := range addressesToGeocode {
@@ -105,6 +116,9 @@ func refreshGeocoding(startDateAfter, startDateBefore *time.Time) error {
 		}
 
 		geocodeResults = append(geocodeResults, result)
+
+		// Store result in the thread-safe cache
+		geocoding.SetCachedGeocodeResult(result)
 	}
 
 	if len(addressesToGeocode) > 0 {
