@@ -1,122 +1,66 @@
 package geocoding
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
-	"sync"
+	"tournois-tt/api/pkg/cache"
 )
 
-// Cache represents a simple in-memory cache for geocoding
-type Cache struct {
-	sync.RWMutex
-	items map[string]interface{}
-}
-
-// NewCache creates a new cache instance
-func NewCache() *Cache {
-	return &Cache{
-		items: make(map[string]interface{}),
-	}
-}
-
-// Get retrieves an item from the cache
-func (c *Cache) Get(key string) (interface{}, bool) {
-	c.RLock()
-	defer c.RUnlock()
-	item, exists := c.items[key]
-	return item, exists
-}
-
-// Set adds an item to the cache
-func (c *Cache) Set(key string, value interface{}) {
-	c.Lock()
-	defer c.Unlock()
-	c.items[key] = value
-}
-
-// DefaultCache is the global cache instance
-var DefaultCache = NewCache()
-
-// GeocodeCache provides a thread-safe cache for geocoding results
-type GeocodeCache struct {
-	sync.RWMutex
-	items map[string]GeocodeResult
-}
-
-// NewGeocodeCache creates a new geocode cache instance
-func NewGeocodeCache() *GeocodeCache {
-	return &GeocodeCache{
-		items: make(map[string]GeocodeResult),
-	}
-}
-
-// Get retrieves a geocode result from the cache
-func (c *GeocodeCache) Get(key string) (GeocodeResult, bool) {
-	c.RLock()
-	defer c.RUnlock()
-	item, exists := c.items[key]
-	return item, exists
-}
-
-// Set adds a geocode result to the cache
-func (c *GeocodeCache) Set(key string, value GeocodeResult) {
-	c.Lock()
-	defer c.Unlock()
-	c.items[key] = value
-}
-
-// GetAll returns a copy of all items in the cache
-func (c *GeocodeCache) GetAll() map[string]GeocodeResult {
-	c.RLock()
-	defer c.RUnlock()
-
-	// Create a copy to avoid concurrent access issues
-	result := make(map[string]GeocodeResult, len(c.items))
-	for k, v := range c.items {
-		result[k] = v
-	}
-
-	return result
-}
-
-// SetAll replaces all items in the cache
-func (c *GeocodeCache) SetAll(items map[string]GeocodeResult) {
-	c.Lock()
-	defer c.Unlock()
-
-	c.items = make(map[string]GeocodeResult, len(items))
-	for k, v := range items {
-		c.items[k] = v
-	}
-}
-
 // DefaultGeocodeCache is the global instance of the geocode cache
-var DefaultGeocodeCache = NewGeocodeCache()
+var DefaultGeocodeCache *cache.GenericCache[GeocodeResult]
 
-// getCacheDirectory returns the absolute path to the cache directory
-func getCacheDirectory() string {
-	// Get the executable's directory
+// CacheFilePath is the path to the geocoding cache file
+var CacheFilePath string
+
+// InitCache initializes the geocoding cache
+func InitCache() error {
+	// Set up the cache file path - match the existing structure where data.json is in api/cache
 	execDir, err := os.Getwd()
+	var cacheDir string
 	if err != nil {
-		return "cache"
+		// Fallback to relative path if we can't get working directory
+		cacheDir = filepath.Join("api", "cache")
+	} else {
+		// Find the api directory in the path
+		if idx := strings.LastIndex(execDir, "api"); idx != -1 {
+			// If we're already in the api directory or a subdirectory
+			cacheDir = filepath.Join(execDir[:idx+3], "cache") // 3 = len("api")
+		} else {
+			// If we're in the root directory
+			cacheDir = filepath.Join(execDir, "api", "cache")
+		}
 	}
 
-	return filepath.Join(execDir, "cache")
+	CacheFilePath = filepath.Join(cacheDir, "data.json")
+
+	// Load cache from JSON file
+	DefaultGeocodeCache, err = cache.LoadFromJSON(CacheFilePath, func(result GeocodeResult) string {
+		return GenerateCacheKey(result.Address)
+	})
+
+	if err != nil {
+		return fmt.Errorf("failed to load geocoding cache: %v", err)
+	}
+
+	return nil
+}
+
+// EnsureCacheInitialized makes sure cache is initialized
+func EnsureCacheInitialized() error {
+	if DefaultGeocodeCache == nil {
+		return InitCache()
+	}
+	return nil
 }
 
 // SaveGeocodeResultsToCache saves geocoding results to a JSON file
 func SaveGeocodeResultsToCache(results []GeocodeResult) error {
-	// Get cache directory
-	cacheDir := getCacheDirectory()
-	if err := os.MkdirAll(cacheDir, 0755); err != nil {
-		return fmt.Errorf("failed to create cache directory: %v", err)
+	// Ensure cache is initialized
+	if err := EnsureCacheInitialized(); err != nil {
+		return err
 	}
-
-	// Prepare cache file path
-	cacheFilePath := filepath.Join(cacheDir, "data.json")
 
 	// Add results to the in-memory cache
 	for _, result := range results {
@@ -124,61 +68,19 @@ func SaveGeocodeResultsToCache(results []GeocodeResult) error {
 		DefaultGeocodeCache.Set(key, result)
 	}
 
-	// Get all cache entries for persistence
-	allCacheEntries := DefaultGeocodeCache.GetAll()
-	allResults := make([]GeocodeResult, 0, len(allCacheEntries))
-	for _, result := range allCacheEntries {
-		allResults = append(allResults, result)
-	}
-
-	// Marshal results to JSON
-	data, err := json.MarshalIndent(allResults, "", "  ")
-	if err != nil {
-		return fmt.Errorf("failed to marshal geocoding results: %v", err)
-	}
-
-	// Write to file
-	if err := os.WriteFile(cacheFilePath, data, 0644); err != nil {
-		return fmt.Errorf("failed to write geocoding cache: %v", err)
-	}
-
-	return nil
+	// Save to JSON file
+	return cache.SaveToJSON(DefaultGeocodeCache, CacheFilePath)
 }
 
 // LoadGeocodeResultsFromCache loads existing geocoding results from JSON file
 func LoadGeocodeResultsFromCache() (map[string]GeocodeResult, error) {
-	// We don't need a lock here as we're only reading from the file system
-	// and then updating the cache once at the end
-
-	cacheFilePath := filepath.Join(getCacheDirectory(), "data.json")
-
-	// Check if cache file exists
-	if _, err := os.Stat(cacheFilePath); os.IsNotExist(err) {
-		return make(map[string]GeocodeResult), nil
+	// Ensure cache is initialized
+	if err := EnsureCacheInitialized(); err != nil {
+		return nil, err
 	}
 
-	// Read cache file
-	data, err := os.ReadFile(cacheFilePath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read geocoding cache: %v", err)
-	}
-
-	var cachedResults []GeocodeResult
-	if err := json.Unmarshal(data, &cachedResults); err != nil {
-		return nil, fmt.Errorf("failed to parse geocoding cache: %v", err)
-	}
-
-	// Convert to map for faster lookup
-	cacheMap := make(map[string]GeocodeResult)
-	for _, result := range cachedResults {
-		key := GenerateCacheKey(result.Address)
-		cacheMap[key] = result
-	}
-
-	// Update the in-memory cache
-	DefaultGeocodeCache.SetAll(cacheMap)
-
-	return cacheMap, nil
+	// Return a copy of all items in the cache
+	return DefaultGeocodeCache.GetAll(), nil
 }
 
 // GenerateCacheKey creates a unique key for an address
@@ -191,41 +93,30 @@ func GenerateCacheKey(addr Address) string {
 
 // GetCachedGeocodeResult retrieves a geocoding result from the cache
 func GetCachedGeocodeResult(addr Address) (GeocodeResult, bool) {
+	// Ensure cache is initialized
+	if err := EnsureCacheInitialized(); err != nil {
+		return GeocodeResult{}, false
+	}
+
 	key := GenerateCacheKey(addr)
 	return DefaultGeocodeCache.Get(key)
 }
 
 // SetCachedGeocodeResult stores a geocoding result in the cache
 func SetCachedGeocodeResult(result GeocodeResult) {
+	// Ensure cache is initialized - ignore error as we're just setting
+	if DefaultGeocodeCache == nil {
+		if err := InitCache(); err != nil {
+			return
+		}
+	}
+
 	key := GenerateCacheKey(result.Address)
 	DefaultGeocodeCache.Set(key, result)
 }
 
 // Legacy function for backward compatibility
 func LoadGeocodeCache() (map[string]GeocodeResult, error) {
-	cacheFilePath := filepath.Join("cache", "data.json")
-
-	// Check if cache file exists
-	if _, err := os.Stat(cacheFilePath); os.IsNotExist(err) {
-		return nil, fmt.Errorf("geocoding cache file not found")
-	}
-
-	// Read cache file
-	data, err := os.ReadFile(cacheFilePath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read geocoding cache: %v", err)
-	}
-
-	var cachedResults []GeocodeResult
-	if err := json.Unmarshal(data, &cachedResults); err != nil {
-		return nil, fmt.Errorf("failed to parse geocoding cache: %v", err)
-	}
-
-	cacheMap := make(map[string]GeocodeResult)
-	for _, result := range cachedResults {
-		key := GenerateCacheKey(result.Address)
-		cacheMap[key] = result
-	}
-
-	return cacheMap, nil
+	// This is a legacy function, but we'll use the new implementation internally
+	return LoadGeocodeResultsFromCache()
 }
