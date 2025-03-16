@@ -75,14 +75,13 @@ func CreateGeocodeResult(address Address, location Location, err error) GeocodeR
 // It tries Nominatim first, then falls back to Google if Nominatim fails
 func GetCoordinates(address Address) (Location, error) {
 	// // Try with Nominatim first
-	// location, err := nominatimProvider.GetCoordinates(address)
+	location, err := nominatimProvider.GetCoordinates(address)
 
 	// // If Nominatim fails, try Google Geocoding API
-	// if err != nil {
-	// 	log.Printf("Nominatim geocoding failed, trying Google: %v", err)
-	// 	location, err = googleProvider.GetCoordinates(address)
-	// }
-	location, err := googleProvider.GetCoordinates(address)
+	if err != nil {
+		log.Printf("Nominatim geocoding failed, trying Google: %v", err)
+		location, err = googleProvider.GetCoordinates(address)
+	}
 
 	return location, err
 }
