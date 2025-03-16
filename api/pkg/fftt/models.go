@@ -18,8 +18,8 @@ type Tournament struct {
 	Responses              []Response        `json:"responses,omitempty"`
 	IsRulesPdfChecked      bool              `json:"isRulesPdfChecked,omitempty"`
 	IsSiteExistenceChecked bool              `json:"isSiteExistenceChecked,omitempty"`
-	SiteUrl                string            `json:"siteUrl,omitempty"`
-	SignupUrl              string            `json:"signupUrl,omitempty"`
+	SiteURL                string            `json:"siteUrl,omitempty"`
+	SignupURL              string            `json:"signupUrl,omitempty"`
 }
 
 // Response represents tournament responses

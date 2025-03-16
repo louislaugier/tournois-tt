@@ -52,8 +52,8 @@ func TournamentsHandler(c *gin.Context) {
 			Endowment:              cachedTournament.Endowment,
 			IsRulesPdfChecked:      cachedTournament.IsRulesPdfChecked,
 			IsSiteExistenceChecked: cachedTournament.IsSiteExistenceChecked,
-			SiteUrl:                cachedTournament.SiteUrl,
-			SignupUrl:              cachedTournament.SignupUrl,
+			SiteURL:                cachedTournament.SiteUrl,
+			SignupURL:              cachedTournament.SignupUrl,
 		}
 
 		// Map the tournament type to full form
