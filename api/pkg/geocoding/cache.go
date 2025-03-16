@@ -2,8 +2,6 @@ package geocoding
 
 import (
 	"fmt"
-	"os"
-	"path/filepath"
 	"strings"
 	"tournois-tt/api/pkg/cache"
 )
@@ -16,42 +14,11 @@ var CacheFilePath string
 
 // InitCache initializes the geocoding cache
 func InitCache() error {
-	// Set up the cache file path - match the existing structure where data.json is in api/cache
-	execDir, err := os.Getwd()
-	var cacheDir string
-	if err != nil {
-		// Fallback to relative path if we can't get working directory
-		cacheDir = filepath.Join("api", "cache")
-	} else {
-		// Find the api directory in the path
-		if idx := strings.LastIndex(execDir, "api"); idx != -1 {
-			// If we're already in the api directory or a subdirectory
-			cacheDir = filepath.Join(execDir[:idx+3], "cache") // 3 = len("api")
-		} else {
-			// If we're in the root directory
-			cacheDir = filepath.Join(execDir, "api", "cache")
-		}
-	}
-
-	CacheFilePath = filepath.Join(cacheDir, "data.json")
-
-	// Load cache from JSON file
-	DefaultGeocodeCache, err = cache.LoadFromJSON(CacheFilePath, func(result GeocodeResult) string {
-		return GenerateCacheKey(result.Address)
-	})
-
-	if err != nil {
-		return fmt.Errorf("failed to load geocoding cache: %v", err)
-	}
-
 	return nil
 }
 
 // EnsureCacheInitialized makes sure cache is initialized
 func EnsureCacheInitialized() error {
-	if DefaultGeocodeCache == nil {
-		return InitCache()
-	}
 	return nil
 }
 
@@ -93,30 +60,60 @@ func GenerateCacheKey(addr Address) string {
 
 // GetCachedGeocodeResult retrieves a geocoding result from the cache
 func GetCachedGeocodeResult(addr Address) (GeocodeResult, bool) {
-	// Ensure cache is initialized
-	if err := EnsureCacheInitialized(); err != nil {
+	// Convert Address to cache.Address
+	cacheAddr := cache.Address{
+		StreetAddress:             addr.StreetAddress,
+		PostalCode:                addr.PostalCode,
+		AddressLocality:           addr.AddressLocality,
+		DisambiguatingDescription: addr.DisambiguatingDescription,
+		Latitude:                  addr.Latitude,
+		Longitude:                 addr.Longitude,
+		Failed:                    addr.Failed,
+	}
+
+	// Get cached tournaments
+	tournaments, err := cache.LoadTournaments()
+	if err != nil {
 		return GeocodeResult{}, false
 	}
 
-	key := GenerateCacheKey(addr)
-	return DefaultGeocodeCache.Get(key)
+	// Search for matching address in cached tournaments
+	key := cache.GenerateAddressCacheKey(cacheAddr)
+
+	// Look for a tournament with matching address
+	for _, tourney := range tournaments {
+		if cache.GenerateAddressCacheKey(tourney.Address) == key {
+			// Found a match - extract geocode data
+			result := GeocodeResult{
+				Address: Address{
+					StreetAddress:             tourney.Address.StreetAddress,
+					PostalCode:                tourney.Address.PostalCode,
+					AddressLocality:           tourney.Address.AddressLocality,
+					DisambiguatingDescription: tourney.Address.DisambiguatingDescription,
+					Latitude:                  tourney.Address.Latitude,
+					Longitude:                 tourney.Address.Longitude,
+					Failed:                    tourney.Address.Failed,
+				},
+				Latitude:  tourney.Address.Latitude,
+				Longitude: tourney.Address.Longitude,
+				Failed:    tourney.Address.Failed,
+				Timestamp: tourney.Timestamp,
+			}
+			return result, true
+		}
+	}
+
+	return GeocodeResult{}, false
 }
 
 // SetCachedGeocodeResult stores a geocoding result in the cache
 func SetCachedGeocodeResult(result GeocodeResult) {
-	// Ensure cache is initialized - ignore error as we're just setting
-	if DefaultGeocodeCache == nil {
-		if err := InitCache(); err != nil {
-			return
-		}
-	}
-
-	key := GenerateCacheKey(result.Address)
-	DefaultGeocodeCache.Set(key, result)
+	// We won't implement this separately anymore.
+	// Geocode results will be stored as part of tournament data when saving tournaments.
+	// This is now just a stub for backward compatibility.
 }
 
 // Legacy function for backward compatibility
 func LoadGeocodeCache() (map[string]GeocodeResult, error) {
-	// This is a legacy function, but we'll use the new implementation internally
 	return LoadGeocodeResultsFromCache()
 }

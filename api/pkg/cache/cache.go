@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 )
 
@@ -146,4 +147,116 @@ func SaveToJSON[T any](cache *GenericCache[T], filePath string) error {
 	}
 
 	return nil
+}
+
+// DefaultTournamentCache is the global instance of the tournament cache
+var DefaultTournamentCache *GenericCache[TournamentCache]
+
+// CacheFilePath is the path to the cache file
+var CacheFilePath string
+
+// InitCache initializes the unified cache
+func InitCache() error {
+	// Set up the cache file path - match the existing structure where data.json is in api/cache
+	execDir, err := os.Getwd()
+	var cacheDir string
+	if err != nil {
+		// Fallback to relative path if we can't get working directory
+		cacheDir = filepath.Join("api", "cache")
+	} else {
+		// Find the api directory in the path
+		if idx := strings.LastIndex(execDir, "api"); idx != -1 {
+			// If we're already in the api directory or a subdirectory
+			cacheDir = filepath.Join(execDir[:idx+3], "cache") // 3 = len("api")
+		} else {
+			// If we're in the root directory
+			cacheDir = filepath.Join(execDir, "api", "cache")
+		}
+	}
+
+	CacheFilePath = filepath.Join(cacheDir, "data.json")
+
+	// Load cache from JSON file
+	DefaultTournamentCache, err = LoadFromJSON(CacheFilePath, func(tournament TournamentCache) string {
+		return GenerateTournamentCacheKey(tournament)
+	})
+
+	if err != nil {
+		return fmt.Errorf("failed to load tournament cache: %v", err)
+	}
+
+	return nil
+}
+
+// EnsureCacheInitialized makes sure cache is initialized
+func EnsureCacheInitialized() error {
+	if DefaultTournamentCache == nil {
+		return InitCache()
+	}
+	return nil
+}
+
+// SaveTournamentsToCache saves tournament data to a JSON file
+func SaveTournamentsToCache(tournaments []TournamentCache) error {
+	// Ensure cache is initialized
+	if err := EnsureCacheInitialized(); err != nil {
+		return err
+	}
+
+	// Add tournaments to the in-memory cache
+	for _, tournament := range tournaments {
+		key := GenerateTournamentCacheKey(tournament)
+		DefaultTournamentCache.Set(key, tournament)
+	}
+
+	// Save to JSON file
+	return SaveToJSON(DefaultTournamentCache, CacheFilePath)
+}
+
+// LoadTournaments loads existing tournament data from JSON file
+func LoadTournaments() (map[string]TournamentCache, error) {
+	// Ensure cache is initialized
+	if err := EnsureCacheInitialized(); err != nil {
+		return nil, err
+	}
+
+	// Return a copy of all items in the cache
+	return DefaultTournamentCache.GetAll(), nil
+}
+
+// GenerateTournamentCacheKey creates a unique key for a tournament
+func GenerateTournamentCacheKey(tournament TournamentCache) string {
+	return fmt.Sprintf("%d", tournament.ID)
+}
+
+// GetCachedTournament retrieves a tournament from the cache
+func GetCachedTournament(id int) (TournamentCache, bool) {
+	// Ensure cache is initialized
+	if err := EnsureCacheInitialized(); err != nil {
+		return TournamentCache{}, false
+	}
+
+	key := fmt.Sprintf("%d", id)
+	return DefaultTournamentCache.Get(key)
+}
+
+// SetCachedTournament stores a tournament in the cache
+func SetCachedTournament(tournament TournamentCache) {
+	// Ensure cache is initialized - ignore error as we're just setting
+	if DefaultTournamentCache == nil {
+		if err := InitCache(); err != nil {
+			return
+		}
+	}
+
+	key := GenerateTournamentCacheKey(tournament)
+	DefaultTournamentCache.Set(key, tournament)
+}
+
+// GenerateAddressCacheKey creates a unique key for an address
+func GenerateAddressCacheKey(addr Address) string {
+	return fmt.Sprintf("%s|%s|%s",
+		strings.TrimSpace(addr.StreetAddress),
+		strings.TrimSpace(addr.PostalCode),
+		strings.TrimSpace(addr.AddressLocality))
 }

@@ -71,7 +71,6 @@ export interface Tournament {
   };
   tables?: Table[];
   endowment: number;
-  status: number;
   id: number;
   organization?: {
     '@id': string;

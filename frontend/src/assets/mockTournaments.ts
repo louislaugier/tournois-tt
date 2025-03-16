@@ -44,7 +44,6 @@ export const mockTournaments: Array<Tournament> = [
             url: ""
         },
         endowment: 0, // Total endowment in cents
-        status: 1, // Assuming 1 means active/upcoming
         organization: undefined, // Optional field
         responses: [], // Optional field
         engagmentSheet: undefined, // Optional field
@@ -96,7 +95,6 @@ export const mockTournaments: Array<Tournament> = [
             url: ""
         },
         endowment: 131000, // Total endowment in cents
-        status: 1, // Assuming 1 means active/upcoming
         organization: undefined, // Optional field
         responses: [], // Optional field
         engagmentSheet: undefined, // Optional field

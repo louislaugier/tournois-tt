@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/url"
 	"time"
+	"tournois-tt/api/pkg/cache"
 	"tournois-tt/api/pkg/fftt"
 	"tournois-tt/api/pkg/geocoding"
 	"tournois-tt/api/pkg/utils"
@@ -21,11 +22,12 @@ func RefreshGeocoding() {
 
 // refresh fetches and processes tournament addresses
 func refreshGeocoding(startDateAfter, startDateBefore *time.Time) error {
-	// Load existing cache - no need to store it in a variable as we'll use the thread-safe methods
-	_, err := geocoding.LoadGeocodeResultsFromCache()
+	// Load existing cache
+	cachedTournaments, err := cache.LoadTournaments()
 	if err != nil {
-		log.Printf("Warning: Failed to load geocoding cache: %v", err)
+		log.Printf("Warning: Failed to load tournament cache: %v", err)
 	}
+
 	// Create query params for future tournaments
 	queryParams := url.Values{}
 	queryParams.Set("startDate[after]", startDateAfter.Format("2006-01-02T15:04:05"))
@@ -47,73 +49,147 @@ func refreshGeocoding(startDateAfter, startDateBefore *time.Time) error {
 	}
 
 	var tournaments []fftt.Tournament
-
 	if err := json.NewDecoder(resp.Body).Decode(&tournaments); err != nil {
 		return fmt.Errorf("failed to decode tournaments: %v", err)
 	}
 
 	// Prepare addresses for geocoding
 	addressesToGeocode := make([]geocoding.Address, 0)
-	geocodeResults := make([]geocoding.GeocodeResult, 0, len(tournaments))
+	newTournamentCacheEntries := make([]cache.TournamentCache, 0, len(tournaments))
 	successCount := 0
 	failureCount := 0
 
 	for _, t := range tournaments {
-		if !t.Address.IsValid() {
-			result := geocoding.GeocodeResult{
-				Address:   t.Address,
-				Failed:    true,
-				Timestamp: time.Now(),
-			}
-			geocodeResults = append(geocodeResults, result)
-			geocoding.SetCachedGeocodeResult(result)
-			continue
-		}
+		// Check if this tournament is already in cache by ID
+		cacheKey := fmt.Sprintf("%d", t.ID)
+		cachedTournament, exists := cachedTournaments[cacheKey]
 
-		// Check if address is already in cache using thread-safe method
-		cachedResult, exists := geocoding.GetCachedGeocodeResult(t.Address)
 		if exists {
-			geocodeResults = append(geocodeResults, cachedResult)
+			// Use existing cached tournament data but update other fields if needed
+			newCacheEntry := cachedTournament
+			// TODO: Update other fields if necessary
+
+			// Keep this tournament in the cache
+			newTournamentCacheEntries = append(newTournamentCacheEntries, newCacheEntry)
 			continue
 		}
 
-		addressesToGeocode = append(addressesToGeocode, t.Address)
-	}
-	// Perform individual geocoding
-	for _, addr := range addressesToGeocode {
-		result := geocoding.GeocodeResult{
-			Address:   addr,
-			Timestamp: time.Now(),
+		// Create a new cache entry for this tournament
+		newCacheEntry := cache.TournamentCache{
+			ID:        t.ID,
+			Name:      t.Name,
+			Type:      utils.MapTournamentType(t.Type),
+			StartDate: t.StartDate,
+			EndDate:   t.EndDate,
+			Address: cache.Address{
+				StreetAddress:             t.Address.StreetAddress,
+				PostalCode:                t.Address.PostalCode,
+				AddressLocality:           t.Address.AddressLocality,
+				DisambiguatingDescription: t.Address.DisambiguatingDescription,
+			},
+			Club: cache.Club{
+				ID:         t.Club.ID,
+				Name:       t.Club.Name,
+				Code:       t.Club.Code,
+				Department: t.Club.Department,
+				Region:     t.Club.Region,
+				Identifier: t.Club.Identifier,
+			},
+			Endowment:              t.Endowment,
+			IsRulesPdfChecked:      false,
+			IsSiteExistenceChecked: false,
+			Timestamp:              time.Now(),
 		}
 
+		// Add Rules if available
+		if t.Rules != nil {
+			newCacheEntry.Rules = &cache.Rules{
+				AgeMin:  t.Rules.AgeMin,
+				AgeMax:  t.Rules.AgeMax,
+				Points:  t.Rules.Points,
+				Ranking: t.Rules.Ranking,
+				URL:     t.Rules.URL,
+			}
+		}
+
+		// Check if the address is valid for geocoding
+		if !t.Address.IsValid() {
+			newCacheEntry.Address.Failed = true
+			newTournamentCacheEntries = append(newTournamentCacheEntries, newCacheEntry)
+			continue
+		}
+
+		// Check if address is already in cache by address key
+		addressKey := cache.GenerateAddressCacheKey(newCacheEntry.Address)
+		addressFound := false
+
+		// Look for an existing tournament with the same address
+		for _, existingTournament := range cachedTournaments {
+			existingAddressKey := cache.GenerateAddressCacheKey(existingTournament.Address)
+			if existingAddressKey == addressKey && !existingTournament.Address.Failed {
+				// Found a tournament with the same address that has coordinates
+				newCacheEntry.Address.Latitude = existingTournament.Address.Latitude
+				newCacheEntry.Address.Longitude = existingTournament.Address.Longitude
+				addressFound = true
+				break
+			}
+		}
+
+		if !addressFound {
+			// If address not found in cache, add to list for geocoding
+			addressesToGeocode = append(addressesToGeocode, t.Address)
+			// Store the index in the newTournamentCacheEntries for updating later
+			newCacheEntry.Address.Failed = true // Mark as failed by default, will update if geocoding succeeds
+			newTournamentCacheEntries = append(newTournamentCacheEntries, newCacheEntry)
+		} else {
+			// Address found, no need to geocode
+			newTournamentCacheEntries = append(newTournamentCacheEntries, newCacheEntry)
+		}
+	}
+
+	// Perform individual geocoding for addresses not in cache
+	for i, addr := range addressesToGeocode {
 		// Rate limit between requests
 		time.Sleep(geocoding.RateLimitDelay)
 
 		// Geocode individual address
 		location, err := geocoding.GetCoordinates(addr)
-		if err != nil {
-			result.Failed = true
-			failureCount++
-		} else {
-			result.Latitude = location.Lat
-			result.Longitude = location.Lon
-			result.Failed = false
-			successCount++
+
+		// Find the tournament with this address in our new cache entries
+		for j := range newTournamentCacheEntries {
+			cacheAddr := newTournamentCacheEntries[j].Address
+			if cacheAddr.StreetAddress == addr.StreetAddress &&
+				cacheAddr.PostalCode == addr.PostalCode &&
+				cacheAddr.AddressLocality == addr.AddressLocality {
+
+				if err != nil || location.Failed {
+					// Geocoding failed
+					newTournamentCacheEntries[j].Address.Failed = true
+					failureCount++
+				} else {
+					// Geocoding succeeded
+					newTournamentCacheEntries[j].Address.Latitude = location.Lat
+					newTournamentCacheEntries[j].Address.Longitude = location.Lon
+					newTournamentCacheEntries[j].Address.Failed = false
+					successCount++
+
+					// Log successful geocoding
+					log.Printf("Geocoded new address (%d/%d): %s -> (%f, %f)",
+						i+1, len(addressesToGeocode),
+						geocoding.ConstructFullAddress(addr), location.Lat, location.Lon)
+				}
+				break
+			}
 		}
-
-		geocodeResults = append(geocodeResults, result)
-
-		// Store result in the thread-safe cache
-		geocoding.SetCachedGeocodeResult(result)
 	}
 
-	if len(addressesToGeocode) > 0 {
-		// Save geocoding results to cache
-		if err := geocoding.SaveGeocodeResultsToCache(geocodeResults); err != nil {
-			log.Printf("Warning: Failed to save geocoding cache: %v", err)
+	// Save all tournament cache entries
+	if len(newTournamentCacheEntries) > 0 {
+		if err := cache.SaveTournamentsToCache(newTournamentCacheEntries); err != nil {
+			log.Printf("Warning: Failed to save tournament cache: %v", err)
 		}
 	}
 
-	log.Printf("Refreshing completed: %d successful, %d failed", successCount, failureCount)
+	log.Printf("Geocoding refresh completed: %d successful, %d failed", successCount, failureCount)
 	return nil
 }

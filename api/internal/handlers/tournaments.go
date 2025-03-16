@@ -1,12 +1,10 @@
 package handlers
 
 import (
-	"encoding/json"
-	"io"
 	"log"
 	"net/http"
 	"strings"
-	"time"
+	"tournois-tt/api/pkg/cache"
 	"tournois-tt/api/pkg/fftt"
 	"tournois-tt/api/pkg/geocoding"
 	"tournois-tt/api/pkg/utils"
@@ -14,55 +12,52 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// Modify TournamentsHandler to use geocoding cache
+// TournamentsHandler handles tournament requests by retrieving data from the cache
 func TournamentsHandler(c *gin.Context) {
-	// Get all query parameters
-	queryParams := c.Request.URL.Query()
-
-	// Call FFTT API
-	resp, err := fftt.GetClient().GetTournaments(queryParams)
+	// Load tournaments from cache
+	cachedTournaments, err := cache.LoadTournaments()
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch data from FFTT API"})
-		return
-	}
-	defer resp.Body.Close()
-
-	// Check response status
-	if resp.StatusCode != http.StatusOK {
-		c.JSON(resp.StatusCode, gin.H{"error": "FFTT API returned an error"})
+		log.Printf("Error loading tournament cache: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to load tournaments from cache"})
 		return
 	}
 
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to read response body"})
-		return
-	}
+	// Convert cache map to slice of tournaments
+	tournaments := make([]fftt.Tournament, 0, len(cachedTournaments))
 
-	// Debug log first tournament raw data
-	var rawTournaments []map[string]interface{}
-	json.Unmarshal(body, &rawTournaments)
+	for _, cachedTournament := range cachedTournaments {
+		tournament := fftt.Tournament{
+			ID:        cachedTournament.ID,
+			Name:      cachedTournament.Name,
+			Type:      cachedTournament.Type,
+			StartDate: cachedTournament.StartDate,
+			EndDate:   cachedTournament.EndDate,
+			Address: geocoding.Address{
+				StreetAddress:             cachedTournament.Address.StreetAddress,
+				PostalCode:                cachedTournament.Address.PostalCode,
+				AddressLocality:           cachedTournament.Address.AddressLocality,
+				DisambiguatingDescription: cachedTournament.Address.DisambiguatingDescription,
+				Latitude:                  cachedTournament.Address.Latitude,
+				Longitude:                 cachedTournament.Address.Longitude,
+				Failed:                    cachedTournament.Address.Failed,
+			},
+			Club: fftt.Club{
+				ID:         cachedTournament.Club.ID,
+				Name:       cachedTournament.Club.Name,
+				Code:       cachedTournament.Club.Code,
+				Department: cachedTournament.Club.Department,
+				Region:     cachedTournament.Club.Region,
+				Identifier: cachedTournament.Club.Identifier,
+			},
+			Endowment:              cachedTournament.Endowment,
+			IsRulesPdfChecked:      cachedTournament.IsRulesPdfChecked,
+			IsSiteExistenceChecked: cachedTournament.IsSiteExistenceChecked,
+			SiteUrl:                cachedTournament.SiteUrl,
+			SignupUrl:              cachedTournament.SignupUrl,
+		}
 
-	if len(rawTournaments) > 0 {
-		json.MarshalIndent(rawTournaments[0], "", "  ")
-	}
-
-	var ffttTournaments []fftt.Tournament
-	if err := json.Unmarshal(body, &ffttTournaments); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to parse tournaments data"})
-		return
-	}
-
-	// Convert to our internal type
-	tournaments := make([]fftt.Tournament, len(ffttTournaments))
-
-	// Create a collection for newly geocoded results
-	newResults := make([]geocoding.GeocodeResult, 0)
-
-	for i, t := range ffttTournaments {
-		tournament := t
 		// Map the tournament type to full form
-		tournament.Type = utils.MapTournamentType(t.Type)
+		tournament.Type = utils.MapTournamentType(tournament.Type)
 
 		// Append a dot to the postal code
 		tournament.Address.PostalCode = tournament.Address.PostalCode + "\u200e"
@@ -72,57 +67,18 @@ func TournamentsHandler(c *gin.Context) {
 			tournament.EndDate = tournament.EndDate + " 23:59"
 		}
 
-		// Check if address is in geocoding cache
-		if cachedResult, exists := geocoding.GetCachedGeocodeResult(t.Address); exists && !cachedResult.Failed {
-			// Use cached coordinates or failed status
-			tournament.Address.Latitude = cachedResult.Latitude
-			tournament.Address.Longitude = cachedResult.Longitude
-
-			// Skip further geocoding if already processed
-			tournaments[i] = tournament
-		} else {
-			// Use the geocoding package's GetCoordinates function that tries both Nominatim and Google
-			location, err := geocoding.GetCoordinates(t.Address)
-
-			// Create a geocode result
-			result := geocoding.GeocodeResult{
-				Address:   t.Address,
-				Timestamp: time.Now(),
+		// Add Rules if available
+		if cachedTournament.Rules != nil {
+			tournament.Rules = &fftt.Rules{
+				AgeMin:  cachedTournament.Rules.AgeMin,
+				AgeMax:  cachedTournament.Rules.AgeMax,
+				Points:  cachedTournament.Rules.Points,
+				Ranking: cachedTournament.Rules.Ranking,
+				URL:     cachedTournament.Rules.URL,
 			}
-
-			if err != nil || location.Failed {
-				result.Failed = true
-			} else {
-				// Update the tournament with coordinates
-				tournament.Address.Latitude = location.Lat
-				tournament.Address.Longitude = location.Lon
-
-				// Set geocode result values
-				result.Latitude = location.Lat
-				result.Longitude = location.Lon
-				result.Failed = false
-
-				// Log successful geocoding for debugging
-				log.Printf("Geocoded new address: %s -> (%f, %f)",
-					geocoding.ConstructFullAddress(t.Address), location.Lat, location.Lon)
-			}
-
-			// Cache the result in memory
-			geocoding.SetCachedGeocodeResult(result)
-
-			// Add to collection of newly geocoded results
-			newResults = append(newResults, result)
-
-			tournaments[i] = tournament
 		}
-	}
 
-	// Only save if we have new results to persist
-	if len(newResults) > 0 {
-		log.Printf("Saving %d newly geocoded results to cache", len(newResults))
-		if err := geocoding.SaveGeocodeResultsToCache(newResults); err != nil {
-			log.Printf("Warning: Failed to save geocoding cache: %v", err)
-		}
+		tournaments = append(tournaments, tournament)
 	}
 
 	c.JSON(http.StatusOK, tournaments)

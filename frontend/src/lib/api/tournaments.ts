@@ -19,7 +19,6 @@ export interface TournamentQueryParams {
     'endDate[before]'?: string;
     'address.postalCode'?: string;
     'address.addressLocality'?: string;
-    status?: number;
     type?: string;
 }
 
@@ -87,11 +86,6 @@ export class TournamentQueryBuilder {
 
     orderByStartDate(order: 'asc' | 'desc'): this {
         this.params['order[startDate]'] = order;
-        return this;
-    }
-
-    withStatus(status: number): this {
-        this.params.status = status;
         return this;
     }
 
