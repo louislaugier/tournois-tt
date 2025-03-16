@@ -3,8 +3,10 @@ package handlers
 import (
 	"encoding/json"
 	"io"
+	"log"
 	"net/http"
 	"strings"
+	"time"
 	"tournois-tt/api/pkg/fftt"
 	"tournois-tt/api/pkg/geocoding"
 	"tournois-tt/api/pkg/utils"
@@ -54,6 +56,9 @@ func TournamentsHandler(c *gin.Context) {
 	// Convert to our internal type
 	tournaments := make([]fftt.Tournament, len(ffttTournaments))
 
+	// Create a collection for newly geocoded results
+	newResults := make([]geocoding.GeocodeResult, 0)
+
 	for i, t := range ffttTournaments {
 		tournament := t
 		// Map the tournament type to full form
@@ -76,24 +81,47 @@ func TournamentsHandler(c *gin.Context) {
 			// Skip further geocoding if already processed
 			tournaments[i] = tournament
 		} else {
-			go func(addr geocoding.Address) {
-				// Attempt to geocode if not in cache
-				var coords geocoding.GeocodeResult
-				var err error
+			// Use the geocoding package's GetCoordinates function that tries both Nominatim and Google
+			location, err := geocoding.GetCoordinates(t.Address)
 
-				// First try Nominatim
-				coords, err = geocoding.GetCoordinatesNominatim(addr)
-				if err != nil || coords.Failed {
-					// If Nominatim fails, try Google
-					coords, err = geocoding.GetCoordinatesGoogle(addr)
-					if err != nil || coords.Failed {
-						return
-					}
-				}
+			// Create a geocode result
+			result := geocoding.GeocodeResult{
+				Address:   t.Address,
+				Timestamp: time.Now(),
+			}
 
-				// Cache the result
-				geocoding.SetCachedGeocodeResult(coords)
-			}(t.Address)
+			if err != nil || location.Failed {
+				result.Failed = true
+			} else {
+				// Update the tournament with coordinates
+				tournament.Address.Latitude = location.Lat
+				tournament.Address.Longitude = location.Lon
+
+				// Set geocode result values
+				result.Latitude = location.Lat
+				result.Longitude = location.Lon
+				result.Failed = false
+
+				// Log successful geocoding for debugging
+				log.Printf("Geocoded new address: %s -> (%f, %f)",
+					geocoding.ConstructFullAddress(t.Address), location.Lat, location.Lon)
+			}
+
+			// Cache the result in memory
+			geocoding.SetCachedGeocodeResult(result)
+
+			// Add to collection of newly geocoded results
+			newResults = append(newResults, result)
+
+			tournaments[i] = tournament
+		}
+	}
+
+	// Only save if we have new results to persist
+	if len(newResults) > 0 {
+		log.Printf("Saving %d newly geocoded results to cache", len(newResults))
+		if err := geocoding.SaveGeocodeResultsToCache(newResults); err != nil {
+			log.Printf("Warning: Failed to save geocoding cache: %v", err)
 		}
 	}
 

@@ -6,11 +6,18 @@ import (
 	"log"
 	"net/http"
 	"net/url"
-	"sync"
 	"time"
 	"tournois-tt/api/pkg/fftt"
 	"tournois-tt/api/pkg/geocoding"
+	"tournois-tt/api/pkg/utils"
 )
+
+func RefreshGeocoding() {
+	lastSeasonStart, _ := utils.GetLastFinishedSeason()
+	if err := refreshGeocoding(&lastSeasonStart, nil); err != nil {
+		log.Printf("Warning: Failed to refresh tournament geocoding data: %v", err)
+	}
+}
 
 // refresh fetches and processes tournament addresses
 func refreshGeocoding(startDateAfter, startDateBefore *time.Time) error {
@@ -19,7 +26,6 @@ func refreshGeocoding(startDateAfter, startDateBefore *time.Time) error {
 	if err != nil {
 		log.Printf("Warning: Failed to load geocoding cache: %v", err)
 	}
-
 	// Create query params for future tournaments
 	queryParams := url.Values{}
 	queryParams.Set("startDate[after]", startDateAfter.Format("2006-01-02T15:04:05"))
@@ -52,47 +58,27 @@ func refreshGeocoding(startDateAfter, startDateBefore *time.Time) error {
 	successCount := 0
 	failureCount := 0
 
-	wg := sync.WaitGroup{}
-	mu := sync.Mutex{}
 	for _, t := range tournaments {
-		wg.Add(1)
-
-		go func(t fftt.Tournament) {
-			defer wg.Done()
-
-			if !t.Address.IsValid() {
-				result := geocoding.GeocodeResult{
-					Address:   t.Address,
-					Failed:    true,
-					Timestamp: time.Now(),
-				}
-
-				// Protect geocodeResults with a mutex for thread-safety
-				mu.Lock()
-				geocodeResults = append(geocodeResults, result)
-				geocoding.SetCachedGeocodeResult(result)
-				mu.Unlock()
-
-				return
+		if !t.Address.IsValid() {
+			result := geocoding.GeocodeResult{
+				Address:   t.Address,
+				Failed:    true,
+				Timestamp: time.Now(),
 			}
+			geocodeResults = append(geocodeResults, result)
+			geocoding.SetCachedGeocodeResult(result)
+			continue
+		}
 
-			// Check if address is already in cache using thread-safe method
-			cachedResult, exists := geocoding.GetCachedGeocodeResult(t.Address)
-			if exists {
-				// Protect geocodeResults with a mutex for thread-safety
-				mu.Lock()
-				geocodeResults = append(geocodeResults, cachedResult)
-				mu.Unlock()
-				return
-			}
+		// Check if address is already in cache using thread-safe method
+		cachedResult, exists := geocoding.GetCachedGeocodeResult(t.Address)
+		if exists {
+			geocodeResults = append(geocodeResults, cachedResult)
+			continue
+		}
 
-			mu.Lock()
-			addressesToGeocode = append(addressesToGeocode, t.Address)
-			mu.Unlock()
-		}(t)
+		addressesToGeocode = append(addressesToGeocode, t.Address)
 	}
-	wg.Wait()
-
 	// Perform individual geocoding
 	for _, addr := range addressesToGeocode {
 		result := geocoding.GeocodeResult{

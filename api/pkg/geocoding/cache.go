@@ -147,9 +147,8 @@ func SaveGeocodeResultsToCache(results []GeocodeResult) error {
 
 // LoadGeocodeResultsFromCache loads existing geocoding results from JSON file
 func LoadGeocodeResultsFromCache() (map[string]GeocodeResult, error) {
-	// Use mutex to ensure thread safety
-	DefaultGeocodeCache.RLock()
-	defer DefaultGeocodeCache.RUnlock()
+	// We don't need a lock here as we're only reading from the file system
+	// and then updating the cache once at the end
 
 	cacheFilePath := filepath.Join(getCacheDirectory(), "data.json")
 
