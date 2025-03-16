@@ -58,9 +58,26 @@ export const getTournamentRows = (allTournamentsForMap: any) => {
             location.tournaments[0].address.streetAddress
                 ? `${location.tournaments[0].address.disambiguatingDescription ? location.tournaments[0].address.disambiguatingDescription + ' ' : ''}${location.tournaments[0].address.streetAddress}, ${location.tournaments[0].address.postalCode} ${location.tournaments[0].address.addressLocality}`
                 : 'Adresse non disponible',
-            location.tournaments.map(t => t.rules?.url || 'Pas de règlement')
-                .map(url => location.count > 1 ? url.replace('https://', '') : url)
-                .join(' | '),
+            location.tournaments.map(t => {
+                // For debugging purposes - console log tournament data to see affiche
+                if (t.identifier === 'MOCK-ATT-XV-2025') {
+                    console.log('Found mock tournament:', t);
+                }
+                
+                // Display rules URL if available
+                if (t.rules?.url) {
+                    return location.count > 1 ? t.rules.url.replace('https://', '') : t.rules.url;
+                }
+                
+                // If affiche is available, display it
+                if (t.affiche) {
+                    const afficheDisplay = location.count > 1 ? t.affiche.replace('https://', '') : t.affiche;
+                    return t.rules ? afficheDisplay : `Pas de règlement (Affiche: ${afficheDisplay})`;
+                }
+                
+                // Default case: no rules, no affiche
+                return 'Pas de règlement';
+            }).join(' | '),
             postalCode,
             formatCityName(location.tournaments[0].address.addressLocality),
             getRegionFromPostalCode(postalCode.split(' | ')[0]),

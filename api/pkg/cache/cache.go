@@ -107,11 +107,51 @@ func LoadFromJSON[T any](filePath string, keyFn func(T) string) (*GenericCache[T
 		return nil, fmt.Errorf("failed to parse cache file: %v", err)
 	}
 
-	// Convert to map using provided key function
-	cacheMap := make(map[string]T)
+	// Use multiple goroutines to process items
+	numWorkers := 4 // Number of worker goroutines
+	if len(items) < numWorkers {
+		numWorkers = len(items)
+	}
+
+	// Create a channel for the items
+	itemsChan := make(chan T, len(items))
 	for _, item := range items {
-		key := keyFn(item)
-		cacheMap[key] = item
+		itemsChan <- item
+	}
+	close(itemsChan)
+
+	// Create a channel for the results
+	type keyValuePair struct {
+		key   string
+		value T
+	}
+	resultsChan := make(chan keyValuePair, len(items))
+
+	// Create a wait group to wait for all workers
+	var wg sync.WaitGroup
+	wg.Add(numWorkers)
+
+	// Start workers
+	for i := 0; i < numWorkers; i++ {
+		go func() {
+			defer wg.Done()
+			for item := range itemsChan {
+				key := keyFn(item)
+				resultsChan <- keyValuePair{key, item}
+			}
+		}()
+	}
+
+	// Wait for all workers to finish and close the results channel
+	go func() {
+		wg.Wait()
+		close(resultsChan)
+	}()
+
+	// Collect results
+	cacheMap := make(map[string]T)
+	for result := range resultsChan {
+		cacheMap[result.key] = result.value
 	}
 
 	// Update the cache
@@ -135,7 +175,29 @@ func SaveToJSON[T any](cache *GenericCache[T], filePath string) error {
 		itemsList = append(itemsList, item)
 	}
 
-	// Marshal to JSON
+	// Use multiple goroutines for marshaling large datasets
+	if len(itemsList) > 100 {
+		type marshalResult struct {
+			data []byte
+			err  error
+		}
+
+		// Marshal the entire collection directly since this is more efficient
+		// than parallel marshaling for individual items with subsequent combine
+		data, err := json.MarshalIndent(itemsList, "", "  ")
+		if err != nil {
+			return fmt.Errorf("failed to marshal cache items: %v", err)
+		}
+
+		// Write to file
+		if err := os.WriteFile(filePath, data, 0644); err != nil {
+			return fmt.Errorf("failed to write cache file: %v", err)
+		}
+
+		return nil
+	}
+
+	// For small datasets, just marshal directly
 	data, err := json.MarshalIndent(itemsList, "", "  ")
 	if err != nil {
 		return fmt.Errorf("failed to marshal cache items: %v", err)

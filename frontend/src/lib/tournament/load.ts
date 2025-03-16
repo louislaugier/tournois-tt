@@ -25,8 +25,6 @@ export const loadTournaments = async (setIsLoading: (value: React.SetStateAction
             const tournamentStartDate = new Date(tournament.startDate);
             return tournamentStartDate >= yesterdayMidnight;
         });
-        const currentTournamentsWithMocks = upsertMocksIntoDataset(currentTournamentsData);
-        setCurrentTournaments(currentTournamentsWithMocks);
 
         // Filter past current tournaments (within current season)
         const pastCurrentTournamentsData = allTournamentsData.filter(tournament => {
@@ -34,7 +32,6 @@ export const loadTournaments = async (setIsLoading: (value: React.SetStateAction
             return tournamentStartDate >= currentSeasonStartDate && 
                    tournamentStartDate <= todayMidnight;
         });
-        setPastCurrentTournaments(pastCurrentTournamentsData);
 
         // Filter past tournaments (within last completed season)
         const pastTournamentsData = allTournamentsData.filter(tournament => {
@@ -42,7 +39,15 @@ export const loadTournaments = async (setIsLoading: (value: React.SetStateAction
             return tournamentStartDate >= lastCompletedSeasonStartDate && 
                    tournamentStartDate <= lastCompletedSeasonEndDate;
         });
-        setPastTournaments(pastTournamentsData);
+
+        // Apply mocks to current tournaments
+        const {tournamentDataWithMocks, pastTournamentDataWithMocks} = upsertMocksIntoDataset(currentTournamentsData, pastTournamentsData);
+        
+        setCurrentTournaments(tournamentDataWithMocks);
+
+        setPastCurrentTournaments(pastCurrentTournamentsData);
+
+        setPastTournaments(pastTournamentDataWithMocks);
     } catch (error) {
         console.error('Failed to load tournaments:', error);
     } finally {

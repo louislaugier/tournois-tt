@@ -8,6 +8,8 @@ import (
 	"time"
 	"tournois-tt/api/pkg/scraper/browser"
 	"tournois-tt/api/pkg/scraper/page"
+
+	pw "github.com/playwright-community/playwright-go"
 )
 
 const (
@@ -20,24 +22,45 @@ const (
 
 // SearchActivities searches for activities on HelloAsso using the provided query
 func SearchActivities(ctx context.Context, query string) ([]Activity, error) {
-	cfg := browser.DefaultConfig()
+	return SearchActivitiesWithBrowser(ctx, query, nil, nil)
+}
 
-	// Setup browser
-	browserInstance, pwInstance, err := browser.Init(cfg)
-	if err != nil {
-		return nil, fmt.Errorf("failed to setup browser: %v", err)
+// SearchActivitiesWithBrowser searches for activities on HelloAsso using the provided query and browser resources
+func SearchActivitiesWithBrowser(ctx context.Context, query string, sharedBrowserContext pw.BrowserContext, pwInstance *pw.Playwright) ([]Activity, error) {
+	var browserInstance pw.Browser
+	var browserContext pw.BrowserContext
+	var ownedPwInstance *pw.Playwright
+	var err error
+
+	// If a browser context is provided, use it; otherwise, create a new browser instance
+	if sharedBrowserContext != nil {
+		browserContext = sharedBrowserContext
+	} else {
+		cfg := browser.DefaultConfig()
+
+		// Setup browser
+		browserInstance, ownedPwInstance, err = browser.Init(cfg)
+		if err != nil {
+			return nil, fmt.Errorf("failed to setup browser: %v", err)
+		}
+		defer func() {
+			if ownedPwInstance != nil {
+				ownedPwInstance.Stop()
+			}
+			if browserInstance != nil {
+				browserInstance.Close()
+			}
+		}()
+
+		// Setup context
+		browserContext, err = browser.NewContext(browserInstance, cfg)
+		if err != nil {
+			return nil, fmt.Errorf("failed to setup context: %v", err)
+		}
+		defer browserContext.Close()
 	}
-	defer pwInstance.Stop()
-	defer browserInstance.Close()
 
-	// Setup context
-	browserContext, err := browser.NewContext(browserInstance, cfg)
-	if err != nil {
-		return nil, fmt.Errorf("failed to setup context: %v", err)
-	}
-	defer browserContext.Close()
-
-	// Setup page
+	// Setup page (tab)
 	playwrightPage, err := browser.NewPage(browserContext)
 	if err != nil {
 		return nil, fmt.Errorf("failed to setup page: %v", err)
