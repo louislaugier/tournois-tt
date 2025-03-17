@@ -2,6 +2,9 @@ package page
 
 import (
 	"fmt"
+	"log"
+	"math"
+	"time"
 
 	"github.com/playwright-community/playwright-go"
 )
@@ -25,15 +28,29 @@ func New(page playwright.Page) *Handler {
 
 // NavigateToPage navigates to the page with the given URL
 func (h *Handler) NavigateToPage(url string) error {
-	// Navigate to the search page with timeout
-	if _, err := h.page.Goto(url, playwright.PageGotoOptions{
-		Timeout:   playwright.Float(60000), // Increase timeout to 60 seconds
-		WaitUntil: playwright.WaitUntilStateNetworkidle,
-	}); err != nil {
-		return fmt.Errorf("could not navigate to page: %v", err)
+	const maxRetries = 5
+	const initialBackoffMs = 1000
+
+	var lastError error
+
+	for attempt := 0; attempt < maxRetries; attempt++ {
+		// Navigate to the search page with timeout
+		if _, err := h.page.Goto(url, playwright.PageGotoOptions{
+			Timeout:   playwright.Float(60000), // 60 seconds timeout
+			WaitUntil: playwright.WaitUntilStateNetworkidle,
+		}); err == nil {
+			// Success - no error
+			return nil
+		} else {
+			lastError = err
+			backoffMs := initialBackoffMs * math.Pow(2, float64(attempt))
+			log.Printf("Navigation to %s failed (attempt %d/%d): %v. Retrying in %.1f seconds...",
+				url, attempt+1, maxRetries, err, backoffMs/1000)
+			time.Sleep(time.Duration(backoffMs) * time.Millisecond)
+		}
 	}
 
-	return nil
+	return fmt.Errorf("could not navigate to page after %d attempts: %v", maxRetries, lastError)
 }
 
 // WaitForResults waits for either search results or empty state to appear

@@ -2,19 +2,31 @@ package utils
 
 import (
 	"regexp"
+	"strings"
 )
 
 // ExtractPostalCode extracts a French postal code from a location string
 func ExtractPostalCode(location string) string {
-	// French postal codes are 5 digits
-	// Try to find a 5-digit sequence in the location string
+	// First, normalize the location string
+	location = strings.ToLower(location)
 
+	// French postal codes are 5 digits
 	// Regular expression to match French postal codes (5 digits)
 	re := regexp.MustCompile(`\b\d{5}\b`)
 	matches := re.FindAllString(location, -1)
 
 	if len(matches) > 0 {
 		return matches[0]
+	}
+
+	// If we can't find a full postal code, try to extract just the first two
+	// digits (department number) for a partial match
+	rePartial := regexp.MustCompile(`\b(\d{2})[^\d]`)
+	partialMatches := rePartial.FindStringSubmatch(location)
+
+	if len(partialMatches) > 1 {
+		// Return with wildcards for the remaining 3 digits
+		return partialMatches[1] + "000"
 	}
 
 	return ""

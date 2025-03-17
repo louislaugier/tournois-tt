@@ -2,12 +2,78 @@ package utils
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 	"time"
 )
 
 // ParseHelloAssoDate attempts to parse a date from HelloAsso
 func ParseHelloAssoDate(dateStr string) (time.Time, error) {
+	// Clean up the date string
+	dateStr = strings.TrimSpace(dateStr)
+	lowerDateStr := strings.ToLower(dateStr)
+
+	// First, handle date ranges like "Du 26/04/2025 au 27/04/2025"
+	if strings.Contains(lowerDateStr, "du ") && strings.Contains(lowerDateStr, " au ") {
+		// Extract the first date from the range
+		parts := strings.Split(lowerDateStr, " au ")
+		if len(parts) > 0 {
+			firstDatePart := strings.TrimPrefix(parts[0], "du ")
+			firstDatePart = strings.TrimSpace(firstDatePart)
+
+			// Extract the first date if it's in DD/MM/YYYY format
+			dateComponents := strings.Split(firstDatePart, "/")
+			if len(dateComponents) == 3 {
+				day := strings.TrimSpace(dateComponents[0])
+				month := strings.TrimSpace(dateComponents[1])
+				year := strings.TrimSpace(dateComponents[2])
+
+				formattedDate := fmt.Sprintf("%s/%s/%s", day, month, year)
+				if date, err := time.Parse("02/01/2006", formattedDate); err == nil {
+					return date, nil
+				}
+			}
+		}
+	}
+
+	// Handle single dates with "le" prefix (e.g., "le 26/04/2025")
+	if strings.HasPrefix(lowerDateStr, "le ") {
+		dateStr = strings.TrimPrefix(lowerDateStr, "le ")
+		dateStr = strings.TrimSpace(dateStr)
+	}
+
+	// Handle dates with weekday prefixes (e.g., "Samedi 26/04/2025")
+	frenchDays := []string{"lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi", "dimanche"}
+	for _, day := range frenchDays {
+		if strings.HasPrefix(lowerDateStr, day) {
+			dateStr = strings.TrimPrefix(lowerDateStr, day)
+			dateStr = strings.TrimSpace(dateStr)
+			break
+		}
+	}
+
+	// Try to extract date in DD/MM/YYYY format using regex
+	re := regexp.MustCompile(`\b(\d{1,2})[/\-\.](\d{1,2})[/\-\.](\d{4})\b`)
+	matches := re.FindStringSubmatch(dateStr)
+	if len(matches) == 4 {
+		day := matches[1]
+		month := matches[2]
+		year := matches[3]
+
+		// Ensure day and month are two digits
+		if len(day) == 1 {
+			day = "0" + day
+		}
+		if len(month) == 1 {
+			month = "0" + month
+		}
+
+		formattedDate := fmt.Sprintf("%s/%s/%s", day, month, year)
+		if date, err := time.Parse("02/01/2006", formattedDate); err == nil {
+			return date, nil
+		}
+	}
+
 	// HelloAsso dates will likely be in French formats
 	formats := []string{
 		// Common French formats
@@ -56,7 +122,7 @@ func ParseHelloAssoDate(dateStr string) (time.Time, error) {
 	dateStr = strings.ReplaceAll(dateStr, ",", "")
 
 	// Handle French month names that might have different capitalizations or accents
-	lowerDateStr := strings.ToLower(dateStr)
+	lowerDateStr = strings.ToLower(dateStr)
 	if strings.Contains(lowerDateStr, "janvier") || strings.Contains(lowerDateStr, "jan") {
 		dateStr = ReplaceMonthWithNumber(dateStr, "01")
 	} else if strings.Contains(lowerDateStr, "février") || strings.Contains(lowerDateStr, "fév") || strings.Contains(lowerDateStr, "fev") {
