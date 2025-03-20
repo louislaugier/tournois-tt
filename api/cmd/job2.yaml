@@ -1,0 +1,33 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: owa-sync-past
+  annotations:
+    timestamp: {{ now | date "2006-01-02T15:04:05" }}
+spec:
+  template:
+    metadata:
+      name: owa-sync-past
+      labels:
+        app: owa-sync-past
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: {{ .Chart.Name }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          envFrom:
+            {{- if .Values.secretName }}
+            - secretRef:
+                name: {{ .Values.secretName }}
+            {{- end }}
+            {{- if .Values.configMap.enabled }}
+            - configMapRef:
+                name: {{ include "onekey-hca-ok-owa-mgr.fullname" . }}
+            {{- end }}
+          ports:
+            - containerPort: 5432
+          command:
+            - /bin/sh
+            - -c
+            - /onekey/hca/scripts/run-past.sh
