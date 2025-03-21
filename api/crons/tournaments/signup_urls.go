@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"math"
+	"strings"
 	"sync"
 	"time"
 	"tournois-tt/api/pkg/cache"
@@ -22,7 +24,7 @@ func RefreshSignupURLs() {
 }
 
 // concurrency control
-var numWorkers = 8
+var numWorkers = 4
 
 func refreshSignupURLs(startDateAfter, startDateBefore *time.Time) error {
 	// Load existing tournaments from cache
@@ -218,7 +220,7 @@ func findSignupUrlOnHelloAsso(tournament cache.TournamentCache, tournamentDate t
 		// First try with full name and exact date
 		dateSpecificQuery := fmt.Sprintf("%s %s", tournament.Name, formattedDate)
 		log.Printf("Searching HelloAsso for tournament name with date: %s", dateSpecificQuery)
-		activities, err := searchHelloAssoAndFilterByDate(ctx, dateSpecificQuery, tournamentDate, tournamentPostalCode, browserContext, pwInstance)
+		activities, err := searchHelloAssoAndFilterByDate(ctx, dateSpecificQuery, tournamentDate, tournamentPostalCode, tournament.ID, tournament.Name, browserContext, pwInstance)
 		if err == nil && len(activities) > 0 {
 			log.Printf("Found %d activities by tournament name with date, using first result: %s (%s)",
 				len(activities), activities[0].Title, activities[0].URL)
@@ -227,7 +229,7 @@ func findSignupUrlOnHelloAsso(tournament cache.TournamentCache, tournamentDate t
 
 		// Then try with just the name
 		log.Printf("Searching HelloAsso for tournament name: %s", tournament.Name)
-		activities, err = searchHelloAssoAndFilterByDate(ctx, tournament.Name, tournamentDate, tournamentPostalCode, browserContext, pwInstance)
+		activities, err = searchHelloAssoAndFilterByDate(ctx, tournament.Name, tournamentDate, tournamentPostalCode, tournament.ID, tournament.Name, browserContext, pwInstance)
 		if err == nil && len(activities) > 0 {
 			log.Printf("Found %d activities by tournament name, using first result: %s (%s)",
 				len(activities), activities[0].Title, activities[0].URL)
@@ -244,7 +246,7 @@ func findSignupUrlOnHelloAsso(tournament cache.TournamentCache, tournamentDate t
 		// First try with club name and exact date
 		dateSpecificQuery := fmt.Sprintf("%s %d %s", tournament.Club.Name, day, monthName)
 		log.Printf("Searching HelloAsso for club name with date: %s", dateSpecificQuery)
-		activities, err := searchHelloAssoAndFilterByDate(ctx, dateSpecificQuery, tournamentDate, tournamentPostalCode, browserContext, pwInstance)
+		activities, err := searchHelloAssoAndFilterByDate(ctx, dateSpecificQuery, tournamentDate, tournamentPostalCode, tournament.ID, tournament.Name, browserContext, pwInstance)
 		if err == nil && len(activities) > 0 {
 			log.Printf("Found %d activities by club name with date, using first result: %s (%s)",
 				len(activities), activities[0].Title, activities[0].URL)
@@ -253,7 +255,7 @@ func findSignupUrlOnHelloAsso(tournament cache.TournamentCache, tournamentDate t
 
 		// Then try with just the club name
 		log.Printf("Searching HelloAsso for club name: %s", tournament.Club.Name)
-		activities, err = searchHelloAssoAndFilterByDate(ctx, tournament.Club.Name, tournamentDate, tournamentPostalCode, browserContext, pwInstance)
+		activities, err = searchHelloAssoAndFilterByDate(ctx, tournament.Club.Name, tournamentDate, tournamentPostalCode, tournament.ID, tournament.Name, browserContext, pwInstance)
 		if err == nil && len(activities) > 0 {
 			log.Printf("Found %d activities by club name, using first result: %s (%s)",
 				len(activities), activities[0].Title, activities[0].URL)
@@ -271,7 +273,7 @@ func findSignupUrlOnHelloAsso(tournament cache.TournamentCache, tournamentDate t
 		dateSpecificQuery := fmt.Sprintf("%s tennis de table %d %s %d",
 			tournament.Address.AddressLocality, day, monthName, year)
 		log.Printf("Searching HelloAsso for city name with date and sport: %s", dateSpecificQuery)
-		activities, err := searchHelloAssoAndFilterByDate(ctx, dateSpecificQuery, tournamentDate, tournamentPostalCode, browserContext, pwInstance)
+		activities, err := searchHelloAssoAndFilterByDate(ctx, dateSpecificQuery, tournamentDate, tournamentPostalCode, tournament.ID, tournament.Name, browserContext, pwInstance)
 		if err == nil && len(activities) > 0 {
 			log.Printf("Found %d activities by city name with date and sport, using first result: %s (%s)",
 				len(activities), activities[0].Title, activities[0].URL)
@@ -280,7 +282,7 @@ func findSignupUrlOnHelloAsso(tournament cache.TournamentCache, tournamentDate t
 
 		// Then try with just the city name
 		log.Printf("Searching HelloAsso for city name: %s", tournament.Address.AddressLocality)
-		activities, err = searchHelloAssoAndFilterByDate(ctx, tournament.Address.AddressLocality, tournamentDate, tournamentPostalCode, browserContext, pwInstance)
+		activities, err = searchHelloAssoAndFilterByDate(ctx, tournament.Address.AddressLocality, tournamentDate, tournamentPostalCode, tournament.ID, tournament.Name, browserContext, pwInstance)
 		if err == nil && len(activities) > 0 {
 			log.Printf("Found %d activities by city name, using first result: %s (%s)",
 				len(activities), activities[0].Title, activities[0].URL)
@@ -311,33 +313,91 @@ func getMonthNameFrench(month int) string {
 }
 
 // searchHelloAssoAndFilterByDate searches HelloAsso with the given query and filters results by date using a shared browser
-func searchHelloAssoAndFilterByDate(ctx context.Context, query string, targetDate time.Time, tournamentPostalCode string, browserContext pw.BrowserContext, pwInstance *pw.Playwright) ([]helloasso.Activity, error) {
+func searchHelloAssoAndFilterByDate(ctx context.Context, query string, targetDate time.Time, tournamentPostalCode string, tournamentID int, tournamentName string, browserContext pw.BrowserContext, pwInstance *pw.Playwright) ([]helloasso.Activity, error) {
 	// Search on HelloAsso using the shared browser context
 	activities, err := helloasso.SearchActivitiesWithBrowser(ctx, query, browserContext, pwInstance)
 	if err != nil {
 		return nil, err
 	}
 
-	log.Printf("Found %d raw activities for query '%s'", len(activities), query)
+	log.Printf("Found %d raw activities for query '%s' (tournament ID: %d, name: %s, target date: %s)",
+		len(activities), query, tournamentID, tournamentName, targetDate.Format("2006-01-02"))
 
-	// Filter results by date, category, and postal code
+	// Debug: List all activities with their fields
+	for i, activity := range activities {
+		log.Printf("Activity %d: Title='%s', Date='%s', URL='%s', Location='%s'",
+			i, activity.Title, activity.Date, activity.URL, activity.Location)
+	}
+
+	// Filter results by date, category, postal code and name similarity
 	filtered := make([]helloasso.Activity, 0)
+
+	// First, look for title containing "tennis de table" or "tennis", sorting by relevance and date
+	relevantActivities := make([]helloasso.Activity, 0)
+	otherActivities := make([]helloasso.Activity, 0)
+
 	for _, activity := range activities {
+		// Validate required activity fields
+		if activity.Title == "" {
+			log.Printf("Skipping activity with empty title (tournament ID: %d)", tournamentID)
+			continue
+		}
+
+		if activity.URL == "" {
+			log.Printf("Skipping activity '%s' with empty URL (tournament ID: %d)", activity.Title, tournamentID)
+			continue
+		}
+
+		// Check for empty date
+		if activity.Date == "" {
+			log.Printf("Skipping activity '%s' due to empty date field (tournament ID: %d)", activity.Title, tournamentID)
+			continue
+		}
+
+		titleLower := strings.ToLower(activity.Title)
+		if strings.Contains(titleLower, "tennis de table") ||
+			strings.Contains(titleLower, "ping") ||
+			strings.Contains(titleLower, "tournoi national") {
+			relevantActivities = append(relevantActivities, activity)
+		} else {
+			otherActivities = append(otherActivities, activity)
+		}
+	}
+
+	// Process relevant activities first, then others
+	allActivitiesToProcess := append(relevantActivities, otherActivities...)
+
+	for _, activity := range allActivitiesToProcess {
 		// Parse activity date
 		activityDate, err := utils.ParseHelloAssoDate(activity.Date)
 		if err != nil {
-			log.Printf("Skipping activity due to date parsing error: %v for date '%s'", err, activity.Date)
+			log.Printf("Skipping activity '%s' due to date parsing error: %v for date '%s' (tournament ID: %d, tournament name: %s)",
+				activity.Title, err, activity.Date, tournamentID, tournamentName)
 			continue
 		}
 
-		// Require exact date match (same year, month, and day)
-		if activityDate.Year() != targetDate.Year() ||
-			activityDate.Month() != targetDate.Month() ||
-			activityDate.Day() != targetDate.Day() {
-			log.Printf("Skipping activity due to date mismatch: activity=%s, activityDate=%s, targetDate=%s",
-				activity.Title, activityDate.Format("2006-01-02"), targetDate.Format("2006-01-02"))
+		// Look for exact date match within +/- 1 day to account for variations
+		dateDiff := math.Abs(float64(activityDate.Sub(targetDate).Hours() / 24))
+		if dateDiff > 1 {
+			log.Printf("Skipping activity due to date mismatch: activity=%s, activityDate=%s, targetDate=%s, diff=%.1f days (tournament ID: %d, tournament name: %s)",
+				activity.Title, activityDate.Format("2006-01-02"), targetDate.Format("2006-01-02"), dateDiff, tournamentID, tournamentName)
 			continue
 		}
+
+		// For tournaments with generic names (less than 3 words), do a more strict title check
+		tournamentWords := len(strings.Fields(strings.ToLower(tournamentName)))
+		activityTitleLower := strings.ToLower(activity.Title)
+
+		if tournamentWords < 3 && !strings.Contains(activityTitleLower, strings.ToLower(tournamentName)) {
+			// For generic tournament names, check if the activity title contains the tournament name
+			// If not, it might be an unrelated tournament that happens to match the date
+			log.Printf("Skipping activity with non-matching title for generic tournament: activity=%s, tournament=%s (tournament ID: %d)",
+				activity.Title, tournamentName, tournamentID)
+			continue
+		}
+
+		log.Printf("Found activity with matching date: title=%s, date=%s, target=%s (tournament ID: %d, tournament name: %s)",
+			activity.Title, activityDate.Format("2006-01-02"), targetDate.Format("2006-01-02"), tournamentID, tournamentName)
 
 		// Check if postal code matches if available
 		if tournamentPostalCode != "" && activity.Location != "" {
@@ -346,28 +406,29 @@ func searchHelloAssoAndFilterByDate(ctx context.Context, query string, targetDat
 			// Try exact match first
 			if activityPostalCode == tournamentPostalCode {
 				filtered = append(filtered, activity)
+				log.Printf("Added activity with exact postal code match: %s (postal code: %s, tournament ID: %d, tournament name: %s)",
+					activity.Title, activityPostalCode, tournamentID, tournamentName)
 				continue
 			}
 
-			// If exact match fails, try partial match on department (first two digits)
+			// If no exact match, check if first two digits match (same department)
 			if len(activityPostalCode) >= 2 && len(tournamentPostalCode) >= 2 &&
 				activityPostalCode[:2] == tournamentPostalCode[:2] {
-				log.Printf("Using partial postal code match (department) for activity: %s, location=%s, expectedPostalCode=%s, foundPostalCode=%s",
-					activity.Title, activity.Location, tournamentPostalCode, activityPostalCode)
 				filtered = append(filtered, activity)
+				log.Printf("Added activity with department match: %s (postal code: %s, tournament postal code: %s, tournament ID: %d, tournament name: %s)",
+					activity.Title, activityPostalCode, tournamentPostalCode, tournamentID, tournamentName)
 				continue
 			}
 
-			// Log the mismatch
-			log.Printf("Skipping activity due to postal code mismatch: activity=%s, location=%s, expectedPostalCode=%s, foundPostalCode=%s",
-				activity.Title, activity.Location, tournamentPostalCode, activityPostalCode)
+			log.Printf("Skipping activity due to postal code mismatch: activity=%s, activityPostalCode=%s, tournamentPostalCode=%s (tournament ID: %d, tournament name: %s)",
+				activity.Title, activityPostalCode, tournamentPostalCode, tournamentID, tournamentName)
 			continue
 		}
 
-		// If no postal code information, still consider the activity
+		// If no postal code to check or postal code not available, add the activity
 		filtered = append(filtered, activity)
 	}
 
-	log.Printf("Filtered to %d activities matching criteria", len(filtered))
+	log.Printf("Filtered to %d activities matching criteria (tournament ID: %d, tournament name: %s)", len(filtered), tournamentID, tournamentName)
 	return filtered, nil
 }

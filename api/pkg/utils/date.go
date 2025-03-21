@@ -9,6 +9,11 @@ import (
 
 // ParseHelloAssoDate attempts to parse a date from HelloAsso
 func ParseHelloAssoDate(dateStr string) (time.Time, error) {
+	// Check for empty string
+	if dateStr == "" {
+		return time.Time{}, fmt.Errorf("could not parse date: empty string")
+	}
+
 	// Clean up the date string
 	dateStr = strings.TrimSpace(dateStr)
 	lowerDateStr := strings.ToLower(dateStr)

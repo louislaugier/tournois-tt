@@ -13,21 +13,15 @@ import (
 	"tournois-tt/api/pkg/utils"
 )
 
-func RefreshGeocoding() {
+func RefreshTournamentsAndGeocoding() {
 	lastSeasonStart, _ := utils.GetLastFinishedSeason()
-	if err := refreshGeocoding(&lastSeasonStart, nil); err != nil {
+	if err := refreshTournamentsGeocoding(&lastSeasonStart, nil); err != nil {
 		log.Printf("Warning: Failed to refresh tournament geocoding data: %v", err)
 	}
 }
 
 // refresh fetches and processes tournament addresses
-func refreshGeocoding(startDateAfter, startDateBefore *time.Time) error {
-	// Load existing cache
-	cachedTournaments, err := cache.LoadTournaments()
-	if err != nil {
-		log.Printf("Warning: Failed to load tournament cache: %v", err)
-	}
-
+func refreshTournamentsGeocoding(startDateAfter, startDateBefore *time.Time) error {
 	// Create query params for future tournaments
 	queryParams := url.Values{}
 	queryParams.Set("startDate[after]", startDateAfter.Format("2006-01-02T15:04:05"))
@@ -58,6 +52,12 @@ func refreshGeocoding(startDateAfter, startDateBefore *time.Time) error {
 	newTournamentCacheEntries := make([]cache.TournamentCache, 0, len(tournaments))
 	successCount := 0
 	failureCount := 0
+
+	// Load existing cache
+	cachedTournaments, err := cache.LoadTournaments()
+	if err != nil {
+		log.Printf("Warning: Failed to load tournament cache: %v", err)
+	}
 
 	for _, t := range tournaments {
 		// Check if this tournament is already in cache by ID

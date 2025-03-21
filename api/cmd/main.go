@@ -22,8 +22,10 @@ func main() {
 	crons.Schedule()
 
 	// Run geocoding refresh in a background goroutine
-	go tournaments.RefreshGeocoding()
-	// go tournaments.RefreshSignupURLs()
+	go func() {
+		tournaments.RefreshTournamentsAndGeocoding()
+		// tournaments.RefreshSignupURLs()
+	}()
 
 	r := router.NewRouter()
 

@@ -1,24 +1,7 @@
 #!/bin/sh
 
-# Print debug information
-echo "Starting entrypoint script..."
-echo "Contents of /usr/share/nginx/html:"
-ls -la /usr/share/nginx/html
-
 # Ensure Playwright directories exist
 mkdir -p /root/.cache/ms-playwright
-
-# Check Playwright installation
-echo "Checking Playwright installation..."
-echo "PLAYWRIGHT_BROWSERS_PATH: $PLAYWRIGHT_BROWSERS_PATH"
-echo "PLAYWRIGHT_DRIVER_VERSION: $PLAYWRIGHT_DRIVER_VERSION"
-echo "PLAYWRIGHT_CHROMIUM_EXECUTABLE: $PLAYWRIGHT_CHROMIUM_EXECUTABLE"
-
-# List Playwright cache directory contents recursively
-echo "Contents of Playwright cache (recursive):"
-find $PLAYWRIGHT_BROWSERS_PATH -type d | sort
-echo "Checking for browser executables:"
-find $PLAYWRIGHT_BROWSERS_PATH -name "chrome*" -o -name "chromium*" -type f -executable
 
 # Check permissions on Playwright directories
 echo "Checking permissions on Playwright directories:"
