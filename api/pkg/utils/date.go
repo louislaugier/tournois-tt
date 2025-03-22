@@ -241,3 +241,29 @@ func IsDateCloseEnough(date1, date2 time.Time, maxDaysDiff int) bool {
 	}
 	return days <= maxDaysDiff
 }
+
+// GetMonthNameFrench returns the French name of the month for the given month number (1-12)
+// or time.Month value
+func GetMonthNameFrench(month interface{}) string {
+	months := []string{
+		"janvier", "février", "mars", "avril", "mai", "juin",
+		"juillet", "août", "septembre", "octobre", "novembre", "décembre",
+	}
+
+	// Handle both int and time.Month types
+	var monthNum int
+	switch m := month.(type) {
+	case int:
+		monthNum = m
+	case time.Month:
+		monthNum = int(m)
+	default:
+		return ""
+	}
+
+	if monthNum < 1 || monthNum > 12 {
+		return ""
+	}
+
+	return months[monthNum-1]
+}

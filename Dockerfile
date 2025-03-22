@@ -31,7 +31,7 @@ RUN npm run build
 FROM --platform=linux/amd64 debian:bullseye-slim
 WORKDIR /app
 
-# Install necessary packages and Playwright dependencies
+# Install necessary packages, Playwright dependencies, and poppler-utils for pdftotext
 RUN apt-get update && apt-get install -y \
     nginx \
     nodejs \
@@ -56,6 +56,7 @@ RUN apt-get update && apt-get install -y \
     libasound2 \
     libatspi2.0-0 \
     libwayland-client0 \
+    poppler-utils \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Go to install playwright browsers easier
@@ -85,8 +86,6 @@ COPY --from=api-build /go/bin/api /app/api
 COPY nginx.conf /etc/nginx/nginx.conf
 
 # Copy necessary configuration files and cache
-COPY api/.env.example /app/api/.env
-COPY api/air.toml /app/api/air.toml
 COPY api/cache/ /app/api/cache/
 
 # Create entrypoint script

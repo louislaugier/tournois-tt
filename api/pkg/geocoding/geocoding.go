@@ -10,6 +10,16 @@ import (
 	"tournois-tt/api/pkg/geocoding/nominatim"
 )
 
+// Debug flag to control verbose logging
+var Debug = false
+
+// debugLog logs a message only if Debug is true
+func debugLog(format string, args ...interface{}) {
+	if Debug {
+		log.Printf(format, args...)
+	}
+}
+
 // RateLimitDelay is used for respecting Nominatim usage policy (1 request per second)
 const RateLimitDelay = 1500 * time.Millisecond
 
@@ -24,6 +34,13 @@ var nominatimProvider Provider
 
 // googleProvider is the cached Google provider instance
 var googleProvider Provider
+
+// GetCoordinatesFunc is the function type for the GetCoordinates function
+type GetCoordinatesFunc func(address Address) (Location, error)
+
+// GetCoordinatesFn is the current implementation of GetCoordinates
+// This can be replaced in tests to mock geocoding
+var GetCoordinatesFn GetCoordinatesFunc = getCoordinatesImpl
 
 // init initializes the geocoding providers
 func init() {
@@ -74,12 +91,17 @@ func CreateGeocodeResult(address Address, location Location, err error) GeocodeR
 // GetCoordinates attempts to geocode a single address
 // It tries Nominatim first, then falls back to Google if Nominatim fails
 func GetCoordinates(address Address) (Location, error) {
-	// // Try with Nominatim first
+	return GetCoordinatesFn(address)
+}
+
+// getCoordinatesImpl is the actual implementation of GetCoordinates
+func getCoordinatesImpl(address Address) (Location, error) {
+	// Try with Nominatim first
 	location, err := nominatimProvider.GetCoordinates(address)
 
-	// // If Nominatim fails, try Google Geocoding API
+	// If Nominatim fails, try Google Geocoding API
 	if err != nil {
-		log.Printf("Nominatim geocoding failed, trying Google: %v", err)
+		debugLog("Nominatim geocoding failed, trying Google: %v", err)
 		location, err = googleProvider.GetCoordinates(address)
 	}
 

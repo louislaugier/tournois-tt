@@ -2,6 +2,7 @@ package browser
 
 import (
 	"fmt"
+	"sync"
 
 	pw "github.com/playwright-community/playwright-go"
 )
@@ -11,6 +12,20 @@ type Config struct {
 	Headless  bool
 	UserAgent string
 }
+
+var (
+	// singletonBrowser is the shared browser instance
+	singletonBrowser pw.Browser
+
+	// singletonPlaywright is the shared playwright instance
+	singletonPlaywright *pw.Playwright
+
+	// initOnce ensures the browser is initialized only once
+	initOnce sync.Once
+
+	// initErr stores any error that occurred during initialization
+	initErr error
+)
 
 // DefaultConfig returns the default browser configuration
 func DefaultConfig() Config {
@@ -35,22 +50,32 @@ func Args() []string {
 }
 
 // Init initializes and configures a new browser instance
+// The first call initializes the singleton browser, subsequent calls return the same instance
 func Init(cfg Config) (pw.Browser, *pw.Playwright, error) {
-	playwright, err := pw.Run()
-	if err != nil {
-		return nil, nil, fmt.Errorf("could not start playwright: %v", err)
-	}
+	initOnce.Do(func() {
+		var err error
+		singletonPlaywright, err = pw.Run()
+		if err != nil {
+			initErr = fmt.Errorf("could not start playwright: %v", err)
+			return
+		}
 
-	browser, err := playwright.Chromium.Launch(pw.BrowserTypeLaunchOptions{
-		Headless: pw.Bool(cfg.Headless),
-		Args:     Args(),
+		singletonBrowser, err = singletonPlaywright.Chromium.Launch(pw.BrowserTypeLaunchOptions{
+			Headless: pw.Bool(cfg.Headless),
+			Args:     Args(),
+		})
+		if err != nil {
+			singletonPlaywright.Stop()
+			initErr = fmt.Errorf("could not launch browser: %v", err)
+			return
+		}
 	})
-	if err != nil {
-		playwright.Stop()
-		return nil, nil, fmt.Errorf("could not launch browser: %v", err)
+
+	if initErr != nil {
+		return nil, nil, initErr
 	}
 
-	return browser, playwright, nil
+	return singletonBrowser, singletonPlaywright, nil
 }
 
 // NewContext creates a new browser context with the specified configuration
@@ -73,4 +98,21 @@ func NewPage(context pw.BrowserContext) (pw.Page, error) {
 	}
 
 	return page, nil
+}
+
+// CleanupSingleton properly cleans up the singleton browser and playwright instance
+// This should be called before the application exits
+func CleanupSingleton() {
+	if singletonBrowser != nil {
+		singletonBrowser.Close()
+		singletonBrowser = nil
+	}
+
+	if singletonPlaywright != nil {
+		singletonPlaywright.Stop()
+		singletonPlaywright = nil
+	}
+
+	// Reset the init once so it can be initialized again if needed
+	initOnce = sync.Once{}
 }

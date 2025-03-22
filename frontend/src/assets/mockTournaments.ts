@@ -117,7 +117,7 @@ export const mockTournaments: Array<Tournament> = [
             '@id': '/clubs/attxv',
             '@type': 'Club',
             id: 68, // Unique mock ID
-            name: 'ASSOC.TENNIS DE TABLE PARIS XVe',
+            name: 'ASSOC. TENNIS DE TABLE PARIS XVe',
             identifier: '08751260'
         },
         startDate: new Date('2025-03-22').toISOString(),
@@ -172,7 +172,7 @@ export const mockPastTournaments: Array<Tournament> = [
             '@id': '/clubs/attxv',
             '@type': 'Club',
             id: 68, // Unique mock ID
-            name: 'ASSOC.TENNIS DE TABLE PARIS XVe',
+            name: 'ASSOC. TENNIS DE TABLE PARIS XVe',
             identifier: '08751260'
         },
         startDate: new Date('2024-03-24').toISOString(),

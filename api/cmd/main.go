@@ -24,7 +24,7 @@ func main() {
 	// Run geocoding refresh in a background goroutine
 	go func() {
 		tournaments.RefreshTournamentsAndGeocoding()
-		// tournaments.RefreshSignupURLs()
+		tournaments.RefreshSignupURLs()
 	}()
 
 	r := router.NewRouter()
