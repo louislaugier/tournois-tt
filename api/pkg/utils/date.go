@@ -7,6 +7,39 @@ import (
 	"time"
 )
 
+// ParseTournamentDate attempts to parse tournament dates from various formats
+func ParseTournamentDate(dateStr string) (time.Time, error) {
+	// First try standard format
+	date, err := time.Parse("2006-01-02", dateStr)
+	if err == nil {
+		return date, nil
+	}
+
+	// Try ISO 8601 format with time component (like "2024-06-08T00:00:00")
+	date, err = time.Parse("2006-01-02T15:04:05", dateStr)
+	if err == nil {
+		return date, nil
+	}
+
+	// Try other common formats
+	formats := []string{
+		"02/01/2006",
+		"2006/01/02",
+		"01/02/2006",
+		"Jan 2, 2006",
+		"2 Jan 2006",
+	}
+
+	for _, format := range formats {
+		date, err := time.Parse(format, dateStr)
+		if err == nil {
+			return date, nil
+		}
+	}
+
+	return time.Time{}, fmt.Errorf("failed to parse date: %s", dateStr)
+}
+
 // ParseHelloAssoDate attempts to parse a date from HelloAsso
 func ParseHelloAssoDate(dateStr string) (time.Time, error) {
 	// Check for empty string

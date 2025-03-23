@@ -12,6 +12,10 @@ import (
 	pw "github.com/playwright-community/playwright-go"
 )
 
+// -----------------------------------------------------------------------------
+// Constants and Configuration
+// -----------------------------------------------------------------------------
+
 const (
 	// CacheSource identifies the cache source for HelloAsso
 	CacheSource = "helloasso"
@@ -20,12 +24,18 @@ const (
 	DefaultCacheExpiration = 24 * time.Hour
 )
 
+// -----------------------------------------------------------------------------
+// Search Functions
+// -----------------------------------------------------------------------------
+
 // SearchActivities searches for activities on HelloAsso using the provided query
+// This is a convenience wrapper around SearchActivitiesWithBrowser that handles browser initialization
 func SearchActivities(ctx context.Context, query string) ([]Activity, error) {
 	return SearchActivitiesWithBrowser(ctx, query, nil, nil)
 }
 
 // SearchActivitiesWithBrowser searches for activities on HelloAsso using the provided query and browser resources
+// If sharedBrowserContext is provided, it will be used instead of creating a new browser
 func SearchActivitiesWithBrowser(ctx context.Context, query string, sharedBrowserContext pw.BrowserContext, pwInstance *pw.Playwright) ([]Activity, error) {
 	var browserInstance pw.Browser
 	var browserContext pw.BrowserContext
@@ -36,13 +46,20 @@ func SearchActivitiesWithBrowser(ctx context.Context, query string, sharedBrowse
 	if sharedBrowserContext != nil {
 		browserContext = sharedBrowserContext
 	} else {
+		// Use our improved setup with a more maintainable config
 		cfg := browser.DefaultConfig()
+
+		// Add health check and timeout settings
+		cfg.NavigationTimeout = 30 * time.Second
+		cfg.OperationTimeout = 15 * time.Second
 
 		// Setup browser
 		browserInstance, ownedPwInstance, err = browser.Init(cfg)
 		if err != nil {
-			return nil, fmt.Errorf("failed to setup browser: %v", err)
+			return nil, fmt.Errorf("failed to setup browser: %w", err)
 		}
+
+		// Ensure cleanup for browser resources
 		defer func() {
 			if ownedPwInstance != nil {
 				ownedPwInstance.Stop()
@@ -52,59 +69,84 @@ func SearchActivitiesWithBrowser(ctx context.Context, query string, sharedBrowse
 			}
 		}()
 
-		// Setup context
+		// Validate browser health
+		if !browser.IsHealthy() {
+			return nil, fmt.Errorf("browser failed health check, unable to continue")
+		}
+
+		// Setup context with proper configuration
 		browserContext, err = browser.NewContext(browserInstance, cfg)
 		if err != nil {
-			return nil, fmt.Errorf("failed to setup context: %v", err)
+			return nil, fmt.Errorf("failed to setup context: %w", err)
 		}
-		defer browserContext.Close()
+		defer browser.SafeCloseContext(browserContext)
 	}
 
-	// Setup page (tab)
-	playwrightPage, err := browser.NewPage(browserContext)
+	// Setup page (tab) with enhanced viewport settings
+	playwrightPage, err := browser.NewPageWithViewport(browserContext, 1280, 800)
 	if err != nil {
-		return nil, fmt.Errorf("failed to setup page: %v", err)
+		return nil, fmt.Errorf("failed to setup page: %w", err)
 	}
+	defer browser.SafeClose(playwrightPage)
 
 	// Create page handler
 	pageHandler := page.New(playwrightPage)
+	defer pageHandler.Close()
+
+	// Set appropriate timeouts for HelloAsso which can be slow
+	pageHandler.SetDefaultTimeouts(30*time.Second, 15*time.Second)
 
 	// Build search URL
 	encodedQuery := url.QueryEscape(query)
 	searchURL := fmt.Sprintf(SearchURLTemplate, encodedQuery)
+	log.Printf("Searching HelloAsso for: %s", query)
 
-	// Navigate to search page
-	if err := pageHandler.NavigateToPage(searchURL); err != nil {
-		return nil, fmt.Errorf("failed to navigate to search page: %v", err)
+	// Navigate to search page with safe navigation (includes retries and health checks)
+	if err := pageHandler.SafeNavigation(searchURL, 3, browser.RestartIfUnhealthy); err != nil {
+		return nil, fmt.Errorf("failed to navigate to search page: %w", err)
 	}
 
-	// Wait for results
+	// Wait for results with improved error handling
 	if err := pageHandler.WaitForResults(Config); err != nil {
-		return nil, fmt.Errorf("failed to wait for results: %v", err)
+		// Take a screenshot for debugging
+		screenshotPath := fmt.Sprintf("helloasso_search_error_%d.png", time.Now().Unix())
+		if screenshotErr := pageHandler.TakeScreenshot(screenshotPath); screenshotErr == nil {
+			log.Printf("Error screenshot saved to: %s", screenshotPath)
+		}
+
+		return nil, fmt.Errorf("failed to wait for results: %w", err)
 	}
 
 	// Check for empty state
 	isEmpty, err := pageHandler.HasEmptyState(Config.EmptyStateSelector)
 	if err != nil {
-		return nil, fmt.Errorf("failed to check empty state: %v", err)
+		return nil, fmt.Errorf("failed to check empty state: %w", err)
 	}
+
 	if isEmpty {
+		log.Printf("No results found for query: %s", query)
 		return []Activity{}, nil
 	}
 
-	// Extract activities from the page
-	extractConfig := ExtractionConfig{
-		BaseURL:            BaseURL,
-		EmptyStateSelector: Config.EmptyStateSelector,
-		ActivitySelector:   Config.ResultsSelector,
-		Selectors:          Selectors,
-	}
-	activities, err := ExtractActivities(playwrightPage, extractConfig)
+	// Extract activities from the page using SafeOperation for reliability
+	var activities []Activity
+	err = pageHandler.SafeOperation("extract activities", func() error {
+		extractConfig := ExtractionConfig{
+			BaseURL:            BaseURL,
+			EmptyStateSelector: Config.EmptyStateSelector,
+			ActivitySelector:   Config.ResultsSelector,
+			Selectors:          Selectors,
+		}
+
+		var extractErr error
+		activities, extractErr = ExtractActivities(playwrightPage, extractConfig)
+		return extractErr
+	})
+
 	if err != nil {
-		return nil, fmt.Errorf("failed to extract activities: %v", err)
+		return nil, fmt.Errorf("failed to extract activities: %w", err)
 	}
 
-	log.Printf("Extracted %d activities from HelloAsso search", len(activities))
-
+	log.Printf("Extracted %d activities from HelloAsso search for query: %s", len(activities), query)
 	return activities, nil
 }

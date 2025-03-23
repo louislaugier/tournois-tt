@@ -98,10 +98,14 @@ func ExtractTextFromURL3(url string) (string, time.Duration, error) {
 	// Use the utility method to process the URL with our ExtractTextFromBytes3 function
 	result := ProcessURLWithExtractor(url, ExtractTextFromBytes3)
 	if result.Error != nil {
-		return "", result.TotalDuration, result.Error
+		// Calculate total duration by adding fetch and processing durations
+		totalDuration := result.FetchDuration + result.Duration
+		return "", totalDuration, result.Error
 	}
 
-	return result.Text, result.TotalDuration, nil
+	// Calculate total duration by adding fetch and processing durations
+	totalDuration := result.FetchDuration + result.Duration
+	return result.Text, totalDuration, nil
 }
 
 // ExtractText3 reads a PDF file and returns its text content

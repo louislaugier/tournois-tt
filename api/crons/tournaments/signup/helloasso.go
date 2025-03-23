@@ -8,27 +8,19 @@ import (
 	"time"
 
 	"tournois-tt/api/pkg/cache"
+	"tournois-tt/api/pkg/scraper/services/common"
 	"tournois-tt/api/pkg/scraper/services/helloasso"
+	"tournois-tt/api/pkg/utils"
 
 	pw "github.com/playwright-community/playwright-go"
 )
-
-// Debug flag to control verbose logging
-var Debug = false
-
-// debugLog logs a message only if Debug is true
-func debugLog(format string, args ...interface{}) {
-	if Debug {
-		log.Printf(format, args...)
-	}
-}
 
 // FindSignupURLOnHelloAsso searches for signup URL on HelloAsso platform
 func FindSignupURLOnHelloAsso(tournament cache.TournamentCache, tournamentDate time.Time, browserContext pw.BrowserContext, pwInstance *pw.Playwright) (string, error) {
 	// Maximum number of retry attempts for navigation errors
 	const maxNavigationRetries = 3
 	// Delay between retries (increases with each retry)
-	var retryDelayBase = 5 * time.Second
+	var retryDelayBase = 2 * time.Second
 
 	// Try different search strategies in order of likelihood
 	searchStrategies := []func(cache.TournamentCache) (string, error){
@@ -47,7 +39,7 @@ func FindSignupURLOnHelloAsso(tournament cache.TournamentCache, tournamentDate t
 			continue
 		}
 
-		debugLog("Trying search strategy %d with query: %s", i+1, searchQuery)
+		utils.DebugLog("Trying search strategy %d with query: %s", i+1, searchQuery)
 
 		// Use the helloasso package's search function with retries for navigation errors
 		var activities []helloasso.Activity
@@ -64,46 +56,46 @@ func FindSignupURLOnHelloAsso(tournament cache.TournamentCache, tournamentDate t
 			}
 
 			activities, searchErr = helloasso.SearchActivitiesWithBrowser(context.Background(), searchQuery, browserContext, pwInstance)
-			
+
 			// If no error or not a navigation error, break the retry loop
-			if searchErr == nil || !isNavigationErrorString(searchErr.Error()) {
+			if searchErr == nil || !common.IsNavigationError(searchErr.Error()) {
 				break
 			}
 		}
 
 		if searchErr != nil {
 			// If we've exhausted retries or it's not a navigation error, propagate the error
-			if attemptsMade >= maxNavigationRetries || !isNavigationErrorString(searchErr.Error()) {
+			if attemptsMade >= maxNavigationRetries || !common.IsNavigationError(searchErr.Error()) {
 				return "", fmt.Errorf("critical browser error in HelloAsso search: %w", searchErr)
 			}
 		}
 
 		if len(activities) == 0 {
-			debugLog("No results found with search strategy %d", i+1)
+			utils.DebugLog("No results found with search strategy %d", i+1)
 			continue
 		}
 
-		debugLog("Found %d potential activity results on HelloAsso with strategy %d", len(activities), i+1)
+		utils.DebugLog("Found %d potential activity results on HelloAsso with strategy %d", len(activities), i+1)
 
 		// Extract URLs from the activities
 		var activityURLs []string
 		for _, activity := range activities {
-			if activity.URL != "" && !Contains(activityURLs, activity.URL) {
+			if activity.URL != "" && !common.Contains(activityURLs, activity.URL) {
 				activityURLs = append(activityURLs, activity.URL)
 			}
 		}
 
 		if len(activityURLs) == 0 {
-			debugLog("No potential activity URLs found on HelloAsso with strategy %d", i+1)
+			utils.DebugLog("No potential activity URLs found on HelloAsso with strategy %d", i+1)
 			continue
 		}
 
-		debugLog("Extracted %d unique URLs from HelloAsso search results with strategy %d", len(activityURLs), i+1)
+		utils.DebugLog("Extracted %d unique URLs from HelloAsso search results with strategy %d", len(activityURLs), i+1)
 
 		// Validate each activity URL with retries for navigation errors
 		for _, url := range activityURLs {
-			debugLog("Validating HelloAsso activity URL: %s", url)
-			
+			utils.DebugLog("Validating HelloAsso activity URL: %s", url)
+
 			var validURL string
 			var validationErr error
 			var validationAttempts int
@@ -118,16 +110,16 @@ func FindSignupURLOnHelloAsso(tournament cache.TournamentCache, tournamentDate t
 				}
 
 				validURL, validationErr = ValidateSignupURL(url, tournament, tournamentDate, browserContext)
-				
+
 				// If no error or not a navigation error, break the retry loop
-				if validationErr == nil || !isNavigationErrorString(validationErr.Error()) {
+				if validationErr == nil || !common.IsNavigationError(validationErr.Error()) {
 					break
 				}
 			}
 
 			if validationErr != nil {
 				// Non-navigation errors or exhausted retries are propagated
-				if !isNavigationErrorString(validationErr.Error()) || validationAttempts >= maxNavigationRetries {
+				if !common.IsNavigationError(validationErr.Error()) || validationAttempts >= maxNavigationRetries {
 					log.Printf("Warning: Failed to validate HelloAsso URL: %v", validationErr)
 					continue
 				}
@@ -139,35 +131,11 @@ func FindSignupURLOnHelloAsso(tournament cache.TournamentCache, tournamentDate t
 			}
 		}
 
-		debugLog("No valid signup URL found with strategy %d", i+1)
+		utils.DebugLog("No valid signup URL found with strategy %d", i+1)
 	}
 
-	debugLog("No valid signup URL found on HelloAsso after trying all search strategies")
+	utils.DebugLog("No valid signup URL found on HelloAsso after trying all search strategies")
 	return "", nil
-}
-
-// isNavigationErrorString determines if an error string represents a navigation error
-// that can be retried rather than a critical browser error
-func isNavigationErrorString(errStr string) bool {
-	// Check for typical navigation error patterns
-	navigationErrorPatterns := []string{
-		"timeout", 
-		"navigation", 
-		"navigate",
-		"Frame.Goto",
-		"Page.Goto",
-		"could not navigate",
-		"network error",
-		"net::ERR",
-	}
-	
-	for _, pattern := range navigationErrorPatterns {
-		if strings.Contains(strings.ToLower(errStr), strings.ToLower(pattern)) {
-			return true
-		}
-	}
-	
-	return false
 }
 
 // buildTournamentNameQuery uses the tournament name for search
@@ -212,9 +180,4 @@ func buildTournamentCityTTShortQuery(tournament cache.TournamentCache) (string, 
 		return "", fmt.Errorf("city name is empty")
 	}
 	return fmt.Sprintf("tournoi TT %s", strings.ToLower(cityName)), nil
-}
-
-// Legacy function kept for compatibility
-func buildHelloAssoSearchQuery(tournament cache.TournamentCache) (string, error) {
-	return buildTournamentClubTTQuery(tournament)
 }

@@ -20,9 +20,9 @@ type PDFExtractor func([]byte) (string, time.Duration, error)
 // PDFResult holds the result of a PDF text extraction operation
 type PDFResult struct {
 	Text          string
-	Duration      time.Duration
+	URL           string
 	FetchDuration time.Duration
-	TotalDuration time.Duration
+	Duration      time.Duration
 	Error         error
 }
 
@@ -74,41 +74,28 @@ func ReadPDFFile(pdfPath string) ([]byte, error) {
 
 // ProcessURLWithExtractor fetches a PDF from a URL and processes it with the provided extractor
 func ProcessURLWithExtractor(url string, extractor PDFExtractor) PDFResult {
-	startTime := time.Now()
+	result := PDFResult{
+		URL: url,
+	}
 
-	// Fetch the PDF from the URL
-	pdfContent, fetchDuration, err := FetchPDFFromURL(url)
+	// Fetch the PDF content
+	pdfBytes, fetchDuration, err := FetchPDFFromURL(url)
+	result.FetchDuration = fetchDuration
+
 	if err != nil {
-		return PDFResult{
-			Error:         err,
-			TotalDuration: time.Since(startTime),
-			FetchDuration: fetchDuration,
-		}
+		result.Error = fmt.Errorf("failed to fetch PDF content: %w", err)
+		return result
 	}
 
-	// Process the PDF bytes with the provided extractor
-	text, processingDuration, err := extractor(pdfContent)
+	// Extract text from the PDF bytes
+	extractedText, processingDuration, err := extractor(pdfBytes)
+	result.Duration = processingDuration
+
 	if err != nil {
-		return PDFResult{
-			Error:         err,
-			TotalDuration: time.Since(startTime),
-			FetchDuration: fetchDuration,
-		}
+		result.Error = fmt.Errorf("failed to extract text from PDF: %w", err)
+		return result
 	}
 
-	totalDuration := time.Since(startTime)
-
-	// Log the timing information in a concise format
-	fmt.Printf("PDF URL: fetch=%v, process=%v, total=%v\n",
-		fetchDuration.Round(time.Millisecond),
-		processingDuration.Round(time.Millisecond),
-		totalDuration.Round(time.Millisecond))
-
-	return PDFResult{
-		Text:          text,
-		Duration:      processingDuration,
-		FetchDuration: fetchDuration,
-		TotalDuration: totalDuration,
-		Error:         nil,
-	}
+	result.Text = extractedText
+	return result
 }

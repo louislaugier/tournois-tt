@@ -9,6 +9,10 @@ import (
 	pw "github.com/playwright-community/playwright-go"
 )
 
+// -----------------------------------------------------------------------------
+// Constants and Configuration
+// -----------------------------------------------------------------------------
+
 const BaseURL = "https://www.helloasso.com"
 
 var SearchURLTemplate = fmt.Sprintf("%s/e/recherche?query=%%s", BaseURL)
@@ -30,6 +34,10 @@ var Config = page.Config{
 	ResultsSelector:    ".Hits-Activity, .h-k2MJThJUO3PScbPTfyXD, .activity-card",
 }
 
+// -----------------------------------------------------------------------------
+// Types and Structures
+// -----------------------------------------------------------------------------
+
 // ExtractionConfig holds the configuration for extracting activities
 type ExtractionConfig struct {
 	BaseURL            string
@@ -49,8 +57,16 @@ type ActivitySelectors struct {
 	Location     string
 }
 
+// -----------------------------------------------------------------------------
+// Activity Extraction Functions
+// -----------------------------------------------------------------------------
+
 // ExtractActivities extracts activities from the search results page
 func ExtractActivities(page pw.Page, cfg ExtractionConfig) ([]Activity, error) {
+	if page == nil {
+		return nil, fmt.Errorf("page is nil")
+	}
+
 	// Check if we have an empty state
 	emptyStateLocator := page.Locator(cfg.EmptyStateSelector)
 	count, err := emptyStateLocator.Count()
@@ -63,7 +79,7 @@ func ExtractActivities(page pw.Page, cfg ExtractionConfig) ([]Activity, error) {
 	elements := page.Locator(cfg.ActivitySelector)
 	count, err = elements.Count()
 	if err != nil {
-		return nil, fmt.Errorf("could not count activity elements: %v", err)
+		return nil, fmt.Errorf("could not count activity elements: %w", err)
 	}
 	log.Printf("Found %d activity elements", count)
 
@@ -87,23 +103,30 @@ func ExtractActivities(page pw.Page, cfg ExtractionConfig) ([]Activity, error) {
 
 		// Extract URL first (from parent 'a' tag)
 		urlElement := element.Locator("a").First()
-		urlCount, _ := urlElement.Count()
-		if urlCount > 0 {
-			href, err := urlElement.GetAttribute("href")
-			if err == nil && href != "" {
-				if strings.HasPrefix(href, "/") {
-					activity.URL = cfg.BaseURL + href
-				} else {
-					activity.URL = href
-				}
-				log.Printf("Element %d: Found URL: '%s'", i, activity.URL)
-			}
+		urlCount, err := urlElement.Count()
+		if err != nil || urlCount == 0 {
+			log.Printf("Warning: Element %d has no URL, skipping", i)
+			continue
 		}
+
+		href, err := urlElement.GetAttribute("href")
+		if err != nil || href == "" {
+			log.Printf("Warning: Element %d has empty href, skipping", i)
+			continue
+		}
+
+		// Normalize URL
+		if strings.HasPrefix(href, "/") {
+			activity.URL = cfg.BaseURL + href
+		} else {
+			activity.URL = href
+		}
+		log.Printf("Element %d: Found URL: '%s'", i, activity.URL)
 
 		// Extract title
 		titleElement := element.Locator(cfg.Selectors.Title)
-		titleCount, _ := titleElement.Count()
-		if titleCount > 0 {
+		titleCount, titleErr := titleElement.Count()
+		if titleErr == nil && titleCount > 0 {
 			title, err := titleElement.First().TextContent()
 			if err == nil && title != "" {
 				activity.Title = strings.TrimSpace(title)
@@ -113,8 +136,8 @@ func ExtractActivities(page pw.Page, cfg ExtractionConfig) ([]Activity, error) {
 
 		// Extract date
 		dateElement := element.Locator(cfg.Selectors.Date)
-		dateCount, _ := dateElement.Count()
-		if dateCount > 0 {
+		dateCount, dateErr := dateElement.Count()
+		if dateErr == nil && dateCount > 0 {
 			date, err := dateElement.First().TextContent()
 			if err == nil && date != "" {
 				activity.Date = strings.TrimSpace(date)
@@ -124,8 +147,8 @@ func ExtractActivities(page pw.Page, cfg ExtractionConfig) ([]Activity, error) {
 
 		// Extract price
 		priceElement := element.Locator(cfg.Selectors.Price)
-		priceCount, _ := priceElement.Count()
-		if priceCount > 0 {
+		priceCount, priceErr := priceElement.Count()
+		if priceErr == nil && priceCount > 0 {
 			price, err := priceElement.First().TextContent()
 			if err == nil && price != "" {
 				activity.Price = strings.TrimSpace(price)
@@ -135,8 +158,8 @@ func ExtractActivities(page pw.Page, cfg ExtractionConfig) ([]Activity, error) {
 
 		// Extract organization name
 		orgElement := element.Locator(cfg.Selectors.Organization)
-		orgCount, _ := orgElement.Count()
-		if orgCount > 0 {
+		orgCount, orgErr := orgElement.Count()
+		if orgErr == nil && orgCount > 0 {
 			org, err := orgElement.First().TextContent()
 			if err == nil && org != "" {
 				activity.Organization = strings.TrimSpace(org)
@@ -146,8 +169,8 @@ func ExtractActivities(page pw.Page, cfg ExtractionConfig) ([]Activity, error) {
 
 		// Extract category
 		categoryElement := element.Locator(cfg.Selectors.Category)
-		categoryCount, _ := categoryElement.Count()
-		if categoryCount > 0 {
+		categoryCount, categoryErr := categoryElement.Count()
+		if categoryErr == nil && categoryCount > 0 {
 			category, err := categoryElement.First().TextContent()
 			if err == nil && category != "" {
 				activity.Category = strings.TrimSpace(category)
@@ -157,8 +180,8 @@ func ExtractActivities(page pw.Page, cfg ExtractionConfig) ([]Activity, error) {
 
 		// Extract location
 		locationElement := element.Locator(cfg.Selectors.Location)
-		locationCount, _ := locationElement.Count()
-		if locationCount > 0 {
+		locationCount, locationErr := locationElement.Count()
+		if locationErr == nil && locationCount > 0 {
 			location, err := locationElement.First().TextContent()
 			if err == nil && location != "" {
 				activity.Location = strings.TrimSpace(location)
