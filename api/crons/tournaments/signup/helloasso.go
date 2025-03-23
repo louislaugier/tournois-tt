@@ -8,8 +8,7 @@ import (
 	"time"
 
 	"tournois-tt/api/pkg/cache"
-	"tournois-tt/api/pkg/scraper/services/common"
-	"tournois-tt/api/pkg/scraper/services/helloasso"
+	"tournois-tt/api/pkg/helloasso"
 	"tournois-tt/api/pkg/utils"
 
 	pw "github.com/playwright-community/playwright-go"
@@ -58,14 +57,14 @@ func FindSignupURLOnHelloAsso(tournament cache.TournamentCache, tournamentDate t
 			activities, searchErr = helloasso.SearchActivitiesWithBrowser(context.Background(), searchQuery, browserContext, pwInstance)
 
 			// If no error or not a navigation error, break the retry loop
-			if searchErr == nil || !common.IsNavigationError(searchErr.Error()) {
+			if searchErr == nil || !utils.IsNavigationError(searchErr.Error()) {
 				break
 			}
 		}
 
 		if searchErr != nil {
 			// If we've exhausted retries or it's not a navigation error, propagate the error
-			if attemptsMade >= maxNavigationRetries || !common.IsNavigationError(searchErr.Error()) {
+			if attemptsMade >= maxNavigationRetries || !utils.IsNavigationError(searchErr.Error()) {
 				return "", fmt.Errorf("critical browser error in HelloAsso search: %w", searchErr)
 			}
 		}
@@ -80,7 +79,7 @@ func FindSignupURLOnHelloAsso(tournament cache.TournamentCache, tournamentDate t
 		// Extract URLs from the activities
 		var activityURLs []string
 		for _, activity := range activities {
-			if activity.URL != "" && !common.Contains(activityURLs, activity.URL) {
+			if activity.URL != "" && !utils.StringSliceContains(activityURLs, activity.URL) {
 				activityURLs = append(activityURLs, activity.URL)
 			}
 		}
@@ -112,14 +111,14 @@ func FindSignupURLOnHelloAsso(tournament cache.TournamentCache, tournamentDate t
 				validURL, validationErr = ValidateSignupURL(url, tournament, tournamentDate, browserContext)
 
 				// If no error or not a navigation error, break the retry loop
-				if validationErr == nil || !common.IsNavigationError(validationErr.Error()) {
+				if validationErr == nil || !utils.IsNavigationError(validationErr.Error()) {
 					break
 				}
 			}
 
 			if validationErr != nil {
 				// Non-navigation errors or exhausted retries are propagated
-				if !common.IsNavigationError(validationErr.Error()) || validationAttempts >= maxNavigationRetries {
+				if !utils.IsNavigationError(validationErr.Error()) || validationAttempts >= maxNavigationRetries {
 					log.Printf("Warning: Failed to validate HelloAsso URL: %v", validationErr)
 					continue
 				}

@@ -1,14 +1,16 @@
 package refresh
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"strings"
 	"time"
 
 	"tournois-tt/api/pkg/cache"
+	"tournois-tt/api/pkg/helloasso"
+	"tournois-tt/api/pkg/pdf/extraction"
 	"tournois-tt/api/pkg/scraper/browser"
-	"tournois-tt/api/pkg/scraper/services/common"
 	"tournois-tt/api/pkg/utils"
 
 	pw "github.com/playwright-community/playwright-go"
@@ -66,7 +68,7 @@ func ProcessTournament(workerID int, tournament cache.TournamentCache,
 	signupURL, err := FindSignupURLOnHelloAsso(tournament, tournamentDate, browserContext, pwInstance)
 	if err != nil {
 		// Handle navigation errors
-		if common.IsNavigationError(err.Error()) {
+		if utils.IsNavigationError(err.Error()) {
 			log.Printf("Worker %d: Warning: Navigation error for tournament %s: %v",
 				workerID, tournament.Name, err)
 			return tournament, false, fmt.Errorf("navigation error for tournament %s: %w", tournament.Name, err)
@@ -101,7 +103,7 @@ func checkPDFForSignupURL(workerID int, tournament cache.TournamentCache,
 	signupURL, err := ExtractSignupURLFromPDFFile(tournament, tournamentDate, rulesURL, browserContext)
 	if err != nil {
 		// Handle PDF navigation errors
-		if IsNavigationError(err) {
+		if utils.IsNavigationError(err.Error()) {
 			log.Printf("Worker %d: Warning: PDF navigation error for tournament %s: %v",
 				workerID, tournament.Name, err)
 			// Still mark PDF as checked to prevent retrying on subsequent runs
@@ -138,13 +140,15 @@ func fetchSignupURL(tournament cache.TournamentCache) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("browser setup failed: %w", err)
 	}
+
+	// Ensure browser is always closed, even if errors occur
 	defer browser.ShutdownBrowser()
 
 	// First try to find signup URL on HelloAsso
 	signupURL, err := searchForSignupURL(tournament, tournamentDate, browserContext, pwInstance)
 	if err != nil {
 		// Handle navigation errors differently than critical errors
-		if common.IsNavigationError(err.Error()) {
+		if utils.IsNavigationError(err.Error()) {
 			log.Printf("Navigation error while searching for signup URL: %v", err)
 			return "", nil
 		}
@@ -191,26 +195,54 @@ func searchForSignupURL(tournament cache.TournamentCache, tournamentDate time.Ti
 }
 
 // FindSignupURLOnHelloAsso searches for signup URL on HelloAsso platform
-// This is a copy of the function from the signup package to avoid import cycles
 func FindSignupURLOnHelloAsso(tournament cache.TournamentCache, tournamentDate time.Time,
 	browserContext pw.BrowserContext, pwInstance *pw.Playwright) (string, error) {
 
-	// In a real implementation, this would search for the signup URL on HelloAsso
-	// For now, this is a placeholder implementation
 	log.Printf("Searching for signup URL on HelloAsso for tournament %s", tournament.Name)
 
-	// Implementation would use the helloasso package to search for the tournament
+	// Build search query for HelloAsso
+	searchQuery := ""
+	if tournament.Name != "" {
+		searchQuery = tournament.Name
+	} else if tournament.Club.Name != "" {
+		searchQuery = fmt.Sprintf("tournoi tennis de table %s", tournament.Club.Name)
+	} else {
+		return "", fmt.Errorf("insufficient tournament information for HelloAsso search")
+	}
+
+	// Create a context with timeout
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+	defer cancel()
+
+	// Extract activities from HelloAsso
+	activities, err := helloasso.SearchActivitiesWithBrowser(ctx, searchQuery, browserContext, pwInstance)
+	if err != nil {
+		return "", fmt.Errorf("failed to search HelloAsso: %w", err)
+	}
+
+	// Check each activity URL
+	for _, activity := range activities {
+		if activity.URL == "" {
+			continue
+		}
+
+		// Validate the URL using the helloasso validator
+		validURL, err := helloasso.ValidateHelloAssoURL(activity.URL, tournament, tournamentDate, browserContext)
+		if err == nil && validURL != "" {
+			return validURL, nil
+		}
+	}
+
 	return "", nil
 }
 
 // ExtractSignupURLFromPDFFile extracts a signup URL from a tournament rules PDF
-// This is a copy of the function from the signup package to avoid import cycles
+// This uses the pdf_processing package to eliminate code duplication
 func ExtractSignupURLFromPDFFile(tournament cache.TournamentCache, tournamentDate time.Time,
 	pdfURL string, browserContext pw.BrowserContext) (string, error) {
 
-	// In a real implementation, this would extract the signup URL from a PDF
-	// For now, this is a placeholder implementation
 	log.Printf("Extracting signup URL from PDF for tournament %s", tournament.Name)
 
-	return "", nil
+	// Call the implementation from the pdf_processing package
+	return extraction.ExtractSignupURLFromPDF(tournament, tournamentDate, pdfURL, browserContext)
 }

@@ -5,7 +5,7 @@ import (
 	"log"
 	"time"
 	"tournois-tt/api/pkg/cache"
-	geocodingPkg "tournois-tt/api/pkg/geocoding"
+	"tournois-tt/api/pkg/models"
 	"tournois-tt/api/pkg/utils"
 )
 
@@ -84,7 +84,7 @@ func RefreshTournamentsAndGeocoding(startDateAfter, startDateBefore *time.Time) 
 	}
 
 	// Prepare for processing
-	addressesToGeocode := make([]geocodingPkg.Address, 0)
+	addressesToGeocode := make([]models.Address, 0)
 	newTournamentCacheEntries := make([]cache.TournamentCache, 0, len(tournaments))
 	tournamentsNeedingGeocoding := make([]int, 0)
 

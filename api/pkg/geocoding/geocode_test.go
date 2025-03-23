@@ -4,6 +4,7 @@ import (
 	"errors"
 	"testing"
 	"time"
+	"tournois-tt/api/pkg/models"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -15,11 +16,11 @@ type mockProvider struct {
 	errorMessage string
 }
 
-func (p *mockProvider) GetCoordinates(address Address) (Location, error) {
+func (p *mockProvider) GetCoordinates(address models.Address) (models.Location, error) {
 	if p.shouldFail {
-		return Location{Failed: true}, errors.New(p.errorMessage)
+		return models.Location{Failed: true}, errors.New(p.errorMessage)
 	}
-	return Location{
+	return models.Location{
 		Lat:    48.856614,
 		Lon:    2.3522219,
 		Failed: false,
@@ -58,12 +59,12 @@ func TestGeocodingProviderSingletons(t *testing.T) {
 func TestConstructFullAddress(t *testing.T) {
 	testCases := []struct {
 		name     string
-		address  Address
+		address  models.Address
 		expected string
 	}{
 		{
 			name: "Complete address",
-			address: Address{
+			address: models.Address{
 				StreetAddress:   "123 Rue de la Paix",
 				PostalCode:      "75000",
 				AddressLocality: "Paris",
@@ -72,7 +73,7 @@ func TestConstructFullAddress(t *testing.T) {
 		},
 		{
 			name: "No street address",
-			address: Address{
+			address: models.Address{
 				StreetAddress:             "",
 				PostalCode:                "75000",
 				AddressLocality:           "Paris",
@@ -82,7 +83,7 @@ func TestConstructFullAddress(t *testing.T) {
 		},
 		{
 			name: "Street address without number",
-			address: Address{
+			address: models.Address{
 				StreetAddress:             "Avenue",
 				PostalCode:                "75000",
 				AddressLocality:           "Paris",
@@ -92,7 +93,7 @@ func TestConstructFullAddress(t *testing.T) {
 		},
 		{
 			name: "Extra spaces in fields",
-			address: Address{
+			address: models.Address{
 				StreetAddress:   "  123 Rue de la Paix  ",
 				PostalCode:      "  75000  ",
 				AddressLocality: "  Paris  ",
@@ -110,14 +111,14 @@ func TestConstructFullAddress(t *testing.T) {
 }
 
 func TestCreateGeocodeResult(t *testing.T) {
-	address := Address{
+	address := models.Address{
 		StreetAddress:   "123 Rue de la Paix",
 		PostalCode:      "75000",
 		AddressLocality: "Paris",
 	}
 
 	t.Run("Success case", func(t *testing.T) {
-		location := Location{
+		location := models.Location{
 			Lat:    48.856614,
 			Lon:    2.3522219,
 			Failed: false,
@@ -134,7 +135,7 @@ func TestCreateGeocodeResult(t *testing.T) {
 	})
 
 	t.Run("Error case", func(t *testing.T) {
-		result := CreateGeocodeResult(address, Location{}, errors.New("geocoding failed"))
+		result := CreateGeocodeResult(address, models.Location{}, errors.New("geocoding failed"))
 
 		assert.Equal(t, address, result.Address)
 		assert.Equal(t, 0.0, result.Latitude)
@@ -145,7 +146,7 @@ func TestCreateGeocodeResult(t *testing.T) {
 	})
 
 	t.Run("Failed location case", func(t *testing.T) {
-		location := Location{
+		location := models.Location{
 			Lat:    48.856614,
 			Lon:    2.3522219,
 			Failed: true,
@@ -162,15 +163,15 @@ func TestCreateGeocodeResult(t *testing.T) {
 	})
 }
 
-func TestIsValidAddress(t *testing.T) {
+func TestIsAddressValid(t *testing.T) {
 	testCases := []struct {
 		name     string
-		address  Address
+		address  models.Address
 		expected bool
 	}{
 		{
 			name: "Valid address",
-			address: Address{
+			address: models.Address{
 				StreetAddress:   "123 Rue de la Paix",
 				PostalCode:      "75000",
 				AddressLocality: "Paris",
@@ -179,7 +180,7 @@ func TestIsValidAddress(t *testing.T) {
 		},
 		{
 			name: "Missing postal code",
-			address: Address{
+			address: models.Address{
 				StreetAddress:   "123 Rue de la Paix",
 				PostalCode:      "",
 				AddressLocality: "Paris",
@@ -188,7 +189,7 @@ func TestIsValidAddress(t *testing.T) {
 		},
 		{
 			name: "Missing locality",
-			address: Address{
+			address: models.Address{
 				StreetAddress:   "123 Rue de la Paix",
 				PostalCode:      "75000",
 				AddressLocality: "",
@@ -197,7 +198,7 @@ func TestIsValidAddress(t *testing.T) {
 		},
 		{
 			name: "Missing street address",
-			address: Address{
+			address: models.Address{
 				StreetAddress:   "",
 				PostalCode:      "75000",
 				AddressLocality: "Paris",
@@ -208,7 +209,7 @@ func TestIsValidAddress(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			result := tc.address.IsValid()
+			result := IsAddressValid(tc.address)
 			assert.Equal(t, tc.expected, result)
 		})
 	}
@@ -230,7 +231,7 @@ func TestGetCoordinatesWithMockProvider(t *testing.T) {
 		nominatimProvider = &mockProvider{name: "Nominatim", shouldFail: false}
 		googleProvider = &mockProvider{name: "Google", shouldFail: false}
 
-		address := Address{
+		address := models.Address{
 			StreetAddress:   "123 Rue de la Paix",
 			PostalCode:      "75000",
 			AddressLocality: "Paris",
@@ -250,7 +251,7 @@ func TestGetCoordinatesWithMockProvider(t *testing.T) {
 		nominatimProvider = &mockProvider{name: "Nominatim", shouldFail: true, errorMessage: "Nominatim error"}
 		googleProvider = &mockProvider{name: "Google", shouldFail: false}
 
-		address := Address{
+		address := models.Address{
 			StreetAddress:   "123 Rue de la Paix",
 			PostalCode:      "75000",
 			AddressLocality: "Paris",
@@ -270,7 +271,7 @@ func TestGetCoordinatesWithMockProvider(t *testing.T) {
 		nominatimProvider = &mockProvider{name: "Nominatim", shouldFail: true, errorMessage: "Nominatim error"}
 		googleProvider = &mockProvider{name: "Google", shouldFail: true, errorMessage: "Google error"}
 
-		address := Address{
+		address := models.Address{
 			StreetAddress:   "123 Rue de la Paix",
 			PostalCode:      "75000",
 			AddressLocality: "Paris",

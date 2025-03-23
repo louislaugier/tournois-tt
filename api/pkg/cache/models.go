@@ -1,46 +1,33 @@
 package cache
 
-import "time"
+import (
+	"time"
 
-// Location represents a geocoded location
-type Location struct {
-	Lat    float64 `json:"lat"`
-	Lon    float64 `json:"lon"`
-	Failed bool    `json:"failed"`
-}
+	"tournois-tt/api/pkg/models"
+)
 
-// Address represents a physical address
-type Address struct {
-	StreetAddress             string  `json:"streetAddress"`
-	PostalCode                string  `json:"postalCode"`
-	AddressLocality           string  `json:"addressLocality"`
-	DisambiguatingDescription string  `json:"disambiguatingDescription,omitempty"`
-	Latitude                  float64 `json:"latitude,omitempty"`
-	Longitude                 float64 `json:"longitude,omitempty"`
-	Failed                    bool    `json:"failed,omitempty"`
-}
+// Address is an alias for models.Address for backward compatibility
+type Address = models.Address
 
-// IsValid checks if an address has enough information for geocoding
-func (a Address) IsValid() bool {
-	return a.PostalCode != "" && a.AddressLocality != ""
-}
+// Location is an alias for models.Location for backward compatibility
+type Location = models.Location
 
 // TournamentCache represents a cached tournament with all its data
 type TournamentCache struct {
-	ID                     int       `json:"id"`
-	Name                   string    `json:"name"`
-	Type                   string    `json:"type"`
-	StartDate              string    `json:"startDate"`
-	EndDate                string    `json:"endDate"`
-	Address                Address   `json:"address"`
-	Club                   Club      `json:"club"`
-	Rules                  *Rules    `json:"rules,omitempty"`
-	Endowment              int       `json:"endowment"`
-	IsRulesPdfChecked      bool      `json:"isRulesPdfChecked,omitempty"`
-	IsSiteExistenceChecked bool      `json:"isSiteExistenceChecked,omitempty"`
-	SiteUrl                string    `json:"siteUrl,omitempty"`
-	SignupUrl              string    `json:"signupUrl,omitempty"`
-	Timestamp              time.Time `json:"timestamp"`
+	ID                     int            `json:"id"`
+	Name                   string         `json:"name"`
+	Type                   string         `json:"type"`
+	StartDate              string         `json:"startDate"`
+	EndDate                string         `json:"endDate"`
+	Address                models.Address `json:"address"`
+	Club                   Club           `json:"club"`
+	Rules                  *Rules         `json:"rules,omitempty"`
+	Endowment              int            `json:"endowment"`
+	IsRulesPdfChecked      bool           `json:"isRulesPdfChecked,omitempty"`
+	IsSiteExistenceChecked bool           `json:"isSiteExistenceChecked,omitempty"`
+	SiteUrl                string         `json:"siteUrl,omitempty"`
+	SignupUrl              string         `json:"signupUrl,omitempty"`
+	Timestamp              time.Time      `json:"timestamp"`
 }
 
 // Club represents a table tennis club

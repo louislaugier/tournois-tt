@@ -6,8 +6,8 @@ import (
 	"time"
 
 	"tournois-tt/api/pkg/cache"
-	"tournois-tt/api/pkg/scraper/services/common"
-	"tournois-tt/api/pkg/scraper/services/helloasso"
+	"tournois-tt/api/pkg/helloasso"
+	"tournois-tt/api/pkg/navigation"
 	"tournois-tt/api/pkg/utils"
 
 	pw "github.com/playwright-community/playwright-go"
@@ -18,7 +18,7 @@ func ValidateSignupURL(urlStr string, tournament cache.TournamentCache, tourname
 	utils.DebugLog("Validating potential signup URL: %s", urlStr)
 
 	// Clean the URL first
-	urlStr = common.CleanURL(urlStr)
+	urlStr = utils.CleanURL(urlStr)
 
 	// Basic URL validation
 	urlObj, err := url.Parse(urlStr)
@@ -27,7 +27,7 @@ func ValidateSignupURL(urlStr string, tournament cache.TournamentCache, tourname
 	}
 
 	// Skip invalid or common domains
-	if common.IsDomainToSkip(urlObj.Host) {
+	if utils.IsDomainToSkip(urlObj.Host) {
 		return "", fmt.Errorf("domain '%s' is in skip list", urlObj.Host)
 	}
 
@@ -42,12 +42,12 @@ func ValidateSignupURL(urlStr string, tournament cache.TournamentCache, tourname
 
 	// Generic validator for other platforms
 	utils.DebugLog("Using generic validator for URL: %s", urlStr)
-	
+
 	// Skip URLs unlikely to be signup forms
-	if common.IsURLToSkip(urlStr) {
+	if utils.IsURLToSkip(urlStr) {
 		return "", fmt.Errorf("URL pattern '%s' is unlikely to be a signup form", urlStr)
 	}
 
 	// Check if the page contains signup form elements
-	return common.ValidateSignupURL(urlStr, tournament, tournamentDate, browserContext)
-} 
+	return navigation.ValidateSignupURL(urlStr, tournament, tournamentDate, browserContext)
+}

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 	"tournois-tt/api/pkg/cache"
+	"tournois-tt/api/pkg/models"
 )
 
 // DefaultGeocodeCache is the global instance of the geocode cache
@@ -51,7 +52,7 @@ func LoadGeocodeResultsFromCache() (map[string]GeocodeResult, error) {
 }
 
 // GenerateCacheKey creates a unique key for an address
-func GenerateCacheKey(addr Address) string {
+func GenerateCacheKey(addr models.Address) string {
 	return fmt.Sprintf("%s|%s|%s",
 		strings.TrimSpace(addr.StreetAddress),
 		strings.TrimSpace(addr.PostalCode),
@@ -59,8 +60,9 @@ func GenerateCacheKey(addr Address) string {
 }
 
 // GetCachedGeocodeResult retrieves a geocoding result from the cache
-func GetCachedGeocodeResult(addr Address) (GeocodeResult, bool) {
-	// Convert Address to cache.Address
+func GetCachedGeocodeResult(addr models.Address) (GeocodeResult, bool) {
+	// Convert Address to cache.Address - unnecessary since we've synchronized the types, but we're keeping
+	// this separate just to ensure future compatibility
 	cacheAddr := cache.Address{
 		StreetAddress:             addr.StreetAddress,
 		PostalCode:                addr.PostalCode,
@@ -85,7 +87,7 @@ func GetCachedGeocodeResult(addr Address) (GeocodeResult, bool) {
 		if cache.GenerateAddressCacheKey(tourney.Address) == key {
 			// Found a match - extract geocode data
 			result := GeocodeResult{
-				Address: Address{
+				Address: models.Address{
 					StreetAddress:             tourney.Address.StreetAddress,
 					PostalCode:                tourney.Address.PostalCode,
 					AddressLocality:           tourney.Address.AddressLocality,

@@ -7,7 +7,7 @@ import (
 
 	"tournois-tt/api/pkg/cache"
 	"tournois-tt/api/pkg/scraper/browser"
-	"tournois-tt/api/pkg/scraper/services/common"
+	"tournois-tt/api/pkg/utils"
 
 	pw "github.com/playwright-community/playwright-go"
 )
@@ -134,6 +134,14 @@ func Worker(workerID int, tournamentCh <-chan cache.TournamentCache, resultCh ch
 
 	defer wg.Done()
 
+	// Add panic recovery to prevent goroutine crashes from affecting the whole process
+	defer func() {
+		if r := recover(); r != nil {
+			log.Printf("Worker %d: Recovered from panic: %v", workerID, r)
+			errorCh <- fmt.Errorf("worker %d recovered from panic: %v", workerID, r)
+		}
+	}()
+
 	// Collect modified tournaments locally to save all at once
 	var modifiedTournaments []cache.TournamentCache
 
@@ -227,5 +235,5 @@ func IsNavigationError(err error) bool {
 	if err == nil {
 		return false
 	}
-	return common.IsNavigationError(err.Error())
+	return utils.IsNavigationError(err.Error())
 }

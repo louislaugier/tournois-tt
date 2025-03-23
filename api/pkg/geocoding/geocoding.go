@@ -8,12 +8,13 @@ import (
 
 	"tournois-tt/api/pkg/geocoding/google"
 	"tournois-tt/api/pkg/geocoding/nominatim"
+	"tournois-tt/api/pkg/models"
 )
 
-// Debug flag to control verbose logging
+// Debug enables verbose logging
 var Debug = false
 
-// debugLog logs a message only if Debug is true
+// debugLog logs a message if Debug is enabled
 func debugLog(format string, args ...interface{}) {
 	if Debug {
 		log.Printf(format, args...)
@@ -25,7 +26,7 @@ const RateLimitDelay = 1500 * time.Millisecond
 
 // Provider defines the interface that all geocoding providers must implement
 type Provider interface {
-	GetCoordinates(address Address) (Location, error)
+	GetCoordinates(address models.Address) (models.Location, error)
 	Name() string
 }
 
@@ -36,7 +37,7 @@ var nominatimProvider Provider
 var googleProvider Provider
 
 // GetCoordinatesFunc is the function type for the GetCoordinates function
-type GetCoordinatesFunc func(address Address) (Location, error)
+type GetCoordinatesFunc func(address models.Address) (models.Location, error)
 
 // GetCoordinatesFn is the current implementation of GetCoordinates
 // This can be replaced in tests to mock geocoding
@@ -49,7 +50,7 @@ func init() {
 }
 
 // ConstructFullAddress creates a standardized address string
-func ConstructFullAddress(addr Address) string {
+func ConstructFullAddress(addr models.Address) string {
 	fullAddress := addr.StreetAddress
 
 	// Add disambiguating description if street number is not in the address
@@ -67,7 +68,7 @@ func ConstructFullAddress(addr Address) string {
 }
 
 // CreateGeocodeResult creates a consistent GeocodeResult
-func CreateGeocodeResult(address Address, location Location, err error) GeocodeResult {
+func CreateGeocodeResult(address models.Address, location models.Location, err error) GeocodeResult {
 	if err != nil {
 		log.Printf("Geocoding error for address %v: %v", address, err)
 		return GeocodeResult{
@@ -90,12 +91,12 @@ func CreateGeocodeResult(address Address, location Location, err error) GeocodeR
 
 // GetCoordinates attempts to geocode a single address
 // It tries Nominatim first, then falls back to Google if Nominatim fails
-func GetCoordinates(address Address) (Location, error) {
+func GetCoordinates(address models.Address) (models.Location, error) {
 	return GetCoordinatesFn(address)
 }
 
 // getCoordinatesImpl is the actual implementation of GetCoordinates
-func getCoordinatesImpl(address Address) (Location, error) {
+func getCoordinatesImpl(address models.Address) (models.Location, error) {
 	// Try with Nominatim first
 	location, err := nominatimProvider.GetCoordinates(address)
 
@@ -109,13 +110,13 @@ func getCoordinatesImpl(address Address) (Location, error) {
 }
 
 // GetCoordinatesNominatim attempts to geocode an address using Nominatim
-func GetCoordinatesNominatim(address Address) (GeocodeResult, error) {
+func GetCoordinatesNominatim(address models.Address) (GeocodeResult, error) {
 	location, err := nominatimProvider.GetCoordinates(address)
 	return CreateGeocodeResult(address, location, err), err
 }
 
 // GetCoordinatesGoogle attempts to geocode an address using Google Geocoding API
-func GetCoordinatesGoogle(address Address) (GeocodeResult, error) {
+func GetCoordinatesGoogle(address models.Address) (GeocodeResult, error) {
 	location, err := googleProvider.GetCoordinates(address)
 	return CreateGeocodeResult(address, location, err), err
 }
@@ -126,7 +127,7 @@ type nominatimAdapter struct {
 }
 
 // GetCoordinates implements the Provider interface for nominatimAdapter
-func (a *nominatimAdapter) GetCoordinates(address Address) (Location, error) {
+func (a *nominatimAdapter) GetCoordinates(address models.Address) (models.Location, error) {
 	// Convert Address to nominatim.Address
 	nomAddr := nominatim.Address{
 		StreetAddress:             address.StreetAddress,
@@ -141,11 +142,11 @@ func (a *nominatimAdapter) GetCoordinates(address Address) (Location, error) {
 	// Call the Nominatim provider
 	nomLocation, err := a.provider.GetCoordinates(nomAddr)
 	if err != nil {
-		return Location{Failed: true}, err
+		return models.Location{Failed: true}, err
 	}
 
 	// Convert nominatim.Location to Location
-	return Location{
+	return models.Location{
 		Lat:    nomLocation.Lat,
 		Lon:    nomLocation.Lon,
 		Failed: nomLocation.Failed,
@@ -163,7 +164,7 @@ type googleAdapter struct {
 }
 
 // GetCoordinates implements the Provider interface for googleAdapter
-func (a *googleAdapter) GetCoordinates(address Address) (Location, error) {
+func (a *googleAdapter) GetCoordinates(address models.Address) (models.Location, error) {
 	// Convert Address to google.Address
 	googleAddr := google.Address{
 		StreetAddress:             address.StreetAddress,
@@ -178,11 +179,11 @@ func (a *googleAdapter) GetCoordinates(address Address) (Location, error) {
 	// Call the Google provider
 	googleLocation, err := a.provider.GetCoordinates(googleAddr)
 	if err != nil {
-		return Location{Failed: true}, err
+		return models.Location{Failed: true}, err
 	}
 
 	// Convert google.Location to Location
-	return Location{
+	return models.Location{
 		Lat:    googleLocation.Lat,
 		Lon:    googleLocation.Lon,
 		Failed: googleLocation.Failed,

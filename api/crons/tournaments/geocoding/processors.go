@@ -7,6 +7,7 @@ import (
 	"tournois-tt/api/pkg/cache"
 	"tournois-tt/api/pkg/fftt"
 	geocodingPkg "tournois-tt/api/pkg/geocoding"
+	"tournois-tt/api/pkg/models"
 	"tournois-tt/api/pkg/utils"
 )
 
@@ -36,14 +37,14 @@ func FetchTournamentsWithRetries(startDateAfter time.Time, startDateBefore *time
 
 // ProcessTournamentForCache prepares a tournament for caching and determines if geocoding is needed
 // Returns: the new cache entry, whether the address needs geocoding, and the address if needed
-func ProcessTournamentForCache(t fftt.Tournament, cachedTournaments map[string]cache.TournamentCache) (cache.TournamentCache, bool, geocodingPkg.Address) {
+func ProcessTournamentForCache(t fftt.Tournament, cachedTournaments map[string]cache.TournamentCache) (cache.TournamentCache, bool, models.Address) {
 	// Check if this tournament is already in cache by ID
 	cacheKey := fmt.Sprintf("%d", t.ID)
 	cachedTournament, exists := cachedTournaments[cacheKey]
 
 	if exists {
 		// Use existing cached tournament data
-		return cachedTournament, false, geocodingPkg.Address{}
+		return cachedTournament, false, models.Address{}
 	}
 
 	// Create a new cache entry for this tournament
@@ -84,8 +85,8 @@ func ProcessTournamentForCache(t fftt.Tournament, cachedTournaments map[string]c
 		}
 	}
 
-	// Convert to geocoding.Address to use IsValid from the geocoding package
-	geoAddress := geocodingPkg.Address{
+	// Convert to models.Address to use IsValid
+	geoAddress := models.Address{
 		StreetAddress:             t.Address.StreetAddress,
 		PostalCode:                t.Address.PostalCode,
 		AddressLocality:           t.Address.AddressLocality,
@@ -93,9 +94,9 @@ func ProcessTournamentForCache(t fftt.Tournament, cachedTournaments map[string]c
 	}
 
 	// Check if the address is valid for geocoding
-	if !geoAddress.IsValid() {
+	if !geocodingPkg.IsAddressValid(geoAddress) {
 		newCacheEntry.Address.Failed = true
-		return newCacheEntry, false, geocodingPkg.Address{}
+		return newCacheEntry, false, models.Address{}
 	}
 
 	// Check if address is already in cache by address key
@@ -108,7 +109,7 @@ func ProcessTournamentForCache(t fftt.Tournament, cachedTournaments map[string]c
 			// Found a tournament with the same address that has coordinates
 			newCacheEntry.Address.Latitude = existingTournament.Address.Latitude
 			newCacheEntry.Address.Longitude = existingTournament.Address.Longitude
-			return newCacheEntry, false, geocodingPkg.Address{}
+			return newCacheEntry, false, models.Address{}
 		}
 	}
 
@@ -119,7 +120,7 @@ func ProcessTournamentForCache(t fftt.Tournament, cachedTournaments map[string]c
 
 // GeocodeAddresses processes a batch of addresses that need geocoding
 // It updates the tournament cache entries with geocoding results
-func GeocodeAddresses(addressesToGeocode []geocodingPkg.Address, tournamentsToUpdate []int, tournamentCacheEntries []cache.TournamentCache) ([]cache.TournamentCache, int, int) {
+func GeocodeAddresses(addressesToGeocode []models.Address, tournamentsToUpdate []int, tournamentCacheEntries []cache.TournamentCache) ([]cache.TournamentCache, int, int) {
 	successCount := 0
 	failureCount := 0
 
@@ -127,16 +128,46 @@ func GeocodeAddresses(addressesToGeocode []geocodingPkg.Address, tournamentsToUp
 	updatedEntries := make([]cache.TournamentCache, len(tournamentCacheEntries))
 	copy(updatedEntries, tournamentCacheEntries)
 
+	// Add more comprehensive error handling and retries
+	const maxRetries = 2
+
 	for i, addr := range addressesToGeocode {
-		// Rate limit between requests
-		time.Sleep(geocodingPkg.RateLimitDelay)
+		// Rate limit between requests - use exponential backoff for retries
+		var geocodeResult geocodingPkg.GeocodeResult
+		var err error
+		var retryCount int
 
-		// Geocode individual address using the geocoding package
-		geocodeResult, err := geocodingPkg.GetCoordinatesNominatim(addr)
+		for retryCount = 0; retryCount <= maxRetries; retryCount++ {
+			// Wait longer between retries
+			if retryCount > 0 {
+				backoffTime := time.Duration(retryCount) * geocodingPkg.RateLimitDelay * 2
+				log.Printf("Geocoding retry %d/%d for address, waiting %v",
+					retryCount, maxRetries, backoffTime)
+				time.Sleep(backoffTime)
+			} else {
+				time.Sleep(geocodingPkg.RateLimitDelay)
+			}
 
-		// If Nominatim fails, try Google as fallback
-		if err != nil || geocodeResult.Failed {
-			geocodeResult, err = geocodingPkg.GetCoordinatesGoogle(addr)
+			// Try primary geocoding service (Nominatim)
+			geocodeResult, err = geocodingPkg.GetCoordinatesNominatim(addr)
+
+			// If successful, break out of retry loop
+			if err == nil && !geocodeResult.Failed {
+				break
+			}
+
+			// If first service fails and we haven't exhausted retries,
+			// try fallback service (Google)
+			if retryCount < maxRetries {
+				// Rate limit between service calls
+				time.Sleep(geocodingPkg.RateLimitDelay)
+				geocodeResult, err = geocodingPkg.GetCoordinatesGoogle(addr)
+
+				// If successful with fallback, break out of retry loop
+				if err == nil && !geocodeResult.Failed {
+					break
+				}
+			}
 		}
 
 		// Find the tournament to update
@@ -146,6 +177,8 @@ func GeocodeAddresses(addressesToGeocode []geocodingPkg.Address, tournamentsToUp
 			// Geocoding failed
 			updatedEntries[tournamentIndex].Address.Failed = true
 			failureCount++
+			log.Printf("Geocoding failed for address: %s after %d attempts: %v",
+				geocodingPkg.ConstructFullAddress(addr), retryCount+1, err)
 		} else {
 			// Geocoding succeeded
 			updatedEntries[tournamentIndex].Address.Latitude = geocodeResult.Latitude

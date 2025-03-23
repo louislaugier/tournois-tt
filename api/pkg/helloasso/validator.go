@@ -9,7 +9,6 @@ import (
 	"tournois-tt/api/pkg/cache"
 	"tournois-tt/api/pkg/scraper/browser"
 	"tournois-tt/api/pkg/scraper/page"
-	"tournois-tt/api/pkg/scraper/services/common"
 	"tournois-tt/api/pkg/utils"
 
 	pw "github.com/playwright-community/playwright-go"
@@ -29,14 +28,14 @@ func ValidateURL(url string, tournament cache.TournamentCache, tournamentDate ti
 	defer browser.SafeClose(pwPage)
 
 	// Create a page handler
-	pageHandler := page.New(pwPage)
+	pageHandler := page.NewPageHandler(pwPage)
 	defer pageHandler.Close()
 
 	// Set default timeouts
 	pageHandler.SetDefaultTimeouts(30*time.Second, 15*time.Second)
 
-	// Use safer navigation with automatic recovery if the page is unhealthy
-	if err := pageHandler.SafeNavigation(url, 2, browser.RestartIfUnhealthy); err != nil {
+	// Use safer navigation with automatic recovery
+	if err := pageHandler.SafeNavigation(url, 2, nil); err != nil {
 		return "", fmt.Errorf("critical error - failed to navigate to URL: %w", err)
 	}
 
@@ -134,7 +133,7 @@ func ValidateHelloAssoURL(urlStr string, tournament cache.TournamentCache, tourn
 	utils.DebugLog("Validating HelloAsso URL: %s", urlStr)
 
 	// Clean up the URL (simplify for validation)
-	cleanedURL := common.CleanURL(urlStr)
+	cleanedURL := utils.CleanURL(urlStr)
 
 	// Create a new page with viewport settings
 	pwPage, err := browser.NewPageWithViewport(browserContext, 1280, 800)
@@ -144,7 +143,7 @@ func ValidateHelloAssoURL(urlStr string, tournament cache.TournamentCache, tourn
 	defer browser.SafeClose(pwPage)
 
 	// Create a page handler
-	pageHandler := page.New(pwPage)
+	pageHandler := page.NewPageHandler(pwPage)
 	defer pageHandler.Close()
 
 	// Set default timeouts - HelloAsso can be slow
@@ -152,10 +151,7 @@ func ValidateHelloAssoURL(urlStr string, tournament cache.TournamentCache, tourn
 
 	// Navigate to the URL
 	utils.DebugLog("Navigating to HelloAsso URL: %s", cleanedURL)
-	if err := pageHandler.NavigateWithConfig(cleanedURL, page.Config{
-		NavigationTimeout: 30 * time.Second,
-		RetryAttempts:     2,
-	}); err != nil {
+	if err := pageHandler.SafeNavigation(cleanedURL, 2, nil); err != nil {
 		return "", fmt.Errorf("failed to navigate to HelloAsso URL: %w", err)
 	}
 
@@ -168,14 +164,8 @@ func ValidateHelloAssoURL(urlStr string, tournament cache.TournamentCache, tourn
 		return "", fmt.Errorf("redirected to non-HelloAsso URL: %s", finalURL)
 	}
 
-	// Check if the page is an active registration form using SafeOperation
-	var isActive bool
-	err = pageHandler.SafeOperation("check if form is active", func() error {
-		var err error
-		isActive, err = common.CheckFormIsActive(pwPage)
-		return err
-	})
-
+	// Check if the page is an active registration form
+	isActive, err := CheckFormIsActive(pwPage)
 	if err != nil {
 		utils.DebugLog("Error checking if HelloAsso form is active: %v", err)
 	}
@@ -191,13 +181,7 @@ func ValidateHelloAssoURL(urlStr string, tournament cache.TournamentCache, tourn
 	}
 
 	// Check if the page contains the tournament name or date
-	var isRelated bool
-	err = pageHandler.SafeOperation("check if related to tournament", func() error {
-		var err error
-		isRelated, err = common.ContainsTournamentInfo(pwPage, tournament, tournamentDate)
-		return err
-	})
-
+	isRelated, err := ContainsTournamentInfo(pwPage, tournament, tournamentDate)
 	if err != nil {
 		utils.DebugLog("Error checking if HelloAsso form is related to tournament: %v", err)
 	}
@@ -219,7 +203,62 @@ func ValidateHelloAssoURL(urlStr string, tournament cache.TournamentCache, tourn
 // -----------------------------------------------------------------------------
 
 // CleanHelloAssoURL simplifies a HelloAsso URL to its canonical form
-// This is a wrapper around common.CleanURL for backward compatibility
 func CleanHelloAssoURL(url string) string {
-	return common.CleanURL(url)
+	return utils.CleanURL(url)
+}
+
+// CheckFormIsActive checks if a form is active on the page
+func CheckFormIsActive(page pw.Page) (bool, error) {
+	// Check for closed form indicators
+	script := `
+	() => {
+		const closedElements = document.querySelectorAll('.registration-closed, .form-closed, .h-rXiJeRZz3ISiX5K07gkk');
+		return closedElements.length === 0;
+	}
+	`
+	result, err := page.Evaluate(script)
+	if err != nil {
+		return false, err
+	}
+
+	if boolResult, ok := result.(bool); ok {
+		return boolResult, nil
+	}
+
+	return false, fmt.Errorf("unexpected result type from form check")
+}
+
+// ContainsTournamentInfo checks if the page contains tournament information
+func ContainsTournamentInfo(page pw.Page, tournament cache.TournamentCache, tournamentDate time.Time) (bool, error) {
+	// Get page content
+	content, err := page.Content()
+	if err != nil {
+		return false, err
+	}
+
+	contentLower := strings.ToLower(content)
+
+	// Check for tournament name
+	if tournament.Name != "" && strings.Contains(contentLower, strings.ToLower(tournament.Name)) {
+		return true, nil
+	}
+
+	// Check for club name
+	if tournament.Club.Name != "" && strings.Contains(contentLower, strings.ToLower(tournament.Club.Name)) {
+		return true, nil
+	}
+
+	// Check for month name
+	monthName := utils.GetMonthNameFrench(int(tournamentDate.Month()))
+	if strings.Contains(contentLower, strings.ToLower(monthName)) {
+		return true, nil
+	}
+
+	// Check for year
+	year := tournamentDate.Year()
+	if strings.Contains(content, fmt.Sprintf("%d", year)) {
+		return true, nil
+	}
+
+	return false, nil
 }

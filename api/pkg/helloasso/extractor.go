@@ -4,7 +4,9 @@ import (
 	"fmt"
 	"log"
 	"strings"
+	"time"
 	"tournois-tt/api/pkg/scraper/page"
+	"tournois-tt/api/pkg/utils"
 
 	pw "github.com/playwright-community/playwright-go"
 )
@@ -28,8 +30,11 @@ var Selectors = ActivitySelectors{
 	Location:     ".Thumbnail--MetadataLocation, .h-hVDkACpKtEyaNE5Gx6BH, .activity-card-location",
 }
 
-// Config contains all the configuration for HelloAsso scraping
-var Config = page.Config{
+// PageConfig contains all the configuration for HelloAsso scraping
+var PageConfig = struct {
+	EmptyStateSelector string
+	ResultsSelector    string
+}{
 	EmptyStateSelector: `[data-testid="empty-state"], .h-39a8TrXCLKJGJxr4DEp6, .no-results`,
 	ResultsSelector:    ".Hits-Activity, .h-k2MJThJUO3PScbPTfyXD, .activity-card",
 }
@@ -55,6 +60,25 @@ type ActivitySelectors struct {
 	Organization string
 	Category     string
 	Location     string
+}
+
+// HelloAssoConfig stores configuration for HelloAsso extractors
+type HelloAssoConfig struct {
+	// Browser timeout settings
+	NavigationTimeout time.Duration
+	WaitTimeout       time.Duration
+
+	// Search settings
+	MaxSearchResults int
+}
+
+// DefaultConfig returns the default configuration for HelloAsso extractors
+func DefaultConfig() HelloAssoConfig {
+	return HelloAssoConfig{
+		NavigationTimeout: 30 * time.Second,
+		WaitTimeout:       15 * time.Second,
+		MaxSearchResults:  10,
+	}
 }
 
 // -----------------------------------------------------------------------------
@@ -202,4 +226,73 @@ func ExtractActivities(page pw.Page, cfg ExtractionConfig) ([]Activity, error) {
 
 	log.Printf("Extracted %d activities from HelloAsso search", len(activities))
 	return activities, nil
+}
+
+// Extract searches HelloAsso for tournament-related activities
+func Extract(query string, browserContext pw.BrowserContext, config HelloAssoConfig) ([]string, error) {
+	// Create a new page
+	pageObj, err := browserContext.NewPage()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create page: %w", err)
+	}
+	defer pageObj.Close()
+
+	// Create a page handler
+	pageHandler := page.NewPageHandler(pageObj)
+
+	// Set navigation timeout
+	pageObj.SetDefaultNavigationTimeout(float64(config.NavigationTimeout / time.Millisecond))
+	pageObj.SetDefaultTimeout(float64(config.WaitTimeout / time.Millisecond))
+
+	// Search for the tournament
+	encodedQuery := strings.ReplaceAll(query, " ", "+")
+	searchURL := fmt.Sprintf("https://www.helloasso.com/search/?q=%s", encodedQuery)
+
+	utils.DebugLog("Searching HelloAsso for: %s", query)
+	if err := pageHandler.SafeNavigation(searchURL, 3, nil); err != nil {
+		return nil, fmt.Errorf("failed to navigate to HelloAsso search page: %w", err)
+	}
+
+	// Wait for results to load
+	time.Sleep(2 * time.Second)
+
+	// Extract activity links using JavaScript
+	script := `
+	() => {
+		const links = [];
+		const resultElements = document.querySelectorAll('.search-group .search-card-item');
+		
+		for (const result of resultElements) {
+			const linkElement = result.querySelector('a.card-link');
+			if (linkElement && linkElement.href) {
+				links.push(linkElement.href);
+			}
+		}
+		
+		return links;
+	}
+	`
+
+	result, err := pageObj.Evaluate(script)
+	if err != nil {
+		return nil, fmt.Errorf("failed to extract activity links: %w", err)
+	}
+
+	// Process the results
+	var activityLinks []string
+	if resultArray, ok := result.([]interface{}); ok {
+		for _, item := range resultArray {
+			if link, ok := item.(string); ok {
+				activityLinks = append(activityLinks, link)
+			}
+		}
+	}
+
+	// Limit the number of results
+	if len(activityLinks) > config.MaxSearchResults {
+		activityLinks = activityLinks[:config.MaxSearchResults]
+	}
+
+	utils.DebugLog("Found %d HelloAsso activities for query: %s", len(activityLinks), query)
+	return activityLinks, nil
 }

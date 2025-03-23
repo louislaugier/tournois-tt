@@ -6,33 +6,42 @@ import (
 	"strings"
 	"tournois-tt/api/pkg/cache"
 	"tournois-tt/api/pkg/fftt"
-	"tournois-tt/api/pkg/geocoding"
-	"tournois-tt/api/pkg/utils"
+	"tournois-tt/api/pkg/models"
 
 	"github.com/gin-gonic/gin"
 )
 
+// TournamentResponse represents the data to return to API clients
+type TournamentResponse struct {
+	ID        int            `json:"id"`
+	Name      string         `json:"name"`
+	Type      string         `json:"type"`
+	StartDate string         `json:"startDate"`
+	EndDate   string         `json:"endDate"`
+	Address   models.Address `json:"address"`
+	Club      fftt.Club      `json:"club"`
+	Rules     *fftt.Rules    `json:"rules,omitempty"`
+	SignupURL string         `json:"signupUrl,omitempty"`
+}
+
 // TournamentsHandler handles tournament requests by retrieving data from the cache
 func TournamentsHandler(c *gin.Context) {
-	// Load tournaments from cache
 	cachedTournaments, err := cache.LoadTournaments()
 	if err != nil {
-		log.Printf("Error loading tournament cache: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to load tournaments from cache"})
 		return
 	}
 
-	// Convert cache map to slice of tournaments
-	tournaments := make([]fftt.Tournament, 0, len(cachedTournaments))
-
+	// Convert to response format with only needed fields
+	var tournamentsResponse []TournamentResponse
 	for _, cachedTournament := range cachedTournaments {
-		tournament := fftt.Tournament{
+		tournamentsResponse = append(tournamentsResponse, TournamentResponse{
 			ID:        cachedTournament.ID,
 			Name:      cachedTournament.Name,
 			Type:      cachedTournament.Type,
 			StartDate: cachedTournament.StartDate,
 			EndDate:   cachedTournament.EndDate,
-			Address: geocoding.Address{
+			Address: models.Address{
 				StreetAddress:             cachedTournament.Address.StreetAddress,
 				PostalCode:                cachedTournament.Address.PostalCode,
 				AddressLocality:           cachedTournament.Address.AddressLocality,
@@ -49,27 +58,12 @@ func TournamentsHandler(c *gin.Context) {
 				Region:     cachedTournament.Club.Region,
 				Identifier: cachedTournament.Club.Identifier,
 			},
-			Endowment:              cachedTournament.Endowment,
-			IsRulesPdfChecked:      cachedTournament.IsRulesPdfChecked,
-			IsSiteExistenceChecked: cachedTournament.IsSiteExistenceChecked,
-			SiteURL:                cachedTournament.SiteUrl,
-			SignupURL:              cachedTournament.SignupUrl,
-		}
+			SignupURL: cachedTournament.SignupUrl,
+		})
 
-		// Map the tournament type to full form
-		tournament.Type = utils.MapTournamentType(tournament.Type)
-
-		// Append a dot to the postal code
-		tournament.Address.PostalCode = tournament.Address.PostalCode + "\u200e"
-
-		// Append 23:59 to endDate if it doesn't already have a time
-		if !strings.Contains(tournament.EndDate, ":") {
-			tournament.EndDate = tournament.EndDate + " 23:59"
-		}
-
-		// Add Rules if available
+		// Add rules if available
 		if cachedTournament.Rules != nil {
-			tournament.Rules = &fftt.Rules{
+			tournamentsResponse[len(tournamentsResponse)-1].Rules = &fftt.Rules{
 				AgeMin:  cachedTournament.Rules.AgeMin,
 				AgeMax:  cachedTournament.Rules.AgeMax,
 				Points:  cachedTournament.Rules.Points,
@@ -77,9 +71,23 @@ func TournamentsHandler(c *gin.Context) {
 				URL:     cachedTournament.Rules.URL,
 			}
 		}
-
-		tournaments = append(tournaments, tournament)
 	}
 
-	c.JSON(http.StatusOK, tournaments)
+	// Filter by postal code if provided
+	postalCode := c.Query("postalCode")
+	if postalCode != "" {
+		var filteredTournaments []TournamentResponse
+		for _, t := range tournamentsResponse {
+			if strings.HasPrefix(t.Address.PostalCode, postalCode) {
+				filteredTournaments = append(filteredTournaments, t)
+			}
+		}
+		tournamentsResponse = filteredTournaments
+	}
+
+	// Log response data
+	log.Printf("Returned %d tournaments (filtered by postal code: %s)",
+		len(tournamentsResponse), postalCode)
+
+	c.JSON(http.StatusOK, tournamentsResponse)
 }

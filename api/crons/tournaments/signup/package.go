@@ -5,8 +5,9 @@ import (
 	"regexp"
 	"strings"
 
-	"tournois-tt/api/pkg/scraper/services/common"
-	"tournois-tt/api/pkg/scraper/services/helloasso"
+	"tournois-tt/api/pkg/constants"
+	"tournois-tt/api/pkg/helloasso"
+	"tournois-tt/api/pkg/utils"
 )
 
 // Debug enables verbose logging within the signup package
@@ -20,21 +21,21 @@ const (
 
 // Create a regex pattern that uses the constant
 var (
-	// urlRegex uses the common URLRegex
-	urlRegex = common.URLRegex
+	// urlRegex uses the utils URLRegex
+	urlRegex = utils.URLRegex
 
 	// helloAssoURLRegex is a regex to find HelloAsso URLs
 	helloAssoURLRegex = regexp.MustCompile(`https?://(?:www\.)?` +
 		strings.TrimPrefix(strings.ReplaceAll(helloasso.BaseURL, ".", "\\."), "https://") +
 		`/[^\s"']+`)
 
-	// Use common regex patterns
-	tournoiSubdomainRegex = common.TournoiSubdomainRegex
-	paymentURLRegex       = common.PaymentURLRegex
-	signupURLRegex        = common.SignupURLRegex
+	// Use regex patterns from utils package
+	tournoiSubdomainRegex = regexp.MustCompile(`https?://[^/]*tournoi[^/]*\.[^/]+/?`)
+	paymentURLRegex       = regexp.MustCompile(`(?i)https?://[^\s"']+(?:pay|payment|paiement|checkout|caisse|transaction|order|commande)`)
+	signupURLRegex        = regexp.MustCompile(`(?i)https?://[^\s"']+(?:sign|registration|inscription|register|inscrire|signup|form|formulaire)`)
 
-	// RegistrationKeywords is the exported version of registrationKeywords for tests
-	RegistrationKeywords = common.RegistrationKeywords
+	// RegistrationKeywords for finding registration-related content
+	RegistrationKeywords = constants.RegistrationKeywords
 )
 
 // GetURLRegex returns the URL regex pattern for use in tests
@@ -62,17 +63,17 @@ func GetSignupURLRegex() *regexp.Regexp {
 	return signupURLRegex
 }
 
-// FindDomainOnlyReferences is the exported version of findDomainOnlyReferences for tests
+// FindDomainOnlyReferences finds domain references in text
 func FindDomainOnlyReferences(text string) []string {
-	return common.FindDomainOnlyReferences(text)
+	return utils.FindDomainOnlyReferences(text)
 }
 
-// GenerateCommonTournamentSubdomains is the exported version of generateCommonTournamentSubdomains for tests
+// GenerateCommonTournamentSubdomains generates common tournament subdomains
 func GenerateCommonTournamentSubdomains(domain string) []string {
-	return common.GenerateCommonTournamentSubdomains(domain)
+	return utils.GenerateCommonTournamentSubdomains(domain)
 }
 
 // FindURLsByPattern extracts URLs from text matching a specific regex pattern
 func FindURLsByPattern(text string, pattern *regexp.Regexp) []string {
-	return common.FindURLsByPattern(text, pattern)
+	return utils.FindURLsByPattern(text, pattern)
 }

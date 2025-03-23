@@ -90,7 +90,7 @@ func SearchActivitiesWithBrowser(ctx context.Context, query string, sharedBrowse
 	defer browser.SafeClose(playwrightPage)
 
 	// Create page handler
-	pageHandler := page.New(playwrightPage)
+	pageHandler := page.NewPageHandler(playwrightPage)
 	defer pageHandler.Close()
 
 	// Set appropriate timeouts for HelloAsso which can be slow
@@ -102,12 +102,17 @@ func SearchActivitiesWithBrowser(ctx context.Context, query string, sharedBrowse
 	log.Printf("Searching HelloAsso for: %s", query)
 
 	// Navigate to search page with safe navigation (includes retries and health checks)
-	if err := pageHandler.SafeNavigation(searchURL, 3, browser.RestartIfUnhealthy); err != nil {
+	if err := pageHandler.SafeNavigation(searchURL, 3, nil); err != nil {
 		return nil, fmt.Errorf("failed to navigate to search page: %w", err)
 	}
 
 	// Wait for results with improved error handling
-	if err := pageHandler.WaitForResults(Config); err != nil {
+	pageConfig := page.Config{
+		EmptyStateSelector: PageConfig.EmptyStateSelector,
+		ResultsSelector:    PageConfig.ResultsSelector,
+	}
+
+	if err := pageHandler.WaitForResults(pageConfig); err != nil {
 		// Take a screenshot for debugging
 		screenshotPath := fmt.Sprintf("helloasso_search_error_%d.png", time.Now().Unix())
 		if screenshotErr := pageHandler.TakeScreenshot(screenshotPath); screenshotErr == nil {
@@ -118,7 +123,7 @@ func SearchActivitiesWithBrowser(ctx context.Context, query string, sharedBrowse
 	}
 
 	// Check for empty state
-	isEmpty, err := pageHandler.HasEmptyState(Config.EmptyStateSelector)
+	isEmpty, err := pageHandler.HasEmptyState(PageConfig.EmptyStateSelector)
 	if err != nil {
 		return nil, fmt.Errorf("failed to check empty state: %w", err)
 	}
@@ -133,8 +138,8 @@ func SearchActivitiesWithBrowser(ctx context.Context, query string, sharedBrowse
 	err = pageHandler.SafeOperation("extract activities", func() error {
 		extractConfig := ExtractionConfig{
 			BaseURL:            BaseURL,
-			EmptyStateSelector: Config.EmptyStateSelector,
-			ActivitySelector:   Config.ResultsSelector,
+			EmptyStateSelector: PageConfig.EmptyStateSelector,
+			ActivitySelector:   PageConfig.ResultsSelector,
 			Selectors:          Selectors,
 		}
 
