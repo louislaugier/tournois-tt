@@ -3,31 +3,31 @@ package cache
 import (
 	"time"
 
-	"tournois-tt/api/pkg/models"
+	"tournois-tt/api/pkg/geocoding"
 )
 
-// Address is an alias for models.Address for backward compatibility
-type Address = models.Address
+// Address is an alias for geocoding.Address for backward compatibility
+type Address = geocoding.Address
 
-// Location is an alias for models.Location for backward compatibility
-type Location = models.Location
+// Location is an alias for geocoding.Location for backward compatibility
+type Location = geocoding.Location
 
 // TournamentCache represents a cached tournament with all its data
 type TournamentCache struct {
-	ID                     int            `json:"id"`
-	Name                   string         `json:"name"`
-	Type                   string         `json:"type"`
-	StartDate              string         `json:"startDate"`
-	EndDate                string         `json:"endDate"`
-	Address                models.Address `json:"address"`
-	Club                   Club           `json:"club"`
-	Rules                  *Rules         `json:"rules,omitempty"`
-	Endowment              int            `json:"endowment"`
-	IsRulesPdfChecked      bool           `json:"isRulesPdfChecked,omitempty"`
-	IsSiteExistenceChecked bool           `json:"isSiteExistenceChecked,omitempty"`
-	SiteUrl                string         `json:"siteUrl,omitempty"`
-	SignupUrl              string         `json:"signupUrl,omitempty"`
-	Timestamp              time.Time      `json:"timestamp"`
+	ID                     int               `json:"id"`
+	Name                   string            `json:"name"`
+	Type                   string            `json:"type"`
+	StartDate              string            `json:"startDate"`
+	EndDate                string            `json:"endDate"`
+	Address                geocoding.Address `json:"address"`
+	Club                   Club              `json:"club"`
+	Rules                  *Rules            `json:"rules,omitempty"`
+	Endowment              int               `json:"endowment"`
+	IsRulesPdfChecked      bool              `json:"isRulesPdfChecked,omitempty"`
+	IsSiteExistenceChecked bool              `json:"isSiteExistenceChecked,omitempty"`
+	SiteUrl                string            `json:"siteUrl,omitempty"`
+	SignupUrl              string            `json:"signupUrl,omitempty"`
+	Timestamp              time.Time         `json:"timestamp"`
 }
 
 // Club represents a table tennis club
@@ -47,4 +47,27 @@ type Rules struct {
 	Points  int    `json:"points,omitempty"`
 	Ranking int    `json:"ranking,omitempty"`
 	URL     string `json:"url,omitempty"`
+}
+
+// GeocodeResult represents a cached geocoding result
+type GeocodeResult struct {
+	Address   geocoding.Address `json:"address"`
+	Latitude  float64           `json:"latitude,omitempty"`
+	Longitude float64           `json:"longitude,omitempty"`
+	Failed    bool              `json:"failed"`
+	Timestamp time.Time         `json:"timestamp"`
+}
+
+// GeocodeConfig allows configuring geocoding behavior
+type GeocodeConfig struct {
+	Enabled             bool
+	MaxGeocodeAttempts  int
+	SkipFailedAddresses bool
+}
+
+// DefaultGeocodeConfig provides default geocoding configuration
+var DefaultGeocodeConfig = GeocodeConfig{
+	Enabled:             false,
+	MaxGeocodeAttempts:  3,
+	SkipFailedAddresses: true,
 }

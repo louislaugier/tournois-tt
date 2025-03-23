@@ -3,7 +3,7 @@ package signup
 import (
 	"time"
 
-	"tournois-tt/api/crons/tournaments/signup/refresh"
+	"tournois-tt/api/internal/crons/tournaments/signup/refresh"
 )
 
 // RefreshURLs refreshes signup URLs for all tournaments in the cache

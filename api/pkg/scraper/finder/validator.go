@@ -1,5 +1,5 @@
-// Package navigation provides navigation services for finding tournament signup URLs
-package navigation
+// Package finder provides navigation services for finding tournament signup URLs
+package finder
 
 import (
 	"fmt"

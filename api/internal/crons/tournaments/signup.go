@@ -5,7 +5,7 @@ import (
 	"log"
 	"time"
 
-	"tournois-tt/api/crons/tournaments/signup"
+	"tournois-tt/api/internal/crons/tournaments/signup"
 	"tournois-tt/api/pkg/utils"
 )
 

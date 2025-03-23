@@ -3,7 +3,7 @@ package crons
 import (
 	"log"
 	"time"
-	"tournois-tt/api/crons/tournaments"
+	"tournois-tt/api/internal/crons/tournaments"
 
 	_ "time/tzdata"
 

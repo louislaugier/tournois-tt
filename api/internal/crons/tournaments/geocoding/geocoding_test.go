@@ -8,12 +8,12 @@ import (
 	"testing"
 	"time"
 	"tournois-tt/api/pkg/fftt"
-	"tournois-tt/api/pkg/models"
+	"tournois-tt/api/pkg/geocoding"
 )
 
 // Helper functions for testing - these are tested versions of functions that would be used in the main code
 // HasValidAddress checks if an address has enough information for geocoding
-func HasValidAddress(address models.Address) bool {
+func HasValidAddress(address geocoding.Address) bool {
 	return address.PostalCode != "" && address.StreetAddress != ""
 }
 
@@ -50,16 +50,16 @@ func (m *mockFFTTClient) GetTournaments(params url.Values) (*http.Response, erro
 // TestGeocoding tests the geocoding functionality
 func TestGeocoding(t *testing.T) {
 	// Set up test data
-	testAddress := models.Address{
+	testAddress := geocoding.Address{
 		StreetAddress:   "123 Main St",
 		PostalCode:      "75001",
 		AddressLocality: "Paris",
 	}
 
 	// Create a mock geocoding function
-	mockGeocode := func(address models.Address) (models.Location, error) {
+	mockGeocode := func(address geocoding.Address) (geocoding.Location, error) {
 		// For testing, just return a fixed location
-		return models.Location{
+		return geocoding.Location{
 			Lat:    48.8566,
 			Lon:    2.3522,
 			Failed: false,
@@ -84,7 +84,7 @@ func TestGeocoding(t *testing.T) {
 	}
 
 	// Test with an invalid address
-	invalidAddress := models.Address{
+	invalidAddress := geocoding.Address{
 		AddressLocality: "Paris",
 	}
 
@@ -103,7 +103,7 @@ func TestGetFutureTournaments(t *testing.T) {
 				Name:      "Test Tournament 1",
 				StartDate: time.Now().AddDate(0, 0, 7).Format("2006-01-02"),
 				EndDate:   time.Now().AddDate(0, 0, 8).Format("2006-01-02"),
-				Address: models.Address{
+				Address: geocoding.Address{
 					StreetAddress:   "123 Main St",
 					PostalCode:      "75001",
 					AddressLocality: "Paris",
@@ -114,7 +114,7 @@ func TestGetFutureTournaments(t *testing.T) {
 				Name:      "Test Tournament 2",
 				StartDate: time.Now().AddDate(0, 0, 14).Format("2006-01-02"),
 				EndDate:   time.Now().AddDate(0, 0, 15).Format("2006-01-02"),
-				Address: models.Address{
+				Address: geocoding.Address{
 					StreetAddress:   "456 Other St",
 					PostalCode:      "69001",
 					AddressLocality: "Lyon",
@@ -150,21 +150,21 @@ func TestGetFutureTournaments(t *testing.T) {
 // TestRefreshAddressProcessing tests the processing of addresses during refresh
 func TestRefreshAddressProcessing(t *testing.T) {
 	// Set up test data
-	testAddress := models.Address{
+	testAddress := geocoding.Address{
 		StreetAddress:   "123 Main St",
 		PostalCode:      "75001",
 		AddressLocality: "Paris",
 	}
 
 	// Test address processing (a simplified version of what the real function would do)
-	processAddress := func(address models.Address) (models.Location, error) {
+	processAddress := func(address geocoding.Address) (geocoding.Location, error) {
 		// Check if the address is valid
 		if !HasValidAddress(address) {
-			return models.Location{}, nil
+			return geocoding.Location{}, nil
 		}
 
 		// For testing, just return a fixed location
-		return models.Location{
+		return geocoding.Location{
 			Lat:    48.8566,
 			Lon:    2.3522,
 			Failed: false,
@@ -184,7 +184,7 @@ func TestRefreshAddressProcessing(t *testing.T) {
 	}
 
 	// Test with an invalid address
-	invalidAddress := models.Address{
+	invalidAddress := geocoding.Address{
 		AddressLocality: "Paris",
 	}
 

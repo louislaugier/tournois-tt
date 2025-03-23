@@ -9,7 +9,7 @@ import (
 
 	"tournois-tt/api/pkg/cache"
 	"tournois-tt/api/pkg/helloasso"
-	"tournois-tt/api/pkg/pdf/extraction"
+	"tournois-tt/api/pkg/pdf"
 	"tournois-tt/api/pkg/scraper/browser"
 	"tournois-tt/api/pkg/utils"
 
@@ -244,5 +244,5 @@ func ExtractSignupURLFromPDFFile(tournament cache.TournamentCache, tournamentDat
 	log.Printf("Extracting signup URL from PDF for tournament %s", tournament.Name)
 
 	// Call the implementation from the pdf_processing package
-	return extraction.ExtractSignupURLFromPDF(tournament, tournamentDate, pdfURL, browserContext)
+	return pdf.ExtractSignupURLFromPDF(tournament, tournamentDate, pdfURL, browserContext)
 }

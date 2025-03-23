@@ -1,4 +1,4 @@
-package crons
+package campaigns
 
 import (
 	"log"

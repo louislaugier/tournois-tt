@@ -6,22 +6,22 @@ import (
 	"strings"
 	"tournois-tt/api/pkg/cache"
 	"tournois-tt/api/pkg/fftt"
-	"tournois-tt/api/pkg/models"
+	"tournois-tt/api/pkg/geocoding"
 
 	"github.com/gin-gonic/gin"
 )
 
 // TournamentResponse represents the data to return to API clients
 type TournamentResponse struct {
-	ID        int            `json:"id"`
-	Name      string         `json:"name"`
-	Type      string         `json:"type"`
-	StartDate string         `json:"startDate"`
-	EndDate   string         `json:"endDate"`
-	Address   models.Address `json:"address"`
-	Club      fftt.Club      `json:"club"`
-	Rules     *fftt.Rules    `json:"rules,omitempty"`
-	SignupURL string         `json:"signupUrl,omitempty"`
+	ID        int               `json:"id"`
+	Name      string            `json:"name"`
+	Type      string            `json:"type"`
+	StartDate string            `json:"startDate"`
+	EndDate   string            `json:"endDate"`
+	Address   geocoding.Address `json:"address"`
+	Club      fftt.Club         `json:"club"`
+	Rules     *fftt.Rules       `json:"rules,omitempty"`
+	SignupURL string            `json:"signupUrl,omitempty"`
 }
 
 // TournamentsHandler handles tournament requests by retrieving data from the cache
@@ -41,7 +41,7 @@ func TournamentsHandler(c *gin.Context) {
 			Type:      cachedTournament.Type,
 			StartDate: cachedTournament.StartDate,
 			EndDate:   cachedTournament.EndDate,
-			Address: models.Address{
+			Address: geocoding.Address{
 				StreetAddress:             cachedTournament.Address.StreetAddress,
 				PostalCode:                cachedTournament.Address.PostalCode,
 				AddressLocality:           cachedTournament.Address.AddressLocality,

@@ -2,8 +2,8 @@ package main
 
 import (
 	"log"
-	"tournois-tt/api/crons"
-	"tournois-tt/api/crons/tournaments"
+	"tournois-tt/api/internal/crons"
+	"tournois-tt/api/internal/crons/tournaments"
 	"tournois-tt/api/internal/router"
 )
 

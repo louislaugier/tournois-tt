@@ -7,7 +7,7 @@ import (
 
 	"tournois-tt/api/pkg/cache"
 	"tournois-tt/api/pkg/helloasso"
-	"tournois-tt/api/pkg/navigation"
+	"tournois-tt/api/pkg/scraper/finder"
 	"tournois-tt/api/pkg/utils"
 
 	pw "github.com/playwright-community/playwright-go"
@@ -49,5 +49,5 @@ func ValidateSignupURL(urlStr string, tournament cache.TournamentCache, tourname
 	}
 
 	// Check if the page contains signup form elements
-	return navigation.ValidateSignupURL(urlStr, tournament, tournamentDate, browserContext)
+	return finder.ValidateSignupURL(urlStr, tournament, tournamentDate, browserContext)
 }

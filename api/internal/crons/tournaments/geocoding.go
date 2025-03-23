@@ -2,7 +2,7 @@ package tournaments
 
 import (
 	"log"
-	"tournois-tt/api/crons/tournaments/geocoding"
+	"tournois-tt/api/internal/crons/tournaments/geocoding"
 	"tournois-tt/api/pkg/utils"
 )
 
