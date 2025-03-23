@@ -3,6 +3,7 @@ package signup
 import (
 	"fmt"
 	"log"
+	"strings"
 	"sync"
 	"time"
 
@@ -225,6 +226,9 @@ func processWorker(workerID int, tournamentCh <-chan cache.TournamentCache, resu
 	errorCh chan<- error, wg *sync.WaitGroup, browserContext pw.BrowserContext, pwInstance *pw.Playwright) {
 
 	defer wg.Done()
+	
+	// Collect modified tournaments locally to save all at once
+	var modifiedTournaments []cache.TournamentCache
 
 	for tournament := range tournamentCh {
 		tournamentModified := false
@@ -245,13 +249,24 @@ func processWorker(workerID int, tournamentCh <-chan cache.TournamentCache, resu
 			workerID, tournament.Name, tournamentDate.Format("2006-01-02"),
 			tournament.Club.Name, tournament.Address.PostalCode)
 
+		// Try to find signup URL on HelloAsso
 		signupUrl, err := FindSignupURLOnHelloAsso(tournament, tournamentDate, browserContext, pwInstance)
 		if err != nil {
-			// Any browser error is critical
-			log.Printf("Worker %d: Critical error in browser operation: %v", workerID, err)
-			errorCh <- fmt.Errorf("critical browser error: %w", err)
-			// Exit the worker loop on critical browser errors
-			return
+			// Check if this is a navigation error (which can be skipped) or a browser setup error (which is critical)
+			if isNavigationError(err) {
+				// This is a navigation error (likely timeout) - log as warning and continue with next tournament
+				log.Printf("Worker %d: Warning: Navigation error for tournament %s: %v", 
+					workerID, tournament.Name, err)
+				errorCh <- fmt.Errorf("navigation error for tournament %s: %w", tournament.Name, err)
+				// Skip this tournament and continue with the next one
+				continue
+			} else {
+				// This is likely a critical browser error (context crashed, etc.) - terminate worker
+				log.Printf("Worker %d: Critical error in browser operation: %v", workerID, err)
+				errorCh <- fmt.Errorf("critical browser error: %w", err)
+				// Exit the worker loop on critical browser errors
+				return
+			}
 		} else if signupUrl != "" {
 			tournament.SignupUrl = signupUrl
 			tournamentModified = true
@@ -268,38 +283,83 @@ func processWorker(workerID int, tournamentCh <-chan cache.TournamentCache, resu
 			rulesURL := tournament.Rules.URL
 			signupUrl, err := ExtractSignupURLFromPDFFile(tournament, tournamentDate, rulesURL, browserContext)
 			if err != nil {
-				// Browser errors are critical
-				log.Printf("Worker %d: Critical error in PDF processing: %v", workerID, err)
-				errorCh <- fmt.Errorf("critical browser error in PDF processing: %w", err)
-				// Exit the worker on browser errors
-				return
+				// Check if this is a navigation error (which can be skipped) or a browser setup error (which is critical)
+				if isNavigationError(err) {
+					// This is a navigation error (likely timeout) - log as warning and continue
+					log.Printf("Worker %d: Warning: PDF navigation error for tournament %s: %v", 
+						workerID, tournament.Name, err)
+					errorCh <- fmt.Errorf("PDF navigation error for tournament %s: %w", tournament.Name, err)
+					// Still mark PDF as checked to prevent retrying on subsequent runs
+					tournament.IsRulesPdfChecked = true
+					tournamentModified = true
+				} else {
+					// This is likely a critical browser error - terminate worker
+					log.Printf("Worker %d: Critical error in PDF processing: %v", workerID, err)
+					errorCh <- fmt.Errorf("critical browser error in PDF processing: %w", err)
+					// Exit the worker on browser errors
+					return
+				}
 			} else if signupUrl != "" {
 				tournament.SignupUrl = signupUrl
 				tournamentModified = true
 				log.Printf("Worker %d: Found signup URL in PDF rules for tournament %s: %s",
 					workerID, tournament.Name, signupUrl)
 			}
-			tournament.IsRulesPdfChecked = true
-			tournamentModified = true
+			if !tournament.IsRulesPdfChecked {
+				tournament.IsRulesPdfChecked = true
+				tournamentModified = true
+			}
 		}
 
 		// TODO search on google if nothing found above
 
-		// Save the tournament to cache if it was modified
+		// Instead of saving the tournament to cache immediately, add it to our collection
 		if tournamentModified {
-			tournamentToSave := []cache.TournamentCache{tournament}
-			if err := cache.SaveTournamentsToCache(tournamentToSave); err != nil {
-				log.Printf("Worker %d: Warning: Failed to save tournament %d to cache: %v", 
-					workerID, tournament.ID, err)
-				errorCh <- fmt.Errorf("failed to save tournament %d to cache: %v", tournament.ID, err)
-			} else {
-				debugLog("Worker %d: Saved tournament %d to cache", workerID, tournament.ID)
-			}
+			modifiedTournaments = append(modifiedTournaments, tournament)
+			debugLog("Worker %d: Added tournament %d to modified collection", workerID, tournament.ID)
 		}
 
 		// Send result back to the collector for statistics
 		resultCh <- tournament
 	}
+
+	// Save all modified tournaments at once for this worker after processing is complete
+	if len(modifiedTournaments) > 0 {
+		if err := cache.SaveTournamentsToCache(modifiedTournaments); err != nil {
+			log.Printf("Worker %d: Warning: Failed to save %d modified tournaments to cache: %v", 
+				workerID, len(modifiedTournaments), err)
+			errorCh <- fmt.Errorf("failed to save %d modified tournaments to cache: %v", 
+				len(modifiedTournaments), err)
+		} else {
+			log.Printf("Worker %d: Saved %d modified tournaments to cache", workerID, len(modifiedTournaments))
+		}
+	}
+}
+
+// isNavigationError determines if an error is a navigation error (timeout, network issue)
+// that can be skipped rather than a critical browser error that requires termination
+func isNavigationError(err error) bool {
+	errStr := err.Error()
+	
+	// Check for typical navigation error patterns
+	navigationErrorPatterns := []string{
+		"timeout", 
+		"navigation", 
+		"navigate",
+		"Frame.Goto",
+		"Page.Goto",
+		"could not navigate",
+		"network error",
+		"net::ERR",
+	}
+	
+	for _, pattern := range navigationErrorPatterns {
+		if strings.Contains(strings.ToLower(errStr), strings.ToLower(pattern)) {
+			return true
+		}
+	}
+	
+	return false
 }
 
 // collectResults collects processed tournaments from the result channel (now just for statistics)

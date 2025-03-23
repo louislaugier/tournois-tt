@@ -25,6 +25,11 @@ func debugLog(format string, args ...interface{}) {
 
 // FindSignupURLOnHelloAsso searches for signup URL on HelloAsso platform
 func FindSignupURLOnHelloAsso(tournament cache.TournamentCache, tournamentDate time.Time, browserContext pw.BrowserContext, pwInstance *pw.Playwright) (string, error) {
+	// Maximum number of retry attempts for navigation errors
+	const maxNavigationRetries = 3
+	// Delay between retries (increases with each retry)
+	var retryDelayBase = 5 * time.Second
+
 	// Try different search strategies in order of likelihood
 	searchStrategies := []func(cache.TournamentCache) (string, error){
 		buildTournamentNameQuery,        // Strategy 1: Tournament name
@@ -44,11 +49,33 @@ func FindSignupURLOnHelloAsso(tournament cache.TournamentCache, tournamentDate t
 
 		debugLog("Trying search strategy %d with query: %s", i+1, searchQuery)
 
-		// Use the helloasso package's search function
-		activities, err := helloasso.SearchActivitiesWithBrowser(context.Background(), searchQuery, browserContext, pwInstance)
-		if err != nil {
-			// Any browser error is critical
-			return "", fmt.Errorf("critical browser error in HelloAsso search: %w", err)
+		// Use the helloasso package's search function with retries for navigation errors
+		var activities []helloasso.Activity
+		var searchErr error
+		var attemptsMade int
+
+		for attemptsMade = 0; attemptsMade < maxNavigationRetries; attemptsMade++ {
+			// Exponential backoff on retries
+			if attemptsMade > 0 {
+				retryDelay := retryDelayBase * time.Duration(attemptsMade)
+				log.Printf("Navigation error in HelloAsso search, retrying in %v (attempt %d/%d)",
+					retryDelay, attemptsMade+1, maxNavigationRetries)
+				time.Sleep(retryDelay)
+			}
+
+			activities, searchErr = helloasso.SearchActivitiesWithBrowser(context.Background(), searchQuery, browserContext, pwInstance)
+			
+			// If no error or not a navigation error, break the retry loop
+			if searchErr == nil || !isNavigationErrorString(searchErr.Error()) {
+				break
+			}
+		}
+
+		if searchErr != nil {
+			// If we've exhausted retries or it's not a navigation error, propagate the error
+			if attemptsMade >= maxNavigationRetries || !isNavigationErrorString(searchErr.Error()) {
+				return "", fmt.Errorf("critical browser error in HelloAsso search: %w", searchErr)
+			}
 		}
 
 		if len(activities) == 0 {
@@ -73,13 +100,37 @@ func FindSignupURLOnHelloAsso(tournament cache.TournamentCache, tournamentDate t
 
 		debugLog("Extracted %d unique URLs from HelloAsso search results with strategy %d", len(activityURLs), i+1)
 
-		// Validate each activity URL
+		// Validate each activity URL with retries for navigation errors
 		for _, url := range activityURLs {
 			debugLog("Validating HelloAsso activity URL: %s", url)
-			validURL, err := ValidateSignupURL(url, tournament, tournamentDate, browserContext)
-			if err != nil {
-				log.Printf("Warning: Failed to validate HelloAsso URL: %v", err)
-				continue
+			
+			var validURL string
+			var validationErr error
+			var validationAttempts int
+
+			for validationAttempts = 0; validationAttempts < maxNavigationRetries; validationAttempts++ {
+				// Exponential backoff on retries
+				if validationAttempts > 0 {
+					retryDelay := retryDelayBase * time.Duration(validationAttempts)
+					log.Printf("Navigation error in HelloAsso URL validation, retrying in %v (attempt %d/%d)",
+						retryDelay, validationAttempts+1, maxNavigationRetries)
+					time.Sleep(retryDelay)
+				}
+
+				validURL, validationErr = ValidateSignupURL(url, tournament, tournamentDate, browserContext)
+				
+				// If no error or not a navigation error, break the retry loop
+				if validationErr == nil || !isNavigationErrorString(validationErr.Error()) {
+					break
+				}
+			}
+
+			if validationErr != nil {
+				// Non-navigation errors or exhausted retries are propagated
+				if !isNavigationErrorString(validationErr.Error()) || validationAttempts >= maxNavigationRetries {
+					log.Printf("Warning: Failed to validate HelloAsso URL: %v", validationErr)
+					continue
+				}
 			}
 
 			if validURL != "" {
@@ -93,6 +144,30 @@ func FindSignupURLOnHelloAsso(tournament cache.TournamentCache, tournamentDate t
 
 	debugLog("No valid signup URL found on HelloAsso after trying all search strategies")
 	return "", nil
+}
+
+// isNavigationErrorString determines if an error string represents a navigation error
+// that can be retried rather than a critical browser error
+func isNavigationErrorString(errStr string) bool {
+	// Check for typical navigation error patterns
+	navigationErrorPatterns := []string{
+		"timeout", 
+		"navigation", 
+		"navigate",
+		"Frame.Goto",
+		"Page.Goto",
+		"could not navigate",
+		"network error",
+		"net::ERR",
+	}
+	
+	for _, pattern := range navigationErrorPatterns {
+		if strings.Contains(strings.ToLower(errStr), strings.ToLower(pattern)) {
+			return true
+		}
+	}
+	
+	return false
 }
 
 // buildTournamentNameQuery uses the tournament name for search

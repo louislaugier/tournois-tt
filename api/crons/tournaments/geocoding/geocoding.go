@@ -240,17 +240,18 @@ func RefreshTournamentsAndGeocoding(startDateAfter, startDateBefore *time.Time) 
 						geocodeResult.Latitude, geocodeResult.Longitude)
 				}
 
-				// Save this single tournament to cache immediately
-				tournamentToSave := []cache.TournamentCache{newTournamentCacheEntries[j]}
-				if err := cache.SaveTournamentsToCache(tournamentToSave); err != nil {
-					log.Printf("Warning: Failed to save geocoded tournament to cache: %v", err)
-				} else {
-					debugLog("Saved geocoded tournament %d to cache", newTournamentCacheEntries[j].ID)
-				}
-
+				// Don't save each tournament individually anymore
+				// Instead, we'll save all tournaments at once after processing is complete
 				break
 			}
 		}
+	}
+
+	// Save all tournaments at once after processing is complete
+	if err := cache.SaveTournamentsToCache(newTournamentCacheEntries); err != nil {
+		log.Printf("Warning: Failed to save all geocoded tournaments to cache: %v", err)
+	} else {
+		debugLog("Saved all %d geocoded tournaments to cache", len(newTournamentCacheEntries))
 	}
 
 	// Log completion statistics

@@ -29,14 +29,63 @@ var (
 		strings.TrimPrefix(strings.ReplaceAll(helloasso.BaseURL, ".", "\\."), "https://") + 
 		`/[^\s"']+`)
 
+	// tournoiSubdomainRegex matches URLs with "tournoi" subdomain
+	tournoiSubdomainRegex = regexp.MustCompile(`\b(?:https?://)?tournoi\.([a-zA-Z0-9][-a-zA-Z0-9]*\.)+[a-zA-Z]{2,}\b`)
+
+	// paymentURLRegex matches text about payment on a tournament website
+	paymentURLRegex = regexp.MustCompile(`(?i)paiement[^\n]*(?:sur|en ligne)[^\n]*(?:https?://)?(?:tournoi\.)?([a-zA-Z0-9][-a-zA-Z0-9]*\.)+[a-zA-Z]{2,}`)
+
+	// signupURLRegex matches text about signup on a tournament website - prioritized over payment
+	signupURLRegex = regexp.MustCompile(`(?i)(?:inscription|s'inscrire|créer un compte|engagement|engagements|etape suivante|étape suivante)[^\n]*(?:sur|en ligne)[^\n]*(?:https?://)?(?:tournoi\.)?([a-zA-Z0-9][-a-zA-Z0-9]*\.)+[a-zA-Z]{2,}`)
+
 	// registrationKeywords is a list of keywords related to registration
 	registrationKeywords = []string{
 		"inscription", "inscriptions", "inscrire", "s'inscrire",
 		"registre", "enregistrer", "s'enregistrer",
 		"tarif", "tarifs", "paiement", "payer",
 		"formulaire", "form", "registration", "register", "signup",
+		"engagement", "engagements",
+		"etape suivante", "étape suivante", "suivant", "continuer",
 	}
+	
+	// RegistrationKeywords is the exported version of registrationKeywords for tests
+	RegistrationKeywords = registrationKeywords
 )
+
+// GetURLRegex returns the URL regex pattern for use in tests
+func GetURLRegex() *regexp.Regexp {
+	return urlRegex
+}
+
+// GetHelloAssoURLRegex returns the HelloAsso URL regex pattern for use in tests
+func GetHelloAssoURLRegex() *regexp.Regexp {
+	return helloAssoURLRegex
+}
+
+// GetTournoiSubdomainRegex returns the regex for finding tournoi subdomain URLs
+func GetTournoiSubdomainRegex() *regexp.Regexp {
+	return tournoiSubdomainRegex
+}
+
+// GetPaymentURLRegex returns the regex for finding payment URL references
+func GetPaymentURLRegex() *regexp.Regexp {
+	return paymentURLRegex
+}
+
+// GetSignupURLRegex returns the regex for finding signup URL references
+func GetSignupURLRegex() *regexp.Regexp {
+	return signupURLRegex
+}
+
+// FindDomainOnlyReferences is the exported version of findDomainOnlyReferences for tests
+func FindDomainOnlyReferences(text string) []string {
+	return findDomainOnlyReferences(text)
+}
+
+// GenerateCommonTournamentSubdomains is the exported version of generateCommonTournamentSubdomains for tests
+func GenerateCommonTournamentSubdomains(domain string) []string {
+	return generateCommonTournamentSubdomains(domain)
+}
 
 // browserSetup initializes a shared browser instance for the signup URL refresh process
 func browserSetup() (pw.Browser, *pw.Playwright, pw.BrowserContext, error) {
