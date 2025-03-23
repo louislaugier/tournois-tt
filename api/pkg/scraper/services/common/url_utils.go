@@ -4,6 +4,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"tournois-tt/api/pkg/scraper/constants"
 )
 
 // -----------------------------------------------------------------------------
@@ -18,20 +19,13 @@ var (
 	TournoiSubdomainRegex = regexp.MustCompile(`\b(?:https?://)?tournoi\.([a-zA-Z0-9][-a-zA-Z0-9]*\.)+[a-zA-Z]{2,}\b`)
 
 	// PaymentURLRegex matches text about payment on a tournament website
-	PaymentURLRegex = regexp.MustCompile(`(?i)paiement[^\n]*(?:sur|en ligne)[^\n]*(?:https?://)?(?:tournoi\.)?([a-zA-Z0-9][-a-zA-Z0-9]*\.)+[a-zA-Z]{2,}`)
+	PaymentURLRegex = regexp.MustCompile(`(?i)` + constants.Payment + `[^\n]*(?:` + constants.On + `|` + constants.Online + `)[^\n]*(?:https?://)?(?:tournoi\.)?([a-zA-Z0-9][-a-zA-Z0-9]*\.)+[a-zA-Z]{2,}`)
 
 	// SignupURLRegex matches text about signup on a tournament website - prioritized over payment
-	SignupURLRegex = regexp.MustCompile(`(?i)(?:inscription|s'inscrire|créer un compte|engagement|engagements|etape suivante|étape suivante)[^\n]*(?:sur|en ligne)[^\n]*(?:https?://)?(?:tournoi\.)?([a-zA-Z0-9][-a-zA-Z0-9]*\.)+[a-zA-Z]{2,}`)
+	SignupURLRegex = regexp.MustCompile(`(?i)(?:` + constants.Register + `|` + constants.SignUp + `|` + constants.CreateAccount + `|` + constants.Engagement + `|` + constants.Engagements + `|` + constants.NextStepNoAccent + `|` + constants.NextStep + `)[^\n]*(?:` + constants.On + `|` + constants.Online + `)[^\n]*(?:https?://)?(?:tournoi\.)?([a-zA-Z0-9][-a-zA-Z0-9]*\.)+[a-zA-Z]{2,}`)
 
 	// RegistrationKeywords is a list of keywords related to registration
-	RegistrationKeywords = []string{
-		"inscription", "inscriptions", "inscrire", "s'inscrire",
-		"registre", "enregistrer", "s'enregistrer",
-		"tarif", "tarifs", "paiement", "payer",
-		"formulaire", "form", "registration", "register", "signup",
-		"engagement", "engagements",
-		"etape suivante", "étape suivante", "suivant", "continuer",
-	}
+	RegistrationKeywords = constants.RegistrationKeywords
 )
 
 // -----------------------------------------------------------------------------
@@ -98,16 +92,16 @@ func FindDomainOnlyReferences(text string) []string {
 	// - "s'inscrire en ligne sur www.example.com"
 	domainRegexes := []*regexp.Regexp{
 		// Pattern 1: inscription(s) sur domain.tld
-		regexp.MustCompile(`(?i)inscription(?:s)?[^\n.]{1,30}(?:sur|en ligne)[^\n.]{1,30}((?:https?://)?(?:www\.)?(?:[a-zA-Z0-9][-a-zA-Z0-9]*\.)+[a-zA-Z]{2,})`),
+		regexp.MustCompile(`(?i)` + constants.Register + `(?:s)?[^\n.]{1,30}(?:` + constants.On + `|` + constants.Online + `)[^\n.]{1,30}((?:https?://)?(?:www\.)?(?:[a-zA-Z0-9][-a-zA-Z0-9]*\.)+[a-zA-Z]{2,})`),
 
 		// Pattern 2: A PRIVILEGIER mentions
 		regexp.MustCompile(`(?i)(?:A PRIVILEGIER|À PRIVILÉGIER)[^\n.]{1,50}((?:https?://)?(?:www\.)?(?:[a-zA-Z0-9][-a-zA-Z0-9]*\.)+[a-zA-Z]{2,})`),
 
 		// Pattern 3: engagement(s) sur domain.tld
-		regexp.MustCompile(`(?i)engagement(?:s)?[^\n.]{1,30}(?:sur|en ligne)[^\n.]{1,30}((?:https?://)?(?:www\.)?(?:[a-zA-Z0-9][-a-zA-Z0-9]*\.)+[a-zA-Z]{2,})`),
+		regexp.MustCompile(`(?i)` + constants.Engagement + `(?:s)?[^\n.]{1,30}(?:` + constants.On + `|` + constants.Online + `)[^\n.]{1,30}((?:https?://)?(?:www\.)?(?:[a-zA-Z0-9][-a-zA-Z0-9]*\.)+[a-zA-Z]{2,})`),
 
 		// Pattern 4: simple domain.tld (with inscription nearby)
-		regexp.MustCompile(`(?i)inscription(?:s)?[^\n]{1,100}((?:https?://)?(?:www\.)?(?:[a-zA-Z0-9][-a-zA-Z0-9]*\.)+[a-zA-Z]{2,})`),
+		regexp.MustCompile(`(?i)` + constants.Register + `(?:s)?[^\n]{1,100}((?:https?://)?(?:www\.)?(?:[a-zA-Z0-9][-a-zA-Z0-9]*\.)+[a-zA-Z]{2,})`),
 	}
 
 	var domains []string
@@ -158,10 +152,10 @@ func GenerateCommonTournamentSubdomains(domain string) []string {
 	variations := []string{
 		"https://" + domain,
 		"https://tournoi." + domain,
-		"https://inscription." + domain,
-		"https://inscriptions." + domain,
-		"https://register." + domain,
-		"https://signup." + domain,
+		"https://" + constants.Register + "." + domain,
+		"https://" + constants.Registers + "." + domain,
+		"https://" + constants.ENRegister + "." + domain,
+		"https://" + constants.ENSignUp + "." + domain,
 		"https://www." + domain,
 	}
 

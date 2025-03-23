@@ -5,238 +5,153 @@ import (
 	"log"
 	"strings"
 	"time"
-
 	"tournois-tt/api/pkg/cache"
+	"tournois-tt/api/pkg/scraper/constants"
 	"tournois-tt/api/pkg/utils"
 
 	pw "github.com/playwright-community/playwright-go"
 )
 
-// Constants for CTA priority levels
+// Priority levels for signup links
 const (
-	PriorityHigh   = "high"
-	PriorityMedium = "medium"
-	PriorityLow    = "low"
+	PriorityHigh   = "HIGH"
+	PriorityMedium = "MEDIUM"
+	PriorityLow    = "LOW"
 )
 
-// Constants for CTA reasons
-const (
-	CTAReasonSignupKeywordWithTournamentOrYear = "signup_keyword_with_tournament_or_year"
-	CTAReasonSignupKeyword                     = "signup_keyword"
-	CTAReasonTournamentAndYear                 = "tournament_and_year"
-	CTAReasonAccountLogin                      = "account_login"
-	CTAReasonParticipationButton               = "participation_button"
-	CTAReasonNextStep                          = "next_step"
+// Common skip keywords and domains
+var (
+	// Common words that typically indicate we should skip a link
+	skipWords = []string{
+		"facebook", "twitter", "instagram", "youtube", "linkedin",
+		"privacy", "cookies", "terms", "conditions", "mailto",
+		"tel:", "sms:", "whatsapp:", "viber:", "tg:",
+		"javascript:", "void", "#",
+	}
+
+	// Words related to registration/signup
+	registrationKeywords = []string{
+		constants.Register, constants.Registers, constants.ToRegister, constants.SignUp,
+		"registre", "s'enregistrer",
+		constants.SignUpForm, constants.Participate, constants.Registration,
+		constants.Engagement, constants.Engagements,
+		constants.NextStep, constants.NextStepNoAccent, constants.Next, constants.Continue,
+	}
+
+	// Domains that we know are not relevant for tournament signup
+	skipDomains = []string{
+		"facebook.com", "twitter.com", "instagram.com", "youtube.com",
+		"linkedin.com", "google.com", "apple.com", "microsoft.com",
+		"amazon.com", "pinterest.com", "snapchat.com", "tiktok.com",
+		"whatsapp.com", "telegram.org", "github.com", "gitlab.com",
+		"adobe.com", "wordpress.com", "wix.com", "squarespace.com",
+		"weebly.com", "godaddy.com", "namecheap.com", "shopify.com",
+	}
 )
 
-// RegistrationKeywords is a list of keywords related to registration
-var registrationKeywords = []string{
-	"inscription", "inscriptions", "inscrire", "s'inscrire",
-	"registre", "enregistrer", "s'enregistrer",
-	"tarif", "tarifs", "paiement", "payer",
-	"formulaire", "form", "registration", "register", "signup",
-	"engagement", "engagements",
-	"etape suivante", "étape suivante", "suivant", "continuer",
-}
-
-// Common domains that should be skipped during validation
-var commonDomainsToSkip = []string{
-	"google.com",
-	"facebook.com",
-	"instagram.com",
-	"twitter.com",
-	"youtube.com",
-	"linkedin.com",
-	"github.com",
-	"zoom.us",
-	"wikipedia.org",
-	"apple.com",
-	"microsoft.com",
-	"amazonaws.com",
-	"cloudfront.net",
-	"cdn.com",
-}
-
-// URL patterns that are unlikely to be signup forms
-var urlPatternsToSkip = []string{
-	"/image/",
-	"/images/",
-	"/img/",
-	"/css/",
-	"/js/",
-	"/assets/",
-	"/static/",
-	"/media/",
-	"/video/",
-	"/downloads/",
-	"/docs/",
-	"/pdf/",
-	".jpg",
-	".jpeg",
-	".png",
-	".gif",
-	".css",
-	".js",
-	".ico",
-	".pdf",
-	".zip",
-	".doc",
-	".docx",
-	".xls",
-	".xlsx",
-	".mp4",
-	".mp3",
-	"privacy",
-	"terms",
-	"about",
-	"contact",
-	"admin",
-	"login",
-}
-
-// ExtractSignificantWords extracts significant words from a text, filtering out common words
+// ExtractSignificantWords extracts significant words from tournament name
 func ExtractSignificantWords(text string) []string {
-	// Normalize text to lowercase for processing
-	text = strings.ToLower(text)
-	// Split text into words
-	words := strings.Fields(text)
-	// List of common words to filter out (stop words)
-	stopWords := map[string]bool{
+	// Skip common words, keep only significant ones
+	commonWords := map[string]bool{
 		"le": true, "la": true, "les": true, "du": true, "de": true, "des": true,
 		"un": true, "une": true, "et": true, "ou": true, "a": true, "à": true,
-		"en": true, "dans": true, "par": true, "pour": true, "sur": true,
-		"au": true, "aux": true, "avec": true, "ce": true, "cette": true,
-		"ces": true, "mon": true, "ton": true, "son": true, "notre": true,
-		"votre": true, "leur": true, "il": true, "elle": true, "ils": true,
-		"elles": true, "nous": true, "vous": true, "je": true, "tu": true,
-		"the": true, "of": true, "and": true, "to": true, "in": true, "for": true,
-		"on": true, "by": true, "with": true, "this": true, "that": true,
-		"it": true, "they": true, "we": true, "you": true, "i": true, "he": true,
-		"she": true, "his": true, "her": true, "their": true, "our": true,
-		"at": true, "from": true, "as": true, "but": true, "not": true, "an": true,
+		"au": true, "aux": true, "pour": true, "par": true, "en": true, "dans": true,
+		"sur": true, "sous": true, "avec": true, "sans": true, "club": true,
+		"tournoi": true, "open": true, "tennis": true, "table": true, "tt": true,
 	}
-	// Result array of significant words
-	var significantWords []string
 
-	minWordLength := 3
-	for _, word := range words {
-		if len(word) >= minWordLength && !stopWords[word] {
-			significantWords = append(significantWords, word)
+	// Split text into words, keeping only significant ones (3+ chars, not in common words)
+	parts := strings.Fields(text)
+	filteredWords := make([]string, 0, len(parts))
+
+	for _, word := range parts {
+		word = strings.ToLower(strings.Trim(word, ".,;:!?\"'()[]{}<>"))
+		if len(word) >= 3 && !commonWords[word] {
+			filteredWords = append(filteredWords, word)
 		}
 	}
 
-	return significantWords
+	return filteredWords
 }
 
-// ValidateSignupURL checks if a URL is a valid signup URL for a tournament
+// ValidateSignupURL validates and potentially follows a URL to check if it's a tournament signup page
 func ValidateSignupURL(url string, tournament cache.TournamentCache, tournamentDate time.Time, browserContext pw.BrowserContext) (string, error) {
-	// Create a new page
+	// Skip common social media platforms, external services, etc.
+	if IsURLToSkip(url) {
+		return "", nil
+	}
+
+	// Attempt to navigate to the URL
 	page, err := browserContext.NewPage()
 	if err != nil {
-		return "", fmt.Errorf("failed to create page for URL validation: %w", err)
+		return "", fmt.Errorf("failed to create new page: %w", err)
 	}
 	defer page.Close()
 
-	// Set viewport for better rendering
-	err = page.SetViewportSize(1280, 800)
-	if err != nil {
-		return "", fmt.Errorf("failed to set viewport size: %w", err)
-	}
+	// Set navigation timeout to 30 seconds
+	// Using Goto with timeout options instead of setting default timeout
 
-	// Try to navigate to the URL with reasonable timeouts
+	// Try to navigate to the URL
 	resp, err := page.Goto(url, pw.PageGotoOptions{
-		Timeout:   pw.Float(30000),
 		WaitUntil: pw.WaitUntilStateNetworkidle,
+		Timeout:   pw.Float(30000), // 30 seconds in milliseconds
 	})
-
 	if err != nil {
-		return "", fmt.Errorf("failed to navigate to URL for validation: %w", err)
+		return "", fmt.Errorf("failed to navigate to %s: %w", url, err)
 	}
 
-	// Check if page is accessible
-	if resp == nil || resp.Status() >= 400 {
-		status := 0
-		if resp != nil {
-			status = resp.Status()
-		}
-		return "", fmt.Errorf("URL returned error status: %d", status)
+	// Check HTTP status code
+	statusCode := resp.Status()
+	if statusCode >= 400 {
+		return "", fmt.Errorf("received HTTP error %d when accessing %s", statusCode, url)
 	}
 
-	// Check if this URL is directly a signup form
+	// Check if the page looks like a signup form
 	isSignupForm, err := checkIfPageIsSignupForm(page, tournament, tournamentDate)
 	if err != nil {
-		return "", fmt.Errorf("failed to check if page is signup form: %w", err)
+		log.Printf("Warning: Failed to check if page is signup form: %v", err)
 	}
 
+	// If it appears to be a signup form, return the final URL after navigation
 	if isSignupForm {
-		// Get the final URL after any redirects
-		currentURL := page.URL()
-		return currentURL, nil
+		return page.URL(), nil
 	}
 
-	// If not a signup form, look for signup link on the current page
-	// Use the tournament name and date to filter for relevant links
-	tournamentNameWords := ExtractSignificantWords(tournament.Name)
-	currentYear := tournamentDate.Year()
-
-	// Execute JavaScript to find signup-related links
+	// Look for potential signup links on the page using JavaScript
 	jsScript := `
 	() => {
-		// Constants for CTA (Call To Action) reasons
-		const CTA_REASON = {
-			SIGNUP_KEYWORD_WITH_TOURNAMENT_OR_YEAR: '` + CTAReasonSignupKeywordWithTournamentOrYear + `',
-			SIGNUP_KEYWORD: '` + CTAReasonSignupKeyword + `',
-			TOURNAMENT_AND_YEAR: '` + CTAReasonTournamentAndYear + `',
-			ACCOUNT_LOGIN: '` + CTAReasonAccountLogin + `',
-			PARTICIPATION_BUTTON: '` + CTAReasonParticipationButton + `',
-			NEXT_STEP: '` + CTAReasonNextStep + `'
-		};
-
-		// Constants for priority levels
 		const PRIORITY = {
-			HIGH: '` + PriorityHigh + `',
-			MEDIUM: '` + PriorityMedium + `',
-			LOW: '` + PriorityLow + `'
+			HIGH: 'HIGH',
+			MEDIUM: 'MEDIUM',
+			LOW: 'LOW'
 		};
-
-		const links = Array.from(document.querySelectorAll('a'));
-		const signupKeywords = ['inscription', 'register', 'signup', "s'inscrire", 'formulaire', 'participer', 'enregistrer'];
-		const tournamentWords = ` + fmt.Sprintf("%v", tournamentNameWords) + `;
-		const year = ` + fmt.Sprintf("%d", currentYear) + `;
 		
-		// First look for explicit signup links
-		for (const link of links) {
-			const text = (link.textContent || '').toLowerCase();
-			const href = link.href;
-			const title = (link.getAttribute('title') || '').toLowerCase();
-			
-			// Skip empty or javascript links
-			if (!href || href.startsWith('javascript:') || href === '#') continue;
-			
-			// Check if link text/title contains signup keywords
-			const containsSignupKeyword = signupKeywords.some(keyword => 
-				text.includes(keyword) || title.includes(keyword) || href.toLowerCase().includes(keyword)
-			);
-			
-			if (containsSignupKeyword) {
-				// Higher chance this is a signup link if it also mentions the tournament name or year
-				const mentionsTournament = tournamentWords.some(word => text.includes(word) || title.includes(word));
-				const mentionsYear = text.includes(year.toString()) || title.includes(year.toString());
-				
-				if (mentionsTournament || mentionsYear) {
-					return { url: href, priority: PRIORITY.HIGH, reason: CTA_REASON.SIGNUP_KEYWORD_WITH_TOURNAMENT_OR_YEAR };
-				} else {
-					return { url: href, priority: PRIORITY.MEDIUM, reason: CTA_REASON.SIGNUP_KEYWORD };
-				}
-			}
-		}
+		const CTA_REASON = {
+			DIRECT_SIGNUP: 'direct_signup',
+			TOURNAMENT_AND_YEAR: 'tournament_and_year',
+			ACCOUNT_LOGIN: 'account_login',
+			PARTICIPATION_BUTTON: 'participation_button',
+			NEXT_STEP: 'next_step'
+		};
 		
-		// No explicit signup link found, look for any link that might be for signup
+		const tournamentWords = ['` + strings.Join(ExtractSignificantWords(tournament.Name), "', '") + `'];
+		const year = '` + fmt.Sprintf("%d", tournamentDate.Year()) + `';
+		
+		const signupKeywords = ['` + constants.Register + `', '` + constants.ENRegister + `', '` + constants.ENSignUp + `', "` + constants.SignUp + `", '` + constants.SignUpForm + `', '` + constants.Participate + `', '` + constants.Registration + `'];
+		
+		// Look for signup links by their text content
+		const links = Array.from(document.querySelectorAll('a, button'));
+		
 		for (const link of links) {
-			const text = (link.textContent || '').toLowerCase();
-			const href = link.href;
-			const title = (link.getAttribute('title') || '').toLowerCase();
+			// Skip links with no text
+			const text = link.textContent.toLowerCase().trim();
+			const title = (link.getAttribute('title') || '').toLowerCase().trim();
+			const href = link.tagName === 'A' ? link.getAttribute('href') : null;
 			
+			// Skip empty links
+			if (text === '' && title === '') continue;
+			
+			// Skip links that are just JavaScript actions or anchors
 			if (!href || href.startsWith('javascript:') || href === '#') continue;
 			
 			// Check if the link mentions both tournament and year
@@ -248,22 +163,22 @@ func ValidateSignupURL(url string, tournament cache.TournamentCache, tournamentD
 			}
 			
 			// Check for "créer un compte" or "se connecter" links as they often lead to signup portals
-			if (text.includes('créer un compte') || text.includes('se connecter') || 
-				text.includes('create account') || text.includes('login') || 
-				text.includes('sign in') || text.includes('connexion')) {
+			if (text.includes('` + constants.CreateAccount + `') || text.includes('` + constants.Login + `') || 
+				text.includes('` + constants.ENCreateAccount + `') || text.includes('` + constants.ENLogin + `') || 
+				text.includes('` + constants.ENSignIn + `') || text.includes('` + constants.Connection + `')) {
 				return { url: href, priority: PRIORITY.MEDIUM, reason: CTA_REASON.ACCOUNT_LOGIN };
 			}
 
 			// Check for participation buttons (new CTA type)
-			if ((text.includes('participer') || text.includes('participate') || title.includes('participer')) &&
+			if ((text.includes('` + constants.Participate + `') || text.includes('` + constants.ENParticipate + `') || title.includes('` + constants.Participate + `')) &&
 				 (mentionsTournament || mentionsYear)) {
 				return { url: href, priority: PRIORITY.MEDIUM, reason: CTA_REASON.PARTICIPATION_BUTTON };
 			}
 			
 			// Check for "étape suivante" (next step) links that indicate progression in a signup flow
-			if (text.includes('etape suivante') || text.includes('étape suivante') || 
-				text.includes('next step') || text.includes('suivant') || 
-				text.includes('continuer') || text.includes('continue')) {
+			if (text.includes('` + constants.NextStepNoAccent + `') || text.includes('` + constants.NextStep + `') || 
+				text.includes('` + constants.ENNextStep + `') || text.includes('` + constants.Next + `') || 
+				text.includes('` + constants.Continue + `') || text.includes('` + constants.ENContinue + `')) {
 				return { url: href, priority: PRIORITY.MEDIUM, reason: CTA_REASON.NEXT_STEP };
 			}
 		}
@@ -365,17 +280,17 @@ func checkIfPageIsSignupForm(page pw.Page, tournament cache.TournamentCache, tou
 	// Additional checks for common signup patterns
 	if !isSignupForm && hasFormElements {
 		// Check for "créer un compte" or "se connecter" forms for tournament platforms
-		if (strings.Contains(contentLower, "créer un compte") || strings.Contains(contentLower, "create account")) &&
+		if (strings.Contains(contentLower, constants.CreateAccount) || strings.Contains(contentLower, constants.ENCreateAccount)) &&
 			(tournamentNameMatch || dateMatch) {
 			isSignupForm = true
 		}
 
 		// Check for "inscription" in the URL
 		currentURL := page.URL()
-		if strings.Contains(strings.ToLower(currentURL), "inscription") ||
-			strings.Contains(strings.ToLower(currentURL), "signup") ||
-			strings.Contains(strings.ToLower(currentURL), "register") ||
-			strings.Contains(strings.ToLower(currentURL), "engagement") {
+		if strings.Contains(strings.ToLower(currentURL), constants.Register) ||
+			strings.Contains(strings.ToLower(currentURL), constants.ENSignUp) ||
+			strings.Contains(strings.ToLower(currentURL), constants.ENRegister) ||
+			strings.Contains(strings.ToLower(currentURL), constants.Engagement) {
 			// If the URL itself suggests it's a signup page
 			if tournamentNameMatch || dateMatch {
 				isSignupForm = true
@@ -384,10 +299,10 @@ func checkIfPageIsSignupForm(page pw.Page, tournament cache.TournamentCache, tou
 
 		// Check for "étape suivante" (next step) in form context
 		if !isSignupForm && hasFormElements {
-			if (strings.Contains(contentLower, "etape suivante") ||
-				strings.Contains(contentLower, "étape suivante") ||
-				strings.Contains(contentLower, "suivant") ||
-				strings.Contains(contentLower, "continuer")) &&
+			if (strings.Contains(contentLower, constants.NextStepNoAccent) ||
+				strings.Contains(contentLower, constants.NextStep) ||
+				strings.Contains(contentLower, constants.Next) ||
+				strings.Contains(contentLower, constants.Continue)) &&
 				(tournamentNameMatch || dateMatch) {
 				isSignupForm = true
 			}
@@ -655,7 +570,7 @@ func CheckWebsiteHeaderForSignupLink(websiteURL string, browserContext pw.Browse
 // IsDomainToSkip checks if a domain should be skipped during validation
 func IsDomainToSkip(domain string) bool {
 	domain = strings.ToLower(domain)
-	for _, skipDomain := range commonDomainsToSkip {
+	for _, skipDomain := range skipDomains {
 		if strings.Contains(domain, skipDomain) {
 			return true
 		}
@@ -666,7 +581,7 @@ func IsDomainToSkip(domain string) bool {
 // IsURLToSkip checks if a URL should be skipped based on common patterns
 func IsURLToSkip(urlStr string) bool {
 	urlLower := strings.ToLower(urlStr)
-	for _, pattern := range urlPatternsToSkip {
+	for _, pattern := range skipWords {
 		if strings.Contains(urlLower, pattern) {
 			return true
 		}
