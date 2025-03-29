@@ -1,4 +1,4 @@
-package test
+package scripts
 
 import (
 	"crypto/tls"

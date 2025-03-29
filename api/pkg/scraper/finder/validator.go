@@ -3,11 +3,13 @@ package finder
 
 import (
 	"fmt"
+	"log"
 	"strings"
 	"time"
 
 	"tournois-tt/api/pkg/cache"
 	"tournois-tt/api/pkg/constants"
+	"tournois-tt/api/pkg/scraper/browser"
 	"tournois-tt/api/pkg/utils"
 
 	pw "github.com/playwright-community/playwright-go"
@@ -29,183 +31,247 @@ var registrationKeywords = []string{
 // for a tournament matching the provided details
 func ValidateSignupURL(urlStr string, tournament cache.TournamentCache, tournamentDate time.Time, browserContext pw.BrowserContext) (string, error) {
 	utils.DebugLog("Validating signup URL: %s", urlStr)
+	log.Printf("Starting validation of URL: %s (Docker-optimized)", urlStr)
 
 	// Skip invalid or irrelevant URLs
 	if utils.IsDomainToSkip(utils.ExtractDomain(urlStr)) {
 		return "", fmt.Errorf("domain is in skip list: %s", urlStr)
 	}
 
-	// Create a new page to validate the URL
-	page, err := browserContext.NewPage()
+	// Create a special header for different browser emulation on retry
+	alternateBrowserHeaders := map[string]string{
+		"User-Agent":      "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.5 Safari/605.1.15",
+		"Accept":          "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+		"Accept-Language": "fr-FR,fr;q=0.9",
+		"Accept-Encoding": "gzip, deflate, br",
+		"Connection":      "keep-alive",
+		"DNT":             "1",
+	}
+
+	// DOCKER-OPTIMIZED: Perform a robust check on the browser context
+	if browserContext == nil {
+		log.Printf("ERROR: Browser context is nil, cannot validate URL")
+		return "", fmt.Errorf("browser context is nil")
+	}
+
+	// Check if parent browser is accessible and get version info
+	if browserContext.Browser() == nil {
+		log.Printf("ERROR: Browser instance not accessible from context")
+		return "", fmt.Errorf("browser instance not accessible from context")
+	}
+
+	log.Printf("DOCKER DIAGNOSTICS: Using browser version: %s", browserContext.Browser().Version())
+
+	// DOCKER-OPTIMIZED: Create a new context specifically for this validation
+	// to avoid potential issues with shared contexts
+	log.Printf("Creating fresh context for this validation")
+	config := browser.DefaultConfig()
+	freshContext, err := browser.NewContext(browserContext.Browser(), config)
 	if err != nil {
-		return "", fmt.Errorf("failed to create page: %w", err)
-	}
-	defer page.Close()
-
-	// Navigate to the URL
-	if _, err := page.Goto(urlStr, pw.PageGotoOptions{
-		WaitUntil: pw.WaitUntilStateNetworkidle,
-		Timeout:   pw.Float(DefaultPageTimeout),
-	}); err != nil {
-		return "", fmt.Errorf("failed to navigate to URL: %w", err)
+		log.Printf("ERROR: Failed to create fresh context: %v", err)
+		return "", fmt.Errorf("failed to create fresh context: %w", err)
 	}
 
-	// Check if the URL appears to be a signup form
-	isSignupForm, err := IsSignupForm(page, tournament, tournamentDate)
+	// Ensure we clean up the fresh context regardless of outcome
+	defer func() {
+		log.Printf("Closing fresh context used for validation")
+		if err := freshContext.Close(); err != nil {
+			log.Printf("WARNING: Error closing fresh context: %v", err)
+		}
+	}()
+
+	// Set aggressive timeouts on the fresh context
+	freshContext.SetDefaultNavigationTimeout(60000) // 60 seconds
+	freshContext.SetDefaultTimeout(60000)           // 60 seconds
+
+	// DOCKER-OPTIMIZED: Create a page with robust error handling
+	var page pw.Page
+	log.Printf("Creating page from fresh context for validation")
+
+	// Add a page creation timeout
+	pageCreationCh := make(chan struct {
+		page pw.Page
+		err  error
+	}, 1)
+
+	go func() {
+		newPage, err := freshContext.NewPage()
+		pageCreationCh <- struct {
+			page pw.Page
+			err  error
+		}{newPage, err}
+	}()
+
+	// Wait for page creation with timeout
+	select {
+	case result := <-pageCreationCh:
+		if result.err != nil {
+			log.Printf("ERROR: Failed to create page: %v", result.err)
+			return "", fmt.Errorf("failed to create page: %w", result.err)
+		}
+		page = result.page
+		log.Printf("Successfully created page for validation")
+	case <-time.After(15 * time.Second):
+		log.Printf("ERROR: Page creation timed out after 15 seconds")
+		return "", fmt.Errorf("page creation timed out after 15 seconds")
+	}
+
+	// Set up deferred cleanup
+	defer func() {
+		log.Printf("Closing page for validation")
+		if err := page.Close(); err != nil {
+			log.Printf("WARNING: Error closing page: %v", err)
+		}
+	}()
+
+	// Attempt the navigation with simplified error handling
+	log.Printf("Navigating to URL with simplified error handling: %s", urlStr)
+	var resp pw.Response
+
+	// Try to prepend https:// if not specified
+	fullURL := urlStr
+	if !strings.HasPrefix(urlStr, "http") {
+		fullURL = "https://" + urlStr
+		log.Printf("Adding https:// prefix: %s", fullURL)
+	}
+
+	// Attempt navigation with timeout channel
+	navigateCh := make(chan struct {
+		resp pw.Response
+		err  error
+	}, 1)
+
+	go func() {
+		resp, err := page.Goto(fullURL, pw.PageGotoOptions{
+			WaitUntil: pw.WaitUntilStateDomcontentloaded, // Less strict wait
+			Timeout:   pw.Float(45000),                   // 45 seconds - reduced from 60
+		})
+		navigateCh <- struct {
+			resp pw.Response
+			err  error
+		}{resp, err}
+	}()
+
+	// Wait for navigation with timeout
+	select {
+	case result := <-navigateCh:
+		resp = result.resp
+		err = result.err
+	case <-time.After(50 * time.Second): // Slightly longer than the goto timeout
+		log.Printf("ERROR: Navigation timed out after 50 seconds")
+		return "", fmt.Errorf("navigation timed out after 50 seconds")
+	}
+
+	// If first navigation attempt fails, try with alternate headers
 	if err != nil {
-		return "", fmt.Errorf("error checking if URL is a signup form: %w", err)
+		log.Printf("First navigation attempt failed: %v. Trying with alternate browser profile.", err)
+
+		// Try with a different browser profile
+		log.Printf("Setting alternate browser headers for retry")
+		if err := page.SetExtraHTTPHeaders(alternateBrowserHeaders); err != nil {
+			log.Printf("Failed to set alternate browser headers: %v", err)
+		}
+
+		// Try navigation again with different browser profile
+		log.Printf("Retrying navigation with alternate browser profile")
+		resp, err = page.Goto(fullURL, pw.PageGotoOptions{
+			WaitUntil: pw.WaitUntilStateLoad, // Even less strict wait
+			Timeout:   pw.Float(30000),       // 30 seconds - reduced timeout for retry
+		})
+
+		if err != nil {
+			log.Printf("Both navigation attempts failed: %v", err)
+			return "", fmt.Errorf("both navigation attempts failed: %w", err)
+		}
 	}
 
-	if isSignupForm {
-		utils.DebugLog("URL appears to be a signup form: %s", urlStr)
-		return urlStr, nil
+	// Check HTTP status if response is available
+	if resp != nil {
+		status := resp.Status()
+		log.Printf("HTTP status code: %d", status)
+		if status >= 400 {
+			log.Printf("HTTP error status %d for URL: %s", status, urlStr)
+			// If we got a 403 Forbidden, it's likely anti-crawling protection
+			if status == 403 {
+				return "", fmt.Errorf("access forbidden (403) - site likely has anti-crawling protection: %s", fullURL)
+			}
+			return "", fmt.Errorf("HTTP error status %d for URL: %s", status, fullURL)
+		}
 	}
 
-	return "", fmt.Errorf("URL does not appear to be a signup form: %s", urlStr)
-}
-
-// IsSignupForm checks if a page is likely to be a registration/signup form
-func IsSignupForm(page pw.Page, tournament cache.TournamentCache, tournamentDate time.Time) (bool, error) {
-	// Match specific keywords in the URL
+	// DOCKER-OPTIMIZED: Simplified URL and content check without JS
 	currentURL := page.URL()
+	log.Printf("Successfully navigated to: %s", currentURL)
 
+	// Check URL patterns first (fastest check)
 	urlLower := strings.ToLower(currentURL)
 	if strings.Contains(urlLower, "inscription") || strings.Contains(urlLower, "register") ||
 		strings.Contains(urlLower, "signup") || strings.Contains(urlLower, "enroll") ||
 		strings.Contains(urlLower, "registration") {
-		return true, nil
+		log.Printf("URL contains registration keyword: %s", currentURL)
+		return currentURL, nil
 	}
 
-	// Check for tournament-specific name patterns
-	isSignupForm, err := CheckIfPageIsSignupForm(page, tournament, tournamentDate)
-	if err != nil {
-		return false, fmt.Errorf("error checking if page is a signup form: %w", err)
+	// Get page content directly with a timeout
+	log.Printf("Getting page content for analysis")
+	contentCh := make(chan struct {
+		content string
+		err     error
+	}, 1)
+
+	go func() {
+		content, err := page.Content()
+		contentCh <- struct {
+			content string
+			err     error
+		}{content, err}
+	}()
+
+	var content string
+	select {
+	case result := <-contentCh:
+		if result.err != nil {
+			log.Printf("ERROR: Failed to get page content: %v", result.err)
+			return "", fmt.Errorf("failed to get page content: %w", result.err)
+		}
+		content = result.content
+		log.Printf("Successfully got page content (%d bytes)", len(content))
+	case <-time.After(20 * time.Second):
+		log.Printf("ERROR: Content retrieval timed out after 20 seconds")
+		return "", fmt.Errorf("content retrieval timed out")
 	}
 
-	if isSignupForm {
-		return true, nil
+	// Get page title with a timeout
+	log.Printf("Getting page title")
+	titleCh := make(chan struct {
+		title string
+		err   error
+	}, 1)
+
+	go func() {
+		title, err := page.Title()
+		titleCh <- struct {
+			title string
+			err   error
+		}{title, err}
+	}()
+
+	var title string
+	select {
+	case result := <-titleCh:
+		if result.err != nil {
+			log.Printf("Warning: Could not get page title: %v", result.err)
+			title = "" // Use empty string if title can't be retrieved
+		} else {
+			title = result.title
+			log.Printf("Page title: %s", title)
+		}
+	case <-time.After(5 * time.Second):
+		log.Printf("WARNING: Title retrieval timed out, using empty title")
+		title = ""
 	}
 
-	// Detect form elements on the page
-	hasForm, err := ContainsFormElements(page)
-	if err != nil {
-		return false, fmt.Errorf("error detecting form elements: %w", err)
-	}
-
-	if hasForm {
-		// Check if the page has tournament-related keywords
-		pageTitle, err := page.Title()
-		if err != nil {
-			return false, fmt.Errorf("failed to get page title: %w", err)
-		}
-
-		pageContent, err := page.TextContent("body")
-		if err != nil {
-			return false, fmt.Errorf("failed to get page content: %w", err)
-		}
-
-		pageContentLower := strings.ToLower(pageContent)
-		pageTitleLower := strings.ToLower(pageTitle)
-
-		// Check for registration-related keywords
-		for _, keyword := range registrationKeywords {
-			if strings.Contains(pageContentLower, keyword) || strings.Contains(pageTitleLower, keyword) {
-				return true, nil
-			}
-		}
-
-		// Check for tournament name patterns
-		for _, pattern := range constants.TournamentPatterns {
-			if strings.Contains(pageContentLower, pattern) {
-				return true, nil
-			}
-		}
-
-		// Check for capitalized variations
-		for _, pattern := range constants.TournamentPatternsCapitalized {
-			if strings.Contains(pageContent, pattern) {
-				return true, nil
-			}
-		}
-
-		// Check for special tournament names
-		for _, pattern := range constants.SpecialTournaments {
-			if strings.Contains(pageContentLower, pattern) {
-				return true, nil
-			}
-		}
-
-		// Check for capitalized special tournament names
-		for _, pattern := range constants.SpecialTournamentsCapitalized {
-			if strings.Contains(pageContent, pattern) {
-				return true, nil
-			}
-		}
-	}
-
-	return false, nil
-}
-
-// ContainsFormElements checks if a page contains form elements
-func ContainsFormElements(page pw.Page) (bool, error) {
-	jsScript := `
-	() => {
-		// Check for forms
-		const forms = document.querySelectorAll('form');
-		if (forms.length > 0) {
-			return true;
-		}
-		
-		// Check for input fields
-		const inputs = document.querySelectorAll('input, select, textarea');
-		if (inputs.length > 3) {  // Typically a form has multiple input fields
-			return true;
-		}
-		
-		return false;
-	}`
-
-	result, err := page.Evaluate(jsScript)
-	if err != nil {
-		return false, fmt.Errorf("failed to evaluate script: %w", err)
-	}
-
-	hasFormElements, ok := result.(bool)
-	if !ok {
-		return false, fmt.Errorf("failed to convert result to boolean")
-	}
-
-	return hasFormElements, nil
-}
-
-// CheckIfPageIsSignupForm determines if a page is likely a tournament signup form
-func CheckIfPageIsSignupForm(page pw.Page, tournament cache.TournamentCache, tournamentDate time.Time) (bool, error) {
-	// Get the page content
-	content, err := page.Content()
-	if err != nil {
-		return false, fmt.Errorf("failed to get page content: %w", err)
-	}
-
-	// Get the page title
-	title, err := page.Title()
-	if err != nil {
-		title = "" // Use empty string if title can't be retrieved
-	}
-
-	// Convert to lowercase for case-insensitive matching
-	contentLower := strings.ToLower(content)
-	titleLower := strings.ToLower(title)
-
-	// Prepare tournament info for matching
-	tournamentNameLower := strings.ToLower(tournament.Name)
-	tournamentWords := utils.ExtractSignificantWordsFromText(tournamentNameLower)
-
-	// Get month name in French and English
-	monthFrench := utils.GetMonthNameFrench(int(tournamentDate.Month()))
-	monthEnglish := tournamentDate.Month().String()
-	yearStr := fmt.Sprintf("%d", tournamentDate.Year())
-
-	// Check if page contains form elements
+	// Basic form element check
 	hasFormElements := strings.Contains(content, "<form") ||
 		strings.Contains(content, "<input") ||
 		strings.Contains(content, "type=\"submit\"") ||
@@ -213,21 +279,14 @@ func CheckIfPageIsSignupForm(page pw.Page, tournament cache.TournamentCache, tou
 		strings.Contains(content, "type=\"email\"") ||
 		strings.Contains(content, "type=\"password\"")
 
-	// Check if page mentions the tournament
-	tournamentNameMatch := false
-	for _, word := range tournamentWords {
-		if strings.Contains(titleLower, word) || strings.Contains(contentLower, word) {
-			tournamentNameMatch = true
-			break
-		}
-	}
+	// Quick check for tournament name and registration keywords
+	contentLower := strings.ToLower(content)
+	titleLower := strings.ToLower(title)
+	tournamentNameLower := strings.ToLower(tournament.Name)
 
-	// Check if page mentions the tournament date
-	dateMatch := (strings.Contains(titleLower, monthFrench) || strings.Contains(contentLower, monthFrench) ||
-		strings.Contains(titleLower, monthEnglish) || strings.Contains(contentLower, monthEnglish)) &&
-		(strings.Contains(titleLower, yearStr) || strings.Contains(contentLower, yearStr))
+	tournamentMatch := strings.Contains(contentLower, tournamentNameLower) ||
+		strings.Contains(titleLower, tournamentNameLower)
 
-	// Check if page mentions registration
 	registrationMatch := false
 	for _, keyword := range registrationKeywords {
 		if strings.Contains(titleLower, keyword) || strings.Contains(contentLower, keyword) {
@@ -236,139 +295,15 @@ func CheckIfPageIsSignupForm(page pw.Page, tournament cache.TournamentCache, tou
 		}
 	}
 
-	// The page is likely a signup form if:
-	// 1. It has form elements AND
-	// 2. (It mentions both the tournament name and registration OR it mentions the tournament name and date)
-	isSignupForm := hasFormElements && ((tournamentNameMatch && registrationMatch) || (tournamentNameMatch && dateMatch))
-
-	// Additional checks for common signup patterns
-	if !isSignupForm && hasFormElements {
-		// Check for "créer un compte" or "se connecter" forms for tournament platforms
-		if (strings.Contains(contentLower, constants.CreateAccount) || strings.Contains(contentLower, constants.ENCreateAccount)) &&
-			(tournamentNameMatch || dateMatch) {
-			isSignupForm = true
-		}
-
-		// Check for "inscription" in the URL
-		currentURL := page.URL()
-		if strings.Contains(strings.ToLower(currentURL), constants.Register) ||
-			strings.Contains(strings.ToLower(currentURL), constants.ENSignUp) ||
-			strings.Contains(strings.ToLower(currentURL), constants.ENRegister) ||
-			strings.Contains(strings.ToLower(currentURL), constants.Engagement) {
-			// If the URL itself suggests it's a signup page
-			if tournamentNameMatch || dateMatch {
-				isSignupForm = true
-			}
-		}
-
-		// Check for "étape suivante" (next step) in form context
-		if !isSignupForm && hasFormElements {
-			if (strings.Contains(contentLower, constants.NextStepNoAccent) ||
-				strings.Contains(contentLower, constants.NextStep) ||
-				strings.Contains(contentLower, constants.Next) ||
-				strings.Contains(contentLower, constants.Continue)) &&
-				(tournamentNameMatch || dateMatch) {
-				isSignupForm = true
-			}
-		}
+	// If it has form elements and mentions the tournament or registration keywords
+	if hasFormElements && (tournamentMatch || registrationMatch) {
+		log.Printf("Found likely registration form at: %s", currentURL)
+		return currentURL, nil
 	}
 
-	// Check for special tournament patterns
-	if !isSignupForm && hasFormElements {
-		// Check for patterns like "tournoi de pâques", "tournoi de noël", etc.
-		for _, pattern := range constants.TournamentPatterns {
-			if strings.Contains(contentLower, pattern) {
-				isSignupForm = true
-				break
-			}
-		}
-	}
+	// Print the HTML content for debugging
+	log.Printf("DEBUG - HTML content of page that failed registration form validation:\n%s", content)
 
-	return isSignupForm, nil
-}
-
-// DetectSignupKeywords checks if the page contains signup-related keywords
-func DetectSignupKeywords(page pw.Page) (bool, error) {
-	jsScript := `
-	() => {
-		const signupKeywords = [
-			'inscription', 'inscrivez', 'inscrire', 's\'inscrire', 'inscriptions', 
-			'signup', 'sign up', 'sign-up', 'register', 'registration', 'enroll', 'enregistrement',
-			'participer', 'participation', 'engagements', 'engagement',
-			'tournoi', 'tournament', 'competition', 'compétition',
-			'paiement', 'payment', 'prix', 'price', 'tarif', 'fee', 'checkout'
-		];
-		
-		const pageText = document.body.innerText.toLowerCase();
-		
-		for (const keyword of signupKeywords) {
-			if (pageText.includes(keyword)) {
-				return true;
-			}
-		}
-		
-		return false;
-	}
-	`
-
-	result, err := page.Evaluate(jsScript)
-	if err != nil {
-		return false, fmt.Errorf("failed to evaluate script: %w", err)
-	}
-
-	if hasKeywords, ok := result.(bool); ok {
-		return hasKeywords, nil
-	}
-
-	return false, nil
-}
-
-// DetectFormElements checks if the page contains form elements - more detailed than ContainsFormElements
-func DetectFormElements(page pw.Page) (bool, error) {
-	jsScript := `
-	() => {
-		// Check for forms
-		const forms = document.querySelectorAll('form');
-		if (forms.length > 0) {
-			return true;
-		}
-		
-		// Check for input fields
-		const inputs = document.querySelectorAll('input[type="text"], input[type="email"], input[type="tel"], input[type="number"], input[type="date"]');
-		if (inputs.length >= 3) { // Multiple input fields suggest a form
-			return true;
-		}
-		
-		// Check for dropdowns and submit buttons
-		const dropdowns = document.querySelectorAll('select');
-		const submitButtons = document.querySelectorAll('button[type="submit"], input[type="submit"]');
-		
-		if ((dropdowns.length > 0 || inputs.length > 0) && submitButtons.length > 0) {
-			return true;
-		}
-		
-		// Check for payment elements
-		const paymentKeywords = ['payment', 'credit card', 'carte', 'paiement', 'checkout', 'price', 'prix', 'tarif'];
-		const allElements = document.body.innerText.toLowerCase();
-		
-		for (const keyword of paymentKeywords) {
-			if (allElements.includes(keyword)) {
-				return true;
-			}
-		}
-		
-		return false;
-	}
-	`
-
-	result, err := page.Evaluate(jsScript)
-	if err != nil {
-		return false, fmt.Errorf("failed to evaluate script: %w", err)
-	}
-
-	if hasForm, ok := result.(bool); ok {
-		return hasForm, nil
-	}
-
-	return false, nil
+	log.Printf("URL does not appear to be a registration form: %s", fullURL)
+	return "", fmt.Errorf("URL does not appear to be a registration form")
 }

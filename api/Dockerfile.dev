@@ -4,32 +4,55 @@ WORKDIR /go/src/tournois-tt/api
 
 # Install system dependencies for Playwright and poppler-utils for pdftotext
 RUN apt-get update && apt-get install -y \
-    libnss3 \
-    libnspr4 \
-    libatk1.0-0 \
+    ca-certificates \
+    fonts-liberation \
+    fonts-noto-color-emoji \
+    libasound2 \
     libatk-bridge2.0-0 \
+    libatk1.0-0 \
+    libatspi2.0-0 \
+    libc6 \
+    libcairo2 \
     libcups2 \
-    libdrm2 \
     libdbus-1-3 \
-    libxkbcommon0 \
+    libdrm2 \
+    libexpat1 \
+    libfontconfig1 \
+    libgbm1 \
+    libgcc1 \
+    libglib2.0-0 \
+    libgtk-3-0 \
+    libnspr4 \
+    libnss3 \
+    libpango-1.0-0 \
+    libpangocairo-1.0-0 \
+    libpulse0 \
+    libsoup2.4-1 \
+    libwayland-client0 \
+    libwayland-cursor0 \
+    libwayland-egl1 \
+    libx11-6 \
+    libx11-xcb1 \
+    libxcb1 \
     libxcomposite1 \
     libxdamage1 \
+    libxext6 \
     libxfixes3 \
+    libxi6 \
+    libxkbcommon0 \
     libxrandr2 \
-    libgbm1 \
-    libpango-1.0-0 \
-    libcairo2 \
-    libasound2 \
-    libatspi2.0-0 \
-    libwayland-client0 \
+    libxrender1 \
+    libxshmfence1 \
+    libxss1 \
+    libxtst6 \
+    lsb-release \
+    procps \
+    xdg-utils \
+    # Additional packages for browser stability
     libxcursor1 \
-    libgtk-3-0 \
-    libpangocairo-1.0-0 \
     libcairo-gobject2 \
     libgdk-pixbuf-2.0-0 \
-    # Additional dependencies
     libgstreamer1.0-0 \
-    libgtk-4-1 \
     libgraphene-1.0-0 \
     libxslt1.1 \
     libwoff1 \
@@ -38,10 +61,6 @@ RUN apt-get update && apt-get install -y \
     libopus0 \
     gstreamer1.0-plugins-base \
     gstreamer1.0-plugins-good \
-    gstreamer1.0-plugins-bad \
-    gstreamer1.0-plugins-ugly \
-    gstreamer1.0-gl \
-    flite1-dev \
     libwebpdemux2 \
     libavif15 \
     libharfbuzz-icu0 \
@@ -49,17 +68,54 @@ RUN apt-get update && apt-get install -y \
     libenchant-2-2 \
     libsecret-1-0 \
     libhyphen0 \
-    libmanette-0.2-0 \
     libgles2 \
-    libx264-dev \
     poppler-utils \
+    # Include X virtual framebuffer for headless display
+    xvfb \
+    # Additional tools for debugging
+    curl \
+    wget \
+    iputils-ping \
+    net-tools \
     && rm -rf /var/lib/apt/lists/*
+
+# Configure environment for stable browser operation
+ENV PLAYWRIGHT_BROWSERS_PATH=/usr/local/ms-playwright \
+    PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=0 \
+    DEBIAN_FRONTEND=noninteractive \
+    DISPLAY=:99 \
+    XDG_RUNTIME_DIR=/tmp/runtime-dir \
+    CHROME_DEVEL_SANDBOX=/usr/local/sbin/chrome-devel-sandbox \
+    CONTAINER_RUNTIME=1
+
+# Setup directories for Playwright
+RUN mkdir -p /usr/local/ms-playwright \
+    && mkdir -p ${XDG_RUNTIME_DIR} \
+    && chmod 0700 ${XDG_RUNTIME_DIR} \
+    && mkdir -p /dev/shm \
+    && chmod 1777 /dev/shm \
+    && chmod 1777 /tmp
 
 COPY . .
 
 RUN go install github.com/air-verse/air@latest
 
-# Install Playwright browsers
+# Install Playwright browsers with optimized Docker configuration
 RUN go run github.com/playwright-community/playwright-go/cmd/playwright install --with-deps chromium
 
+# Prepare browser sandbox configuration
+RUN echo '#!/bin/bash\nexec "$@"' > /usr/local/sbin/chrome-devel-sandbox \
+    && chmod 4755 /usr/local/sbin/chrome-devel-sandbox
+
+# Create a simple test script to verify Playwright installation
+RUN echo '#!/bin/bash\necho "Verifying Playwright installation..."\nls -la $PLAYWRIGHT_BROWSERS_PATH\necho "Directory structure looks good."\n' > /usr/local/bin/verify-playwright.sh \
+    && chmod +x /usr/local/bin/verify-playwright.sh \
+    && /usr/local/bin/verify-playwright.sh
+
+# Set entrypoint script to ensure proper environment setup
+COPY entrypoint-dev.sh /entrypoint-dev.sh
+RUN chmod +x /entrypoint-dev.sh
+
+# Start Xvfb before running any browser commands
+ENTRYPOINT ["/entrypoint-dev.sh"]
 CMD ["air", "-c", "air.toml"]

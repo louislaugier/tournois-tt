@@ -39,13 +39,21 @@ services:
       dockerfile: Dockerfile.dev
     volumes:
       - ./api/:/go/src/tournois-tt/api
+      - /dev/shm:/dev/shm
     expose:
       - 8080
     environment:
       - GIN_MODE=debug
       - GOOGLE_GEOCODING_API_KEY=${GOOGLE_GEOCODING_API_KEY}
+      - PLAYWRIGHT_BROWSERS_PATH=/usr/local/ms-playwright
+      - CONTAINER_RUNTIME=1
+      - DISPLAY=:99
+      - XDG_RUNTIME_DIR=/tmp/runtime-dir
     networks:
       - vpc_local
+    cap_add:
+      - SYS_ADMIN
+    shm_size: 2gb
 
 networks:
   vpc_local:
