@@ -1,0 +1,13 @@
+FROM --platform=linux/amd64 node:20.18.1-alpine
+
+WORKDIR /tournois-tt/frontend
+
+COPY package*.json ./
+RUN npm i
+
+# Create a backup of node_modules that will be used by entrypoint script
+RUN cp -r node_modules node_modules.container
+
+COPY . .
+
+CMD ["npm", "start"]

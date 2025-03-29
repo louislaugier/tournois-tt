@@ -1,0 +1,52 @@
+services:
+
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx.dev.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - frontend
+      - api
+    networks:
+      - vpc_local
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    volumes:
+      - ./frontend/src/:/tournois-tt/frontend/src
+      - ./frontend/public/:/tournois-tt/frontend/public
+      - ./frontend/package.json/:/tournois-tt/frontend/package.json
+      - ./frontend/package-lock.json/:/tournois-tt/frontend/package-lock.json
+      - ./frontend/tsconfig.json/:/tournois-tt/frontend/tsconfig.json
+      - ./frontend/webpack.dev.js/:/tournois-tt/frontend/webpack.dev.js
+    expose:
+      - 3000
+    environment:
+      - NODE_ENV=development
+      - CHOKIDAR_USEPOLLING=true
+    depends_on:
+      - api
+    networks:
+      - vpc_local
+
+  api:
+    build:
+      context: ./api
+      dockerfile: Dockerfile.dev
+    volumes:
+      - ./api/:/go/src/tournois-tt/api
+    expose:
+      - 8080
+    environment:
+      - GIN_MODE=debug
+      - GOOGLE_GEOCODING_API_KEY=${GOOGLE_GEOCODING_API_KEY}
+    networks:
+      - vpc_local
+
+networks:
+  vpc_local:
+    driver: bridge 

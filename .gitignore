@@ -1,0 +1,8 @@
+# Environment variables
+.env
+
+# Certbot
+certbot/conf/*
+certbot/data/*
+!certbot/conf/.gitkeep
+!certbot/data/.gitkeep 
