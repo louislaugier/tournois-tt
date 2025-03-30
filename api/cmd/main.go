@@ -34,8 +34,8 @@ func start() {
 }
 
 func main() {
-	// start()
-	test()
+	start()
+	// test()
 }
 
 func test() {
