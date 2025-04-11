@@ -1,8 +1,29 @@
 import { TournamentQueryBuilder } from "../api/tournaments";
 import { Tournament } from "../api/types";
-import { getTodayMidnight, getYesterdayMidnight } from "../utils/date";
+import { getTodayMidnight, getYesterdayMidnight, normalizeDate } from "../utils/date";
 import { getCurrentSeasonStartDate, getLastCompletedSeasonDates } from "../utils/season";
 import { upsertMocksIntoDataset } from "./mock";
+
+// Deduplicate tournaments with the same club and start date
+function deduplicateTournaments(tournaments: Tournament[]): Tournament[] {
+    // Create a map to track unique tournaments by club+date
+    const uniqueTournaments = new Map<string, Tournament>();
+    
+    // Loop through all tournaments
+    for (const tournament of tournaments) {
+        // Create a unique key based on club identifier and start date
+        const key = `${tournament.club.identifier}|${normalizeDate(tournament.startDate)}`;
+        
+        // If we've never seen this club+date before, or this tournament has a higher ID (newer),
+        // add/update it in our map
+        if (!uniqueTournaments.has(key) || tournament.id > uniqueTournaments.get(key)!.id) {
+            uniqueTournaments.set(key, tournament);
+        }
+    }
+    
+    // Convert map back to array
+    return Array.from(uniqueTournaments.values());
+}
 
 export const loadTournaments = async (setIsLoading: (value: React.SetStateAction<boolean>) => void, setCurrentTournaments: (value: React.SetStateAction<Tournament[]>) => void, setPastCurrentTournaments: (value: React.SetStateAction<Tournament[]>) => void, setPastTournaments: (value: React.SetStateAction<Tournament[]>) => void) => {
     try {
@@ -43,11 +64,14 @@ export const loadTournaments = async (setIsLoading: (value: React.SetStateAction
         // Apply mocks to current tournaments
         const {tournamentDataWithMocks, pastTournamentDataWithMocks} = upsertMocksIntoDataset(currentTournamentsData, pastTournamentsData);
         
-        setCurrentTournaments(tournamentDataWithMocks);
-
-        setPastCurrentTournaments(pastCurrentTournamentsData);
-
-        setPastTournaments(pastTournamentDataWithMocks);
+        // Deduplicate at the very end
+        const dedupedCurrentTournaments = deduplicateTournaments(tournamentDataWithMocks);
+        const dedupedPastCurrentTournaments = deduplicateTournaments(pastCurrentTournamentsData);
+        const dedupedPastTournaments = deduplicateTournaments(pastTournamentDataWithMocks);
+        
+        setCurrentTournaments(dedupedCurrentTournaments);
+        setPastCurrentTournaments(dedupedPastCurrentTournaments);
+        setPastTournaments(dedupedPastTournaments);
     } catch (error) {
         console.error('Failed to load tournaments:', error);
     } finally {

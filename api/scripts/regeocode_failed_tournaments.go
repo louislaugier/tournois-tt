@@ -61,9 +61,23 @@ func RegeocodeFailedTournaments() {
 		time.Sleep(1 * time.Second)
 	}
 
-	// Save all changes to cache file
-	if err := cache.SaveTournamentsToCache(failedTournaments); err != nil {
-		log.Printf("Warning: Failed to save all geocoded tournaments to cache: %v", err)
+	// Save all tournaments to the cache file
+	// This ensures all tournaments are properly saved, not just the updated ones
+	allTournamentsMap, err := cache.LoadTournaments()
+	if err != nil {
+		log.Printf("Warning: Failed to load tournaments for saving: %v", err)
+		return
+	}
+
+	allTournaments := []cache.TournamentCache{}
+	for _, t := range allTournamentsMap {
+		allTournaments = append(allTournaments, t)
+	}
+
+	if err := cache.SaveTournamentsToCache(allTournaments); err != nil {
+		log.Printf("Warning: Failed to save all tournaments to cache: %v", err)
+	} else {
+		log.Printf("Successfully saved all %d tournaments to cache", len(allTournaments))
 	}
 
 	log.Printf("Re-geocoding completed: %d successful, %d failed", successCount, len(failedTournaments)-successCount)
