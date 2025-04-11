@@ -37,10 +37,11 @@ func start() {
 
 func main() {
 	start()
-	// test()
+	// testScraping()
+	// scripts.RegeocodeFailedTournaments()
 }
 
-func test() {
+func testScraping() {
 	// browser.CheckBrowserInstallation()
 
 	// tournament := findTournament(3043) // cognac
@@ -424,7 +425,7 @@ func findTournament(ID int) *cache.TournamentCache {
 	return &targetTournament
 }
 
-func test2() {
+func testHelloAsso() {
 	activities, err := helloasso.SearchActivities(context.Background(), "tournoi tennis de table courbevoie")
 	if err != nil {
 		log.Println(err)

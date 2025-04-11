@@ -1,7 +1,6 @@
 package geocoding
 
 import (
-	"fmt"
 	"log"
 	"strings"
 	"time"
@@ -119,14 +118,26 @@ func getCoordinatesImpl(address Address) (Location, error) {
 
 // GetCoordinatesNominatim gets coordinates using Nominatim
 func GetCoordinatesNominatim(address Address) (GeocodeResult, error) {
-	// Implementation here
-	return GeocodeResult{}, fmt.Errorf("not implemented")
+	// Use the existing nominatimProvider
+	location, err := nominatimProvider.GetCoordinates(address)
+	if err != nil {
+		return GeocodeResult{}, err
+	}
+
+	// Create and return a GeocodeResult
+	return CreateGeocodeResult(address, location, nil), nil
 }
 
 // GetCoordinatesGoogle gets coordinates using Google Maps API
 func GetCoordinatesGoogle(address Address) (GeocodeResult, error) {
-	// Implementation here
-	return GeocodeResult{}, fmt.Errorf("not implemented")
+	// Use the existing googleProvider
+	location, err := googleProvider.GetCoordinates(address)
+	if err != nil {
+		return GeocodeResult{}, err
+	}
+
+	// Create and return a GeocodeResult
+	return CreateGeocodeResult(address, location, nil), nil
 }
 
 // nominatimAdapter adapts the Nominatim provider to the Provider interface
