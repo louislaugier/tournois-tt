@@ -45,7 +45,8 @@ func testScraping() {
 	// browser.CheckBrowserInstallation()
 
 	// tournament := findTournament(3043) // cognac
-	tournament := findTournament(3026) // chalons en champagne
+	// tournament := findTournament(3026) // chalons en champagne
+	tournament := findTournament(2799) // epinal
 	if tournament == nil {
 		return
 	}

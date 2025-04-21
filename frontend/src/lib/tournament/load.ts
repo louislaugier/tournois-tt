@@ -62,11 +62,11 @@ export const loadTournaments = async (setIsLoading: (value: React.SetStateAction
         });
 
         // Apply mocks to current tournaments
-        const {tournamentDataWithMocks, pastTournamentDataWithMocks} = upsertMocksIntoDataset(currentTournamentsData, pastTournamentsData);
+        const {tournamentDataWithMocks, pastCurrentTournamentDataWithMocks, pastTournamentDataWithMocks} = upsertMocksIntoDataset(currentTournamentsData, pastCurrentTournamentsData, pastTournamentsData);
         
         // Deduplicate at the very end
         const dedupedCurrentTournaments = deduplicateTournaments(tournamentDataWithMocks);
-        const dedupedPastCurrentTournaments = deduplicateTournaments(pastCurrentTournamentsData);
+        const dedupedPastCurrentTournaments = deduplicateTournaments(pastCurrentTournamentDataWithMocks);
         const dedupedPastTournaments = deduplicateTournaments(pastTournamentDataWithMocks);
         
         setCurrentTournaments(dedupedCurrentTournaments);
