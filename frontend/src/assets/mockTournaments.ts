@@ -105,6 +105,56 @@ export const mockTournaments: Array<Tournament> = [
     //         canDelete: false
     //     }
     // },
+     {
+        '@id': '/tournaments/mock-boulogne-2025',
+        '@type': 'Tournament',
+        id: 999998, // Unique mock ID
+        identifier: 'MOCK-BOULOGNE-2025',
+        name: 'Tournoi National (B) de Boulogne-Billancourt - Coupe Jacques PEREZ',
+        type: 'National B',
+        club: {
+            '@id': '/clubs/esvitry',
+            '@type': 'Club',
+            id: 68, // Unique mock ID
+            name: 'BOULOGNE BILLANCOURT AC',
+            identifier: '08920049'
+        },
+        startDate: new Date('2025-06-07').toISOString(),
+        endDate: new Date('2025-06-09').toISOString(),
+        address: {
+            '@id': '/addresses/boulogne-gymnase',
+            '@type': 'PostalAddress',
+            id: 999998, // Unique mock ID
+            postalCode: '92100',
+            streetAddress: '44 rue Marcel Bontemps',
+            disambiguatingDescription: 'Gymnase de la Biodiversité',
+            addressCountry: 'FR',
+            addressRegion: 'Ile-de-France',
+            addressLocality: 'Boulogne-Billancourt',
+            areaServed: null,
+            latitude: 48.826992,
+            longitude: 2.2372837,
+            name: 'Gymnase de la Biodiversité',
+            identifier: null,
+            openingHours: null,
+            main: false,
+            approximate: false
+        },
+        contacts: [], // Empty contacts array
+        rules: {
+            url: "https://acbb-tt.fr/wp-content/uploads/2025/04/Reglement-tournoi-ACBB-2025-1.pdf"
+        },
+        endowment: 360000, // Total endowment in cents
+        organization: undefined, // Optional field
+        responses: [], // Optional field
+        engagmentSheet: undefined, // Optional field
+        decision: undefined, // Optional field
+        page: null, // Optional field
+        '@permissions': {
+            canUpdate: true,
+            canDelete: false
+        }
+    },
 ];
 
 export const mockPastCurrentTournaments: Array<Tournament> = [
