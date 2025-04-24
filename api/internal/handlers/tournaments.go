@@ -22,6 +22,7 @@ type TournamentResponse struct {
 	Club      fftt.Club         `json:"club"`
 	Rules     *fftt.Rules       `json:"rules,omitempty"`
 	SignupURL string            `json:"signupUrl,omitempty"`
+	Endowment int               `json:"endowment"`
 }
 
 // TournamentsHandler handles tournament requests by retrieving data from the cache
@@ -59,6 +60,7 @@ func TournamentsHandler(c *gin.Context) {
 				Identifier: cachedTournament.Club.Identifier,
 			},
 			SignupURL: cachedTournament.SignupUrl,
+			Endowment: cachedTournament.Endowment,
 		})
 
 		// Add rules if available
