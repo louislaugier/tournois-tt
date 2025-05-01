@@ -20,8 +20,8 @@ const (
 	NumWorkers = 3
 )
 
-// isCurrentSeasonQuery checks if the query date range is part of the current season
-func isCurrentSeasonQuery(startDateAfter, startDateBefore *time.Time) bool {
+// IsCurrentSeasonQuery checks if the query date range is part of the current season
+func IsCurrentSeasonQuery(startDateAfter, startDateBefore *time.Time) bool {
 	currentSeasonStart, currentSeasonEnd := utils.GetCurrentSeason()
 
 	// If startDateAfter is nil, we're starting from before current season

@@ -18,7 +18,7 @@ body {
   display: none !important;
 }
 
-.side-side-panel__header__bottom{
+.side-side-panel__header__bottom {
   padding-top: 16px !important;
 }
 
@@ -83,7 +83,7 @@ body {
 }
 
 /* date filter */
-.side-panel-section>div:nth-child(7) {
+.side-panel-section>div:nth-child(8) {
   display: none !important;
 }
 
@@ -130,7 +130,7 @@ body {
   margin-top: 0 !important;
 }
 
-.map-popover{
+.map-popover {
   /* padding-top: 7.5px !important; */
   /* padding-bottom: 7.5px !important; */
 }
@@ -178,20 +178,19 @@ body {
   display: none !important;
 }
 
-.sortable-layer-item input[id="france_borders:input-layer-label"] + div {
+.sortable-layer-item input[id="france_borders:input-layer-label"]+div {
   display: none !important;
 }
 
-.sortable-layer-item input[id="france_borders:input-layer-label"] + div + div {
+.sortable-layer-item input[id="france_borders:input-layer-label"]+div+div {
   display: none !important;
 }
 
-.sortable-layer-item input[id="france_borders:input-layer-label"]
-.sortable-layer-item {
+.sortable-layer-item input[id="france_borders:input-layer-label"] .sortable-layer-item {
   display: none !important;
 }
 
-.sortable-layer-item[data-testid="sortable-layer-item"] input[id="france_borders:input-layer-label"] ~ .sortable-layer-item {
+.sortable-layer-item[data-testid="sortable-layer-item"] input[id="france_borders:input-layer-label"]~.sortable-layer-item {
   display: none !important;
 }
 
@@ -208,22 +207,25 @@ input.layer__title__editor {
   display: none !important;
 }
 
-.layer__title__editor{
+.layer__title__editor {
   width: 120% !important;
 }
 
-.hQuvhR>div:first-child .layer-panel__header.sort--handle, .inUwnR {
+.hQuvhR>div:first-child .layer-panel__header.sort--handle,
+.inUwnR {
   border-left: 3px solid #1FBAD6 !important;
 }
 
-.hQuvhR>div:nth-child(2) .layer-panel__header.sort--handle, .bMyRek {
+.hQuvhR>div:nth-child(2) .layer-panel__header.sort--handle,
+.bMyRek {
   border-left: 3px solid rgba(0, 0, 139, 1) !important;
 }
 
-.hQuvhR>div:nth-child(3) .layer-panel__header.sort--handle, .bXBtJe {
+.hQuvhR>div:nth-child(3) .layer-panel__header.sort--handle,
+.bXBtJe {
   border-left: 3px solid rgba(155, 89, 182, 1) !important;
 }
 
-.kILWMQ{
+.kILWMQ {
   display: none !important;
 }

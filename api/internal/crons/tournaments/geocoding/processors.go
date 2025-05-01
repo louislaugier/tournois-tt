@@ -69,8 +69,18 @@ func ProcessTournamentForCache(t fftt.Tournament, cachedTournaments map[string]c
 			Region:     t.Club.Region,
 			Identifier: t.Club.Identifier,
 		},
-		Endowment: t.Endowment,
 		Timestamp: time.Now(),
+	}
+
+	// When endowment is 0 (null), calculate it from the tables
+	if t.Endowment == 0 && len(t.Tables) > 0 {
+		totalEndowment := 0
+		for _, table := range t.Tables {
+			totalEndowment += table.Endowment
+		}
+		newCacheEntry.Endowment = totalEndowment
+	} else {
+		newCacheEntry.Endowment = t.Endowment
 	}
 
 	// Add Rules if available

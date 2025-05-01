@@ -1,6 +1,8 @@
 export const formatPostcode = (postcode: string | undefined): string => {
     if (!postcode) return '';
-    return postcode.toString();
+    // Add a text prefix to force Kepler.gl to treat it as a string
+    // This should prevent histogram visualization
+    return postcode.toString() + '‎';
 };
 
 export const formatCityName = (city: string): string => {

@@ -47,11 +47,17 @@ export const getTournamentRows = (allTournamentsForMap: any) => {
             location.tournaments.map(t => t.name).join(' | '),
             Array.from(new Set<string>(location.tournaments.map(t => t.type))).join(' | '),
             Array.from(new Set<string>(location.tournaments.map(t => `${t.club.name} (${t.club.identifier})`))).join(' | '),
-            location.tournaments.map(t =>
-            (typeof t.endowment === 'number' && t.endowment > 0
-                ? Math.floor(t.endowment / 100)
-                : (t.tables?.reduce((sum, table) => sum + (table.endowment || 0), 0) || 0) / 100)
-            ).join(' | '),
+            location.tournaments.map(t => {
+                // Ensure we always have a valid numeric value for endowment filtering
+                let endowmentValue = 0;
+                if (typeof t.endowment === 'number' && t.endowment > 0) {
+                    endowmentValue = Math.floor(t.endowment / 100);
+                } else if (t.tables && t.tables.length > 0) {
+                    // Calculate from tables
+                    endowmentValue = Math.floor((t.tables.reduce((sum, table) => sum + (table.endowment || 0), 0) || 0) / 100);
+                }
+                return endowmentValue;
+            }).join(' | '),
             location.tournaments.map(t =>
                 `${formatDateDDMMYYYY(t.startDate)}${t.startDate !== t.endDate ? ` au ${formatDateDDMMYYYY(t.endDate)}` : ''}`
             ).join(' | '),

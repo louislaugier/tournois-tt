@@ -28,6 +28,8 @@ import (
 
 func start() {
 	go tournaments.RefreshListWithGeocoding()
+	// go tournaments.RefreshSignupURLs()
+
 	crons.Schedule()
 
 	r := router.NewRouter()

@@ -9,14 +9,14 @@ export const getMapLayers = () => {
             [31, 186, 214],
             `Saison en cours - tournoi à venir (${seasonStartYear}-${seasonEndYear})`,
             16,  // text label size
-            24   // radius
+            22   // radius
         ),
         createLayerConfig(
             'past_current_tournaments',
             [0, 0, 139],
             `Saison en cours - tournoi terminé (${seasonStartYear}-${seasonEndYear})`,
             16,  // text label size
-            22   // radius
+            24   // radius
         ),
         createLayerConfig(
             'past_tournaments',

@@ -22,7 +22,7 @@ func URLs() {
 // If startDateAfter and startDateBefore are both nil, refreshes the current season
 func URLsInRange(startDateAfter, startDateBefore *time.Time) error {
 	// Check if we're querying for current season
-	isCurrentSeason := isCurrentSeasonQuery(startDateAfter, startDateBefore)
+	isCurrentSeason := IsCurrentSeasonQuery(startDateAfter, startDateBefore)
 
 	// Configure retry parameters based on season type
 	maxRetries := MaxRetriesCurrentSeason

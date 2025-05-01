@@ -20,8 +20,8 @@ func debugLog(format string, args ...interface{}) {
 	}
 }
 
-// isCurrentSeasonQuery checks if the query date range is part of the current season
-func isCurrentSeasonQuery(startDateAfter time.Time, startDateBefore *time.Time) bool {
+// IsCurrentSeasonQuery checks if the query date range is part of the current season
+func IsCurrentSeasonQuery(startDateAfter time.Time, startDateBefore *time.Time) bool {
 	currentSeasonStart, currentSeasonEnd := utils.GetCurrentSeason()
 
 	// Check if startDateAfter is within or after the current season start
@@ -146,7 +146,7 @@ func RefreshGeocoding(startDateAfter, startDateBefore *time.Time) error {
 	}
 
 	// Check if we're querying for current season
-	isCurrentSeason := isCurrentSeasonQuery(*startDateAfter, startDateBefore)
+	isCurrentSeason := IsCurrentSeasonQuery(*startDateAfter, startDateBefore)
 
 	// Fetch and validate tournaments
 	tournaments, err := fetchAndValidateTournaments(*startDateAfter, startDateBefore, isCurrentSeason)
