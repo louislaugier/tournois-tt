@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 	"tournois-tt/api/internal/crons"
+	"tournois-tt/api/internal/crons/tournaments"
 	"tournois-tt/api/internal/router"
 	"tournois-tt/api/pkg/cache"
 	"tournois-tt/api/pkg/finder"
@@ -21,11 +22,12 @@ import (
 
 // Run geocoding refresh in a background goroutine
 // go func() {
-// 	tournaments.RefreshTournamentsAndGeocoding()
+// 	tournaments.RefreshGeocoding()
 // 	tournaments.RefreshSignupURLs()
 // }()
 
 func start() {
+	go tournaments.RefreshListWithGeocoding()
 	crons.Schedule()
 
 	r := router.NewRouter()

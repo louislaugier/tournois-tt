@@ -25,10 +25,12 @@ func FetchTournamentsWithRetries(startDateAfter time.Time, startDateBefore *time
 
 		// Create query parameters
 		params := url.Values{}
-		params.Add("startDateAfter", startDateAfter.Format("2006-01-02"))
+		params.Set("startDate[after]", startDateAfter.Format("2006-01-02T15:04:05"))
 		if startDateBefore != nil {
-			params.Add("startDateBefore", startDateBefore.Format("2006-01-02"))
+			params.Set("startDate[before]", startDateBefore.Format("2006-01-02T15:04:05"))
 		}
+		params.Set("itemsPerPage", "999999")
+		params.Set("order[startDate]", "asc")
 
 		// Try to fetch tournaments
 		tournaments, err = fftt.FetchTournaments(params)
@@ -43,16 +45,7 @@ func FetchTournamentsWithRetries(startDateAfter time.Time, startDateBefore *time
 
 // ProcessTournamentForCache prepares a tournament for caching and determines if it needs geocoding
 func ProcessTournamentForCache(t fftt.Tournament, cachedTournaments map[string]cache.TournamentCache) (cache.TournamentCache, bool, geocoding.Address) {
-	// Check if already in cache with complete geocoding
-	cacheKey := fmt.Sprintf("%d", t.ID)
-	if cachedTournament, exists := cachedTournaments[cacheKey]; exists {
-		if cachedTournament.Address.Latitude != 0 && cachedTournament.Address.Longitude != 0 {
-			// Already geocoded, no need to process
-			return cachedTournament, false, geocoding.Address{}
-		}
-	}
-
-	// Create a new cache entry
+	// Create a new cache entry with tournament data from API
 	newCacheEntry := cache.TournamentCache{
 		ID:        t.ID,
 		Name:      t.Name,
@@ -88,6 +81,20 @@ func ProcessTournamentForCache(t fftt.Tournament, cachedTournaments map[string]c
 			Points:  t.Rules.Points,
 			Ranking: t.Rules.Ranking,
 			URL:     t.Rules.URL,
+		}
+	}
+
+	// Check if already in cache with complete geocoding
+	cacheKey := fmt.Sprintf("%d", t.ID)
+	if cachedTournament, exists := cachedTournaments[cacheKey]; exists {
+		if cachedTournament.Address.Latitude != 0 && cachedTournament.Address.Longitude != 0 {
+			// Tournament exists with coordinates - preserve them and update other data
+			newCacheEntry.Address.Latitude = cachedTournament.Address.Latitude
+			newCacheEntry.Address.Longitude = cachedTournament.Address.Longitude
+			newCacheEntry.Address.Failed = cachedTournament.Address.Failed
+
+			// Already geocoded, no need to process
+			return newCacheEntry, false, geocoding.Address{}
 		}
 	}
 

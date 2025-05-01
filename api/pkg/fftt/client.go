@@ -1,6 +1,7 @@
 package fftt
 
 import (
+	"log"
 	"net/http"
 	"net/url"
 	"sync"
@@ -54,6 +55,9 @@ func (c *Client) GetTournaments(params url.Values) (*http.Response, error) {
 	if params != nil {
 		req.URL.RawQuery = params.Encode()
 	}
+
+	// Log the complete URL with query parameters
+	log.Println("ok123", req.URL.String())
 
 	// Set required headers
 	req.Header.Set("Referer", FFTT_REFERER_URL)

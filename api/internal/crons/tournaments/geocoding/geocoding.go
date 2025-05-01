@@ -138,8 +138,8 @@ func saveTournamentCache(tournamentCacheEntries []cache.TournamentCache) error {
 	return nil
 }
 
-// RefreshTournamentsAndGeocoding fetches and updates tournament geocoding data
-func RefreshTournamentsAndGeocoding(startDateAfter, startDateBefore *time.Time) error {
+// RefreshGeocoding fetches and updates tournament geocoding data
+func RefreshGeocoding(startDateAfter, startDateBefore *time.Time) error {
 	if startDateAfter == nil {
 		now := time.Now()
 		startDateAfter = &now
@@ -159,11 +159,15 @@ func RefreshTournamentsAndGeocoding(startDateAfter, startDateBefore *time.Time) 
 		return nil
 	}
 
+	log.Printf("Fetched %d tournaments for processing", len(tournaments))
+
 	// Prepare tournaments for geocoding
 	tournamentCacheEntries, addressesToGeocode, tournamentsNeedingGeocoding, err := prepareTournamentsForGeocoding(tournaments)
 	if err != nil {
 		return fmt.Errorf("error preparing tournaments for geocoding: %v", err)
 	}
+
+	log.Printf("Found %d tournaments needing geocoding out of %d total tournaments", len(addressesToGeocode), len(tournamentCacheEntries))
 
 	// Perform geocoding for addresses that need it
 	updatedEntries, err := performGeocoding(tournamentCacheEntries, addressesToGeocode, tournamentsNeedingGeocoding)
