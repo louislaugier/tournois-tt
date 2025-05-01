@@ -1,6 +1,7 @@
 import { formatPostcode, formatCityName, getRegionFromPostalCode } from '../utils/address';
 import { getTodayMidnight, formatDateDDMMYYYY } from '../utils/date';
 import { getCurrentSeasonYears } from '../utils/season';
+import { mapTournamentType } from '../utils/tournament';
 // import franceBordersRaw from './../../assets/metropole-et-outre-mer.json';
 
 const { seasonStartYear, seasonEndYear } = getCurrentSeasonYears()
@@ -45,7 +46,7 @@ export const getTournamentRows = (allTournamentsForMap: any) => {
             location.latitude,
             location.longitude,
             location.tournaments.map(t => t.name).join(' | '),
-            Array.from(new Set<string>(location.tournaments.map(t => t.type))).join(' | '),
+            Array.from(new Set<string>(location.tournaments.map(t => mapTournamentType(t.type)))).join(' | '),
             Array.from(new Set<string>(location.tournaments.map(t => `${t.club.name} (${t.club.identifier})`))).join(' | '),
             location.tournaments.map(t => {
                 // Ensure we always have a valid numeric value for endowment filtering
