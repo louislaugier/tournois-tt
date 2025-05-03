@@ -1062,7 +1062,33 @@ func getBaseURL(url string) string {
 func IsSignupFormPage(HTML string) bool {
 	// Check if the HTML contains a form
 	containsForm := strings.Contains(strings.ToLower(HTML), "<form")
-	log.Printf("IsSignupFormPage check - contains form: %v", containsForm)
+
+	// Also check for React form containers (Retool and other modern frameworks)
+	containsReactForm := false
+	reactContainerPatterns := []string{
+		`_retool-TextInputWidget2`,                    // Retool text input widget
+		`_retool-container-textInput`,                 // Retool text input container
+		`_retool-ButtonWidget`,                        // Retool button widget
+		`data-testid="RetoolWidget:TextInputWidget2"`, // Retool input widget test ID
+		`data-testid="RetoolWidget:FormWidget"`,       // Retool form widget test ID
+		`class="retool-form"`,                         // Generic Retool form class
+		`class="MuiFormControl"`,                      // Material UI form control
+		`class="ant-form"`,                            // Ant Design form
+		`class="form-control"`,                        // Bootstrap form control
+	}
+
+	for _, pattern := range reactContainerPatterns {
+		if strings.Contains(HTML, pattern) {
+			containsReactForm = true
+			log.Printf("IsSignupFormPage check - contains React form component: %v (matched: %s)", containsReactForm, pattern)
+			break
+		}
+	}
+
+	log.Printf("IsSignupFormPage check - contains traditional form: %v, contains React form: %v", containsForm, containsReactForm)
+
+	// Update containsForm to include modern frameworks
+	containsForm = containsForm || containsReactForm
 
 	// Check if nom/prénom are in form labels or inputs
 	nameFieldsInFormElements := false
@@ -1079,6 +1105,39 @@ func IsSignupFormPage(HTML string) bool {
 	if inputRegex.MatchString(HTML) {
 		nameFieldsInFormElements = true
 		log.Printf("IsSignupFormPage check - found nom/prénom in input attributes")
+	}
+
+	// Check for React component labels and placeholders for name/contact info fields
+	reactLabelRegex := regexp.MustCompile(`(?:label|aria-label|placeholder)=["']([^"']*(?:nom|prénom|prenom|e-mail|email|contact)[^"']*)["']`)
+	if reactLabelRegex.MatchString(HTML) {
+		nameFieldsInFormElements = true
+		log.Printf("IsSignupFormPage check - found name/email fields in React component attributes")
+	}
+
+	// Check for specific label text in React components (useful for framework-generated markup)
+	labelTextSnippets := []string{
+		"Informations de contact",     // Contact information
+		"Veuillez saisir un e-mail",   // Please enter an email
+		"Entrez votre adresse e-mail", // Enter your email address
+		"Inscriptions",                // Registrations
+		"Modalités de paiement",       // Payment terms
+		"Informations personnelles",   // Personal information
+		"Coordonnées",                 // Contact details
+	}
+
+	for _, snippet := range labelTextSnippets {
+		if strings.Contains(HTML, snippet) {
+			nameFieldsInFormElements = true
+			log.Printf("IsSignupFormPage check - found contact/registration related text: %s", snippet)
+			break
+		}
+	}
+
+	// Look for email input placeholders in any component
+	emailPlaceholderRegex := regexp.MustCompile(`placeholder=["'][^"']*(?:email|e-mail|courriel|adresse)[^"']*["']`)
+	if emailPlaceholderRegex.MatchString(HTML) {
+		nameFieldsInFormElements = true
+		log.Printf("IsSignupFormPage check - found email field placeholder")
 	}
 
 	// Check for tableau links
