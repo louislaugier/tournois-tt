@@ -41,8 +41,8 @@ func start() {
 }
 
 func main() {
-	// start()
-	testScraping()
+	start()
+	// testScraping()
 	// scripts.RegeocodeFailedTournaments()
 }
 
