@@ -12,6 +12,7 @@ export function upsertMocksIntoDataset(tournamentData: Tournament[], pastCurrent
     // Get the current season start date and the last completed season date range
     const currentSeasonStartDate = getCurrentSeasonStartDate();
     const { lastCompletedSeasonStartDate, lastCompletedSeasonEndDate } = getLastCompletedSeasonDates();
+    const currentDate = new Date(); // Get the current date
     
     // Helper function to check if a tournament already exists in the dataset
     const tournamentExists = (dataset: Tournament[], mockTournament: Tournament) => 
@@ -33,12 +34,19 @@ export function upsertMocksIntoDataset(tournamentData: Tournament[], pastCurrent
                tournamentStartDate <= lastCompletedSeasonEndDate;
     };
     
+    // Helper function to check if a tournament's start date is today or in the future
+    const isFutureOrToday = (tournament: Tournament) => {
+        const tournamentStartDate = new Date(tournament.startDate);
+        return tournamentStartDate >= currentDate;
+    };
+    
     // Add new mock tournaments that don't exist in the datasets and match the current season dates
     const tournamentDataWithMocks = [
         ...currentData,
         ...mockTournaments
             .filter(mock => !tournamentExists(currentData, mock))
             .filter(isInCurrentSeason)
+            .filter(isFutureOrToday)
     ];
 
     const pastCurrentTournamentDataWithMocks = [
@@ -46,6 +54,7 @@ export function upsertMocksIntoDataset(tournamentData: Tournament[], pastCurrent
         ...mockPastCurrentTournaments
             .filter(mock => !tournamentExists(pastCurrentData, mock))
             .filter(isInCurrentSeason)
+            .filter(isFutureOrToday)
     ];
 
     const pastTournamentDataWithMocks = [
