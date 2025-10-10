@@ -1,6 +1,8 @@
 import { Routes, Route, Navigate, useLocation, BrowserRouter } from "react-router-dom";
 import Cookies from "../pages/CookiePolicy";
 import { Map } from "../pages/Map";
+import FeedIndex from "../pages/FeedIndex";
+import FeedTournament from "../pages/FeedTournament";
 import { useEffect } from "react";
 import React from "react";
 
@@ -19,6 +21,8 @@ const Router: React.FC = () => {
         <Routes>
             <Route path="/" element={<Map />} />
             <Route path="/cookies" element={<Cookies />} />
+            <Route path="/feed" element={<FeedIndex />} />
+            <Route path="/feed/:id" element={<FeedTournament />} />
             <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
     );

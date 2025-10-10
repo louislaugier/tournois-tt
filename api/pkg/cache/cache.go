@@ -3,7 +3,9 @@ package cache
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -282,7 +284,14 @@ func SaveTournamentsToCache(tournaments []TournamentCache) error {
 	}
 
 	// Save to JSON file
-	return SaveToJSON(DefaultTournamentCache, CacheFilePath)
+	if err := SaveToJSON(DefaultTournamentCache, CacheFilePath); err != nil {
+		return err
+	}
+
+	// Update sitemap automatically after saving tournaments
+	go updateSitemap()
+
+	return nil
 }
 
 // LoadTournaments loads existing tournament data from JSON file
@@ -416,4 +425,115 @@ func SetCachedGeocodeResult(result GeocodeResult) {
 // Legacy function for backward compatibility
 func LoadGeocodeCache() (map[string]GeocodeResult, error) {
 	return LoadGeocodeResultsFromCache()
+}
+
+// updateSitemap updates the sitemap by calling npm scripts directly
+func updateSitemap() {
+	// Get the project root directory
+	execDir, err := os.Getwd()
+	if err != nil {
+		log.Printf("Warning: Could not get working directory for sitemap update: %v", err)
+		return
+	}
+
+	// Find the project root (look for api directory)
+	var projectRoot string
+	if idx := strings.LastIndex(execDir, "api"); idx != -1 {
+		projectRoot = execDir[:idx-1] // Remove "api" and the trailing slash
+	} else {
+		projectRoot = execDir
+	}
+	
+
+	// Path to the frontend directory (different paths for dev vs prod)
+	var frontendDir string
+	var isDockerEnv bool
+
+	// Check if we're in Docker environment (agnostic dev/prod)
+	// Try different possible Docker frontend paths
+	dockerPaths := []string{
+		"/app/frontend",           // Production Docker
+		"/tournois-tt/frontend",   // Development Docker
+		filepath.Join(projectRoot, "frontend"), // Try project root frontend too
+	}
+	
+	var foundDockerPath string
+	for _, dockerPath := range dockerPaths {
+		if _, err := os.Stat(dockerPath); err == nil {
+			foundDockerPath = dockerPath
+			break
+		}
+	}
+	
+	if foundDockerPath != "" {
+		// We're in Docker
+		frontendDir = foundDockerPath
+		isDockerEnv = true
+		log.Printf("Detected Docker environment, using frontend directory: %s", frontendDir)
+		
+		// Only generate sitemap/RSS in production Docker (single container)
+		// In development Docker, containers are separate so skip generation
+		if frontendDir == "/tournois-tt/frontend" {
+			log.Printf("Development Docker detected - skipping sitemap/RSS generation (separate containers)")
+			return // Exit early, no generation in dev Docker
+		}
+	} else {
+		// We're in local development, frontend files are in frontend directory
+		frontendDir = filepath.Join(projectRoot, "frontend")
+		isDockerEnv = false
+		log.Printf("Detected local development environment, using frontend directory: %s", frontendDir)
+	}
+
+	// Check if frontend directory exists
+	if _, err := os.Stat(frontendDir); os.IsNotExist(err) {
+		log.Printf("Warning: Frontend directory not found: %s", frontendDir)
+		return
+	}
+
+	if isDockerEnv {
+		// In Docker, determine output directory based on environment
+		var outputDir string
+		if frontendDir == "/app/frontend" {
+			// Production Docker - output to nginx html directory
+			outputDir = "/usr/share/nginx/html"
+		} else {
+			// Development Docker - output to frontend public directory
+			outputDir = filepath.Join(frontendDir, "public")
+		}
+		
+		// Execute npm scripts from Docker frontend directory
+		commands := []string{
+			"generate-sitemap",
+			"generate-rss",
+		}
+		
+		for _, cmdName := range commands {
+			cmd := exec.Command("npm", "run", cmdName)
+			cmd.Dir = frontendDir
+			cmd.Env = append(os.Environ(), "OUTPUT_DIR="+outputDir)
+			
+			if err := cmd.Run(); err != nil {
+				log.Printf("Warning: Failed to run npm run %s: %v", cmdName, err)
+			} else {
+				log.Printf("Successfully ran npm run %s", cmdName)
+			}
+		}
+	} else {
+		// In development, run scripts normally
+		commands := []string{
+			"generate-sitemap",
+			"generate-rss",
+		}
+
+		for _, cmdName := range commands {
+			cmd := exec.Command("npm", "run", cmdName)
+			cmd.Dir = frontendDir
+
+			if err := cmd.Run(); err != nil {
+				log.Printf("Warning: Failed to run npm run %s: %v", cmdName, err)
+			} else {
+				log.Printf("Successfully ran npm run %s", cmdName)
+			}
+		}
+	}
 }

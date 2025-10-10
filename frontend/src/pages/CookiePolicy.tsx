@@ -29,21 +29,14 @@ const CookiePolicy: React.FC = () => {
         <section style={{ marginBottom: '30px' }}>
           <h2>Cookies et publicités</h2>
           <p>
-            Ce site utilise Google Analytics et Google AdSense pour améliorer votre expérience et
-            afficher des publicités pertinentes. Ces services peuvent utiliser des cookies pour
-            fonctionner correctement.
-          </p>
-          <p>
-            Les cookies Google Analytics nous permettent d'analyser l'utilisation du site de manière
-            anonyme. Les cookies Google AdSense sont utilisés pour personnaliser les annonces en
-            fonction de vos centres d'intérêt.
+            Ce site utilise Google Analytics pour récolter des statistiques anonymes. Ce service peut utiliser des cookies pour fonctionner correctement.
           </p>
         </section>
 
         <section style={{ marginBottom: '30px' }}>
           <h2>Données collectées</h2>
           <p>
-            Les données collectées par Google Analytics et AdSense peuvent inclure :
+            Les données collectées par Google Analyticspeuvent inclure :
           </p>
           <ul style={{ marginLeft: '20px', lineHeight: '1.5' }}>
             <li>Informations sur votre navigateur</li>

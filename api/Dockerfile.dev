@@ -98,7 +98,7 @@ RUN mkdir -p /usr/local/ms-playwright \
 
 COPY . .
 
-RUN go install github.com/air-verse/air@latest
+RUN go install github.com/air-verse/air@v1.61.0
 
 # Install Playwright browsers with optimized Docker configuration
 RUN go run github.com/playwright-community/playwright-go/cmd/playwright install --with-deps chromium

@@ -127,6 +127,10 @@ COPY nginx.conf /etc/nginx/nginx.conf
 # Copy necessary configuration files and cache
 COPY api/cache/ /app/api/cache/
 
+# Copy frontend scripts and package.json for sitemap/RSS generation
+COPY frontend/package.json /app/frontend/
+COPY frontend/scripts/ /app/frontend/scripts/
+
 # Create entrypoint script
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh

@@ -1,4 +1,18 @@
 User-agent: *
 Allow: /
-Disallow: /api/
-Disallow: /admin/ 
+
+# Sitemap principal
+Sitemap: https://tournois-tt.fr/sitemap.xml
+
+# Sitemap du feed (optionnel, pour référence)
+Sitemap: https://tournois-tt.fr/feed/sitemap.xml
+
+# Pages importantes à indexer en priorité
+Allow: /feed/
+Allow: /feed/*
+
+# Pages moins importantes
+Allow: /cookies
+
+# Délai entre les requêtes (en secondes)
+Crawl-delay: 1

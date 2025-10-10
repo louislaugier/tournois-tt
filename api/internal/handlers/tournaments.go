@@ -4,12 +4,9 @@ import (
 	"log"
 	"net/http"
 	"strings"
-	"time"
-	"tournois-tt/api/internal/crons/tournaments/signup/refresh"
 	"tournois-tt/api/pkg/cache"
 	"tournois-tt/api/pkg/fftt"
 	"tournois-tt/api/pkg/geocoding"
-	"tournois-tt/api/pkg/utils"
 
 	"github.com/gin-gonic/gin"
 )
@@ -93,20 +90,6 @@ func TournamentsHandler(c *gin.Context) {
 	// Log response data
 	log.Printf("Returned %d tournaments (filtered by postal code: %s)",
 		len(tournamentsResponse), postalCode)
-
-	for i, t := range tournamentsResponse {
-		date, err := utils.ParseTournamentDate(t.StartDate)
-		if err != nil {
-			log.Printf("Failed to parse tournament date: %v", err)
-			continue
-		}
-
-		// check also if date is after now
-		if refresh.IsCurrentSeasonQuery(&date, nil) && date.After(time.Now()) {
-			tournamentsResponse[i].Address.PostalCode += "test1"
-			break
-		}
-	}
 
 	c.JSON(http.StatusOK, tournamentsResponse)
 }
