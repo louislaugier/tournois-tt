@@ -1,7 +1,6 @@
 import React, { Component } from "react";
 import { Spinner } from "./Spinner";
 import Map from "./Map";
-import { Button } from "@heroui/react";
 import { NotificationsModal } from "./NotificationsModal";
 
 // Error boundary component

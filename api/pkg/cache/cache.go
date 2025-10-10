@@ -443,7 +443,6 @@ func updateSitemap() {
 	} else {
 		projectRoot = execDir
 	}
-	
 
 	// Path to the frontend directory (different paths for dev vs prod)
 	var frontendDir string
@@ -452,11 +451,11 @@ func updateSitemap() {
 	// Check if we're in Docker environment (agnostic dev/prod)
 	// Try different possible Docker frontend paths
 	dockerPaths := []string{
-		"/app/frontend",           // Production Docker
-		"/tournois-tt/frontend",   // Development Docker
+		"/app/frontend",                        // Production Docker
+		"/tournois-tt/frontend",                // Development Docker
 		filepath.Join(projectRoot, "frontend"), // Try project root frontend too
 	}
-	
+
 	var foundDockerPath string
 	for _, dockerPath := range dockerPaths {
 		if _, err := os.Stat(dockerPath); err == nil {
@@ -464,13 +463,13 @@ func updateSitemap() {
 			break
 		}
 	}
-	
+
 	if foundDockerPath != "" {
 		// We're in Docker
 		frontendDir = foundDockerPath
 		isDockerEnv = true
 		log.Printf("Detected Docker environment, using frontend directory: %s", frontendDir)
-		
+
 		// Only generate sitemap/RSS in production Docker (single container)
 		// In development Docker, containers are separate so skip generation
 		if frontendDir == "/tournois-tt/frontend" {
@@ -500,18 +499,18 @@ func updateSitemap() {
 			// Development Docker - output to frontend public directory
 			outputDir = filepath.Join(frontendDir, "public")
 		}
-		
+
 		// Execute npm scripts from Docker frontend directory
 		commands := []string{
 			"generate-sitemap",
 			"generate-rss",
 		}
-		
+
 		for _, cmdName := range commands {
 			cmd := exec.Command("npm", "run", cmdName)
 			cmd.Dir = frontendDir
 			cmd.Env = append(os.Environ(), "OUTPUT_DIR="+outputDir)
-			
+
 			if err := cmd.Run(); err != nil {
 				log.Printf("Warning: Failed to run npm run %s: %v", cmdName, err)
 			} else {
