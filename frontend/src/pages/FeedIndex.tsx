@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { Tournament } from '../lib/api/types';
 import { mapTournamentType } from '../lib/utils/tournament';
 import { formatDateDDMMYYYY } from '../lib/utils/date';
-import FeedMeta from '../components/FeedMeta';
+import Meta from '../components/Meta';
 import { useTournaments } from '../lib/hooks/useTournaments';
 
 const FeedIndex: React.FC = () => {
@@ -37,7 +37,7 @@ const FeedIndex: React.FC = () => {
   }
   return (
     <>
-      <FeedMeta isIndex={true} totalTournaments={tournaments.length} />
+      <Meta isIndex={true} totalTournaments={tournaments.length} />
       <div className="min-h-screen bg-gray-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div style={{ marginTop: '10px' }}>

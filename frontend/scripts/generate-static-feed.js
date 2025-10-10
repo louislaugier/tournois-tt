@@ -97,14 +97,22 @@ function generateTournamentHTML(tournament) {
         },
         "organizer": {
             "@type": "Organization",
-            "name": "${tournament.club.name}"
+            "name": "Fédération Française de Tennis de Table",
+            "alternateName": "FFTT",
+            "url": "https://www.fftt.com"
         },
         "sport": "Tennis de Table",
         "url": "https://tournois-tt.fr/feed/${tournament.id}",
         "eventStatus": "EventScheduled",
-        "eventAttendanceMode": "OfflineEventAttendanceMode"${tournament.endowment > 0 ? `,
+        "eventAttendanceMode": "OfflineEventAttendanceMode",
+        "performer": {
+            "@type": "SportsTeam",
+            "name": "Joueurs de Tennis de Table"
+        },
+        "image": "https://www.fftt.com/site/medias/header2017/logo.png"${tournament.endowment > 0 ? `,
         "offers": {
             "@type": "Offer",
+            "url": "https://tournois-tt.fr/feed/${tournament.id}",
             "price": "${tournament.endowment}",
             "priceCurrency": "EUR",
             "availability": "https://schema.org/InStock"

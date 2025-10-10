@@ -3,7 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { Tournament } from '../lib/api/types';
 import { mapTournamentType } from '../lib/utils/tournament';
 import { formatDateDDMMYYYY } from '../lib/utils/date';
-import FeedMeta from '../components/FeedMeta';
+import Meta from '../components/Meta';
 import { useTournaments } from '../lib/hooks/useTournaments';
 
 const FeedTournament: React.FC = () => {
@@ -63,7 +63,7 @@ const FeedTournament: React.FC = () => {
 
   return (
     <>
-      <FeedMeta tournament={tournament} />
+      <Meta tournament={tournament} />
       <div className="min-h-screen bg-gray-50">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           {/* Breadcrumb */}

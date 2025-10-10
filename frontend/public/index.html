@@ -28,15 +28,51 @@
 
   <meta name="monetag" content="39d5ac8b1f7913131e127f7cc267a6b0">
 
-  <script type="application/ld+json">
-    {
+  <script>
+    // Fonction pour calculer les dates de saison dynamiquement
+    function getCurrentSeasonYears() {
+      const currentDate = new Date();
+      const currentMonth = currentDate.getMonth() + 1; // JavaScript months are 0-based
+      const currentYear = currentDate.getFullYear();
+      
+      let seasonStartYear, seasonEndYear;
+      if (currentMonth >= 7) { // July or later
+        seasonStartYear = currentYear;
+        seasonEndYear = currentYear + 1;
+      } else {
+        seasonStartYear = currentYear - 1;
+        seasonEndYear = currentYear;
+      }
+      
+      return { seasonStartYear, seasonEndYear };
+    }
+
+    function getSeasonDates() {
+      const { seasonStartYear, seasonEndYear } = getCurrentSeasonYears();
+      
+      // startDate: beginning of previous season
+      const previousSeasonStartYear = seasonStartYear - 1;
+      const startDate = new Date(previousSeasonStartYear, 6, 1); // July 1st of previous season start year
+      
+      // endDate: end of current season
+      const endDate = new Date(seasonEndYear, 5, 30); // June 30th of current season end year
+      
+      return {
+        startDate: startDate.toISOString().split('T')[0],
+        endDate: endDate.toISOString().split('T')[0]
+      };
+    }
+
+    // Générer le JSON-LD dynamiquement
+    const seasonDates = getSeasonDates();
+    const jsonLd = {
       "@context": "https://schema.org",
       "@type": "SportsEvent",
       "name": "Tournois de Tennis de Table en France",
       "description": "Carte interactive des tournois FFTT homologués. Tri & recherche par type de tournoi, club organisateur, date, région, code postal, ville, dotation.",
       "sport": "Tennis de Table",
-      "startDate": "2024-01-01",
-      "endDate": "2024-12-31",
+      "startDate": seasonDates.startDate,
+      "endDate": seasonDates.endDate,
       "location": {
         "@type": "Place",
         "name": "France",
@@ -58,15 +94,22 @@
         "@type": "SportsTeam",
         "name": "Joueurs de Tennis de Table"
       },
-      "image": "https://cdn-icons-png.flaticon.com/512/9978/9978844.png",
+      "image": "https://www.fftt.com/site/medias/header2017/logo.png",
       "offers": {
         "@type": "Offer",
+        "url": "https://tournois-tt.fr",
         "availability": "https://schema.org/InStock",
         "price": "0",
         "priceCurrency": "EUR",
-        "validFrom": "2024-01-01"
+        "validFrom": seasonDates.startDate
       }
-    }
+    };
+
+    // Injecter le JSON-LD dans le DOM
+    const script = document.createElement('script');
+    script.type = 'application/ld+json';
+    script.textContent = JSON.stringify(jsonLd);
+    document.head.appendChild(script);
   </script>
 </head>
 

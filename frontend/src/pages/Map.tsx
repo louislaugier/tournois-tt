@@ -11,6 +11,7 @@ import { loadTournaments } from "../lib/tournament/load";
 import { CustomTooltipObserver } from "../components/CustomTooltipObserver";
 import { getTournamentRows, tournamentFields } from "../lib/map/datasets";
 import ErrorBoundary from "../components/ErrorBoundary";
+import Meta from "../components/Meta";
 
 export const Map: React.FC = () => {
     const [currentTournaments, setCurrentTournaments] = useState<Tournament[]>([]);
@@ -135,6 +136,9 @@ export const Map: React.FC = () => {
 
     // Wrap the entire component with error boundary
     return (
-        <ErrorBoundary isLoading={isLoading} />
+        <>
+            <Meta isMainPage={true} />
+            <ErrorBoundary isLoading={isLoading} />
+        </>
     );
 };
