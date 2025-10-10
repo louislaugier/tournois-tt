@@ -47,14 +47,8 @@ const FeedIndex: React.FC = () => {
           </div>
           <header className="mb-8">
             <h1 className="text-4xl font-bold text-gray-900 mb-4">
-              Tournois FFTT de la saison précédente et actuelle (2024-2025 / 2025-2026)
+              Tournois FFTT homologués
             </h1>
-            <p className="text-lg text-gray-600">
-              Découvrez tous les tournois homologués.
-              {tournaments.length > 0 && (
-                <span className="font-semibold"> {tournaments.length} tournoi{tournaments.length > 1 ? 's' : ''} disponible{tournaments.length > 1 ? 's' : ''}.</span>
-              )}
-            </p>
           </header>
 
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
