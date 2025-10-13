@@ -1,13 +1,13 @@
 {
   "name": "tournois-tt-frontend",
   "version": "1.0.0",
-  "description": "Tournois FFTT",
+  "description": "Carte des Tournois FFTT",
   "engines": {
     "node": ">=20.18.1"
   },
   "main": "index.js",
   "scripts": {
-    "start": "npm run generate-sitemap && npm run generate-rss && webpack serve --config webpack.dev.js",
+    "start": "webpack serve --config webpack.dev.js",
     "build": "webpack --config webpack.prod.js",
     "build:dev": "webpack --config webpack.dev.js",
     "generate-feed": "node scripts/generate-static-feed.js",

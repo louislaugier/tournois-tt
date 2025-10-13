@@ -65,6 +65,7 @@ function generateTournamentHTML(tournament) {
     <meta property="og:event:end_time" content="${tournament.endDate}">
     <meta property="og:event:location" content="${fullAddress}">
     <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:site" content="@tournoistt">
     <meta name="twitter:title" content="${title}">
     <meta name="twitter:description" content="${description}">
     <meta name="twitter:image" content="https://tournois-tt.fr/thumbnail.png">
@@ -331,6 +332,7 @@ function generateIndexHTML(tournaments) {
     <meta property="og:image" content="https://tournois-tt.fr/thumbnail.png">
     <meta property="og:site_name" content="Carte des Tournois FFTT">
     <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:site" content="@tournoistt">
     <meta name="twitter:title" content="Liste des Tournois de Tennis de Table en France">
     <meta name="twitter:description" content="${tournaments.length} tournoi${tournaments.length > 1 ? 's' : ''} de tennis de table disponibles en France.">
     <meta name="twitter:image" content="https://tournois-tt.fr/thumbnail.png">

@@ -31,6 +31,25 @@ export const CustomTooltipObserver = (): MutationObserver => {
                         (el as HTMLElement).style.display = '';
                     }
                 });
+
+                // Add click tracking for external links in tooltips
+                document.querySelectorAll('.map-popover a[href^="http"]').forEach((link) => {
+                    const href = link.getAttribute('href');
+                    if (href && !href.includes('tournois-tt.fr')) {
+                        link.addEventListener('click', () => {
+                            if (typeof window !== 'undefined' && window.gtag) {
+                                window.gtag('event', 'click', {
+                                    event_category: 'external_link',
+                                    event_label: 'Map Tooltip External Link',
+                                    value: href,
+                                    link_url: href,
+                                    link_text: link.textContent || '',
+                                    source: 'map_tooltip'
+                                });
+                            }
+                        });
+                    }
+                });
             }
         });
     });

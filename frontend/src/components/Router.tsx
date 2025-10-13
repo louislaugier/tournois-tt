@@ -20,7 +20,7 @@ const Router: React.FC = () => {
     return (
         <Routes>
             <Route path="/" element={<Map />} />
-            <Route path="/cookies" element={<Cookies />} />
+            <Route path="/a-propos" element={<Cookies />} />
             <Route path="/feed" element={<FeedIndex />} />
             <Route path="/feed/:id" element={<FeedTournament />} />
             <Route path="*" element={<Navigate to="/" replace />} />

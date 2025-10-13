@@ -74,7 +74,10 @@ export const getTournamentRows = (allTournamentsForMap: any) => {
                 
                 // Display rules URL if available
                 if (t.rules?.url) {
-                    return location.count > 1 ? t.rules.url.replace('https://', '') : t.rules.url;
+                    const utmParams = 'utm_source=tournois-tt.fr&utm_medium=website&utm_campaign=fftt_rules&utm_content=map_tooltip';
+                    const separator = t.rules.url.includes('?') ? '&' : '?';
+                    const urlWithUTM = `${t.rules.url}${separator}${utmParams}`;
+                    return location.count > 1 ? urlWithUTM.replace('https://', '') : urlWithUTM;
                 }
                 
                 // If affiche is available, display it
@@ -89,7 +92,10 @@ export const getTournamentRows = (allTournamentsForMap: any) => {
             location.tournaments.map(t => {
                 // Display signup URL if available
                 if (t.signupUrl) {
-                    return location.count > 1 ? t.signupUrl.replace('https://', '') : t.signupUrl;
+                    const utmParams = 'utm_source=tournois-tt.fr&utm_medium=website&utm_campaign=fftt_signup&utm_content=map_tooltip';
+                    const separator = t.signupUrl.includes('?') ? '&' : '?';
+                    const urlWithUTM = `${t.signupUrl}${separator}${utmParams}`;
+                    return location.count > 1 ? urlWithUTM.replace('https://', '') : urlWithUTM;
                 }
                 return '/';
             }).join(' | '),

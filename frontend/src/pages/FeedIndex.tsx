@@ -105,7 +105,24 @@ const FeedIndex: React.FC = () => {
 
                 {tournament.rules?.url && (
                   <div className="mt-4 pt-4 border-t border-gray-200">
-                    <a href={tournament.rules.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center text-blue-600 hover:text-blue-800 font-medium text-sm transition-colors duration-200">
+                    <a 
+                      href={`${tournament.rules.url}${tournament.rules.url.includes('?') ? '&' : '?'}utm_source=tournois-tt.fr&utm_medium=website&utm_campaign=fftt_rules&utm_content=feed_list`} 
+                      target="_blank" 
+                      rel="noopener noreferrer" 
+                      className="inline-flex items-center text-blue-600 hover:text-blue-800 font-medium text-sm transition-colors duration-200"
+                      onClick={() => {
+                        if (typeof window !== 'undefined' && window.gtag) {
+                          window.gtag('event', 'click', {
+                            event_category: 'external_link',
+                            event_label: 'FFTT Rules - Feed List',
+                            value: tournament.rules?.url,
+                            link_url: tournament.rules?.url,
+                            link_text: 'Voir le règlement',
+                            tournament_name: tournament.name
+                          });
+                        }
+                      }}
+                    >
                       Voir le règlement
                     </a>
                   </div>

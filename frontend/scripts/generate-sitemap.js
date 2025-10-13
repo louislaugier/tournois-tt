@@ -30,7 +30,7 @@ const MAIN_PAGES = [
     lastmod: new Date().toISOString()
   },
   {
-    url: 'https://tournois-tt.fr/cookies',
+    url: 'https://tournois-tt.fr/a-propos',
     changefreq: 'monthly',
     priority: '0.3',
     lastmod: new Date().toISOString()

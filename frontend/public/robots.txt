@@ -12,7 +12,7 @@ Allow: /feed/
 Allow: /feed/*
 
 # Pages moins importantes
-Allow: /cookies
+Allow: /a-propos
 
 # Délai entre les requêtes (en secondes)
 Crawl-delay: 1

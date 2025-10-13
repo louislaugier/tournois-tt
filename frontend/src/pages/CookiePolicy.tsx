@@ -12,10 +12,10 @@ const CookiePolicy: React.FC = () => {
         `}
       </style>
       <Helmet>
-        <title>Politique de Confidentialité et Cookies | Carte des Tournois FFTT</title>
+        <title>A propos | Carte des Tournois FFTT</title>
         <meta name="description" content="Politique de confidentialité et utilisation des cookies pour la carte des tournois de tennis de table. Informations sur l'utilisation de Google Analytics et la protection de vos données." />
         <meta name="robots" content="index, follow" />
-        <link rel="canonical" href="https://tournois-tt.fr/cookies" />
+        <link rel="canonical" href="https://tournois-tt.fr/a-propos" />
       </Helmet>
       <div style={{
         padding: '20px',
@@ -24,7 +24,7 @@ const CookiePolicy: React.FC = () => {
         minHeight: '100vh',
         fontFamily: 'Arial, sans-serif'
       }}>
-        <h1>Politique de confidentialité et cookies</h1>
+        <h1>A propos</h1>
         
         <section style={{ marginBottom: '30px' }}>
           <h2>Cookies et publicités</h2>
