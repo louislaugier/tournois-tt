@@ -77,6 +77,16 @@ export default (props: any) => {
     const [isModalOpen, setIsModalOpen] = React.useState(false)
 
     React.useEffect(() => {
+        // iOS keyboard safe viewport height fix
+        const setAppViewport = () => {
+            if (typeof window !== 'undefined') {
+                const vh = window.innerHeight * 0.01
+                document.documentElement.style.setProperty('--app-vh', `${vh}px`)
+            }
+        }
+        setAppViewport()
+        window.addEventListener('resize', setAppViewport)
+
         const checkSidebarState = () => {
             // Use the same logic as sidebarCustomizer.ts
             const sidePanel = document.querySelector('.side-panel--container') as HTMLElement
@@ -99,6 +109,7 @@ export default (props: any) => {
         })
 
         return () => {
+            window.removeEventListener('resize', setAppViewport)
             observer.disconnect()
         }
     }, [])

@@ -11,7 +11,10 @@ body {
 
 .map-container {
   width: 100vw;
+  /* Fallbacks + iOS/Safari keyboard safe height */
   height: 100vh;
+  height: 100dvh;
+  height: calc(var(--app-vh, 1vh) * 100);
   position: fixed;
   top: 0;
   left: 0;
