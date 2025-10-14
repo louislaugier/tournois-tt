@@ -49,6 +49,7 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({ isOpen, 
         onCancel={onClose}
         onRequestClose={onClose}
         shouldCloseOnEsc
+        shouldCloseOnOverlayClick
         // we'll render actions inside the content to match Kepler's example (left-aligned primary button)
         footer={false}
         title="Soyez notifié des prochaines fonctionnalités"

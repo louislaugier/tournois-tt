@@ -47,4 +47,7 @@ func setupRoutes(router *gin.Engine) {
 		v1.GET("/tournaments", middleware.Logger(), handlers.TournamentsHandler)
 		v1.POST("/newsletter", handlers.NewsletterHandler)
 	}
+
+	// Direct redirect from root id to rules pdf: /:id -> rules url or '/'
+	router.GET("/:id", handlers.RedirectRulesHandler)
 }

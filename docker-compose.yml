@@ -51,6 +51,8 @@ services:
       - CONTAINER_RUNTIME=1
       - DISPLAY=:99
       - XDG_RUNTIME_DIR=/tmp/runtime-dir
+      - GA_MEASUREMENT_ID=${GA_MEASUREMENT_ID}
+      - GA_API_SECRET=${GA_API_SECRET}
     networks:
       - vpc_local
     cap_add:
