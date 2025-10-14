@@ -1,6 +1,9 @@
 import React, { Component } from "react";
 import { Spinner } from "./Spinner";
 import Map from "./Map";
+import { MapControlButton } from "@kepler.gl/components";
+import { ThemeProvider } from "styled-components";
+import { theme } from "@kepler.gl/styles";
 import { NotificationsModal } from "./NotificationsModal";
 
 // Error boundary component
@@ -21,37 +24,46 @@ class ErrorBoundary extends Component<{ children: React.ReactNode }, { hasError:
     render() {
         if (this.state.hasError) {
             return (
-                <div style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    height: '100vh',
-                    backgroundColor: '#242730',
-                    color: 'white',
-                    fontFamily: 'system-ui, -apple-system, sans-serif'
-                }}>
-                    <h1 style={{ marginBottom: '20px', fontSize: '24px' }}>
-                        Une erreur s'est produite
-                    </h1>
-                    <p style={{ marginBottom: '20px', textAlign: 'center' }}>
-                        Veuillez actualiser la page pour continuer.
-                    </p>
-                    <button
-                        onClick={() => window.location.reload()}
-                        style={{
-                            padding: '10px 20px',
-                            backgroundColor: '#007bff',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '5px',
-                            cursor: 'pointer',
-                            fontSize: '16px'
-                        }}
-                    >
-                        Actualiser la page
-                    </button>
-                </div>
+                <ThemeProvider theme={theme}>
+                    <div style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        height: '100vh',
+                        backgroundColor: '#242730',
+                        color: theme.titleColorLT,
+                        fontFamily: theme.fontFamily
+                    }}>
+                        <div style={{
+                            background: '#29323C',
+                            border: '1px solid #3A414C',
+                            boxShadow: '0 6px 12px 0 rgba(0,0,0,0.16)',
+                            borderRadius: 2,
+                            padding: '24px 28px',
+                            maxWidth: 520,
+                            textAlign: 'center'
+                        }}>
+                            <h1 style={{ margin: 0, marginBottom: 12, fontSize: 18, color: theme.textColorHl }}>Une erreur s'est produite</h1>
+                            <p style={{ margin: 0, marginBottom: 20, color: theme.textColor }}>Veuillez actualiser la page pour continuer.</p>
+                            <button
+                                onClick={() => window.location.reload()}
+                                className="map-control-button"
+                                style={{
+                                    backgroundColor: theme.primaryBtnBgd,
+                                    color: theme.primaryBtnColor,
+                                    border: theme.primaryBtnBorder,
+                                    borderRadius: theme.primaryBtnRadius,
+                                    padding: '10px 16px',
+                                    fontSize: theme.primaryBtnFontSizeDefault,
+                                    cursor: 'pointer'
+                                }}
+                            >
+                                Actualiser la page
+                            </button>
+                        </div>
+                    </div>
+                </ThemeProvider>
             );
         }
 
@@ -95,12 +107,13 @@ export default (props: any) => {
         <>
             <style>
                 {`
-                    @keyframes shake {
-                        0%, 100% { transform: translateY(0); }
-                        20% { transform: translateY(-2px); }
-                        40% { transform: translateY(2px); }
-                        60% { transform: translateY(-1px); }
-                        80% { transform: translateY(1px); }
+                    @keyframes pulse {
+                        0%, 100% { box-shadow: 0 6px 12px 0 rgba(0, 0, 0, 0.16); }
+                        50% { box-shadow: 0 6px 12px 0 rgba(0, 0, 0, 0.16), 0 0 0 6px rgba(31, 186, 214, 0.28); }
+                    }
+                    .notification-bell-button { animation: pulse 2.4s ease-in-out infinite; }
+                    .notification-bell-button:hover {
+                        animation: none;
                     }
                 `}
             </style>
@@ -137,44 +150,38 @@ export default (props: any) => {
                         </div>
                         <Map />
                         {/* Bell notification button */}
-                        {/* <Button
-                            isIconOnly
-                            style={{
-                                position: 'absolute',
-                                top: '50px',
-                                left: sidebarOpen ? '330px' : '15px',
-                                zIndex: 1000,
-                                background: '#242730',
-                                border: 'none',
-                                borderRadius: '50%',
-                                width: '48px',
-                                height: '48px',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                cursor: 'pointer',
-                                boxShadow: '0 2px 8px rgba(0, 0, 0, 0.3)',
-                                transition: 'all 0.2s ease',
-                                animation: 'shake 1.5s ease-in-out infinite',
-                            }}
-                            onPress={() => setIsModalOpen(true)}
-                            title="Notifications"
-                            aria-label="Notifications"
-                        >
-                            <svg
-                                width="20"
-                                height="20"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                stroke="white"
-                                strokeWidth="2"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
+                        <ThemeProvider theme={theme}>
+                            <MapControlButton
+                                onClick={() => {
+                                    if (typeof window !== 'undefined' && (window as any).gtag) {
+                                        (window as any).gtag('event', 'click', {
+                                            event_category: 'ui_action',
+                                            event_label: 'bell_notifications',
+                                            link_type: 'notification_bell',
+                                            content_group: 'ui',
+                                        });
+                                    }
+                                    setIsModalOpen(true)
+                                }}
+                                className="map-control-button notification-bell-button"
+                                style={{
+                                    position: 'absolute',
+                                    top: '50px',
+                                    left: sidebarOpen ? '330px' : '15px',
+                                    zIndex: 1000,
+                                    transition: 'left 0.2s ease',
+                                }}
                             >
-                                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
-                                <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
-                            </svg>
-                        </Button> */}
+                                <svg 
+                                    width="16" 
+                                    height="16" 
+                                    fill="currentColor" 
+                                    viewBox="0 0 24 24"
+                                >
+                                    <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/>
+                                </svg>
+                            </MapControlButton>
+                        </ThemeProvider>
 
                         <div style={{
                             position: 'absolute',
@@ -209,12 +216,14 @@ export default (props: any) => {
                                     <path d="M6.503 20.752c0 1.794-1.456 3.248-3.251 3.248S0 22.546 0 20.752s1.456-3.248 3.251-3.248 3.252 1.454 3.252 3.248zm-6.503-12.572v4.811c6.05.062 10.96 4.966 11.022 11.009h4.817c-.062-8.71-7.118-15.758-15.839-15.82zm0-3.368c10.58.046 19.152 8.594 19.183 19.188h4.817c-.03-13.231-10.755-23.954-24-24v4.812z" />
                                 </svg>
                             </a></div>
+
+                        <NotificationsModal 
+                            isOpen={isModalOpen} 
+                            onClose={() => setIsModalOpen(false)} 
+                        />
                     </div>
                 )}
-                {/* <NotificationsModal
-                    isOpen={true}
-                    onClose={() => setIsModalOpen(false)}
-                /> */}
+              
             </ErrorBoundary>
         </>
     )
