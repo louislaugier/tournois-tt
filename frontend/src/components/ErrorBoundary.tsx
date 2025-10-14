@@ -204,7 +204,9 @@ export default (props: any) => {
                                 window.gtag('event', 'click', {
                                     event_category: 'social_link',
                                     event_label: 'Instagram Footer',
-                                    value: 'https://instagram.com/tournoistt'
+                                    value: 'https://instagram.com/tournoistt',
+                                    link_type: 'instagram',
+                                    content_group: 'footer'
                                 });
                             }
                         }}>

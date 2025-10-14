@@ -49,7 +49,27 @@ export const createExternalLink = (url: string, options: LinkTrackingOptions = {
 /**
  * Track un clic sur un lien externe
  */
-export const trackExternalClick = (url: string, linkText: string = '', eventCategory: string = 'external_link') => {
+export type ExternalClickParams = {
+  tournament_id?: string | number;
+  tournament_name?: string;
+  link_source?: string; // e.g., signup, rules, website
+  content_group?: string; // e.g., map_tooltip, feed_list
+};
+
+// Declare analytics globals so TypeScript doesn't error
+// They may not be present at runtime; we guard their usage.
+// Use ambient declarations without reopening Window to avoid duplicate issues
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+declare const gtag: any | undefined;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+declare const ga: any | undefined;
+
+export const trackExternalClick = (
+  url: string,
+  linkText: string = '',
+  eventCategory: string = 'external_link',
+  params: ExternalClickParams = {}
+) => {
   // Google Analytics 4
   if (typeof gtag !== 'undefined') {
     gtag('event', 'click', {
@@ -57,7 +77,12 @@ export const trackExternalClick = (url: string, linkText: string = '', eventCate
       event_label: linkText || url,
       value: url,
       link_url: url,
-      link_text: linkText
+      link_text: linkText,
+      // Tournament / context metadata (optional)
+      tournament_id: params.tournament_id,
+      tournament_name: params.tournament_name,
+      link_source: params.link_source,
+      content_group: params.content_group
     });
   }
 

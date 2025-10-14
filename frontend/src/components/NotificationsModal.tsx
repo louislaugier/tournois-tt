@@ -47,6 +47,8 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({ isOpen, 
       <StyledModal
         isOpen={isOpen}
         onCancel={onClose}
+        onRequestClose={onClose}
+        shouldCloseOnEsc
         // we'll render actions inside the content to match Kepler's example (left-aligned primary button)
         footer={false}
         title="Soyez notifié des prochaines fonctionnalités"
@@ -64,9 +66,9 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({ isOpen, 
               Prochaines évolutions :
             </div>
             <ul style={{ margin: 0, paddingLeft: 16 }}>
-              <li>Affichage du lien d’inscription dans l’infobulle quand disponible</li>
-              <li>Fonctionnalité d'alertes push/sms/email dès l’ouverture des inscriptions aux tournois (notifications par département, région ou partout)</li>
-              <li>Sortie des apps iOS et Android (en cours de développement)</li>
+              <li>Affichage du lien d’inscription aux tableaux du tournoi dans l’infobulle quand il est disponible</li>
+              <li>Fonctionnalité d'alertes push/sms/email dès l’ouverture des inscriptions aux tableaux du tournoi (notifications par département, région ou partout)</li>
+              <li>Applications mobile iOS et Android (en cours de développement)</li>
             </ul>
           </div>
           <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 10, paddingTop: 6, fontFamily: theme.fontFamily, fontSize: 15 }}>
