@@ -32,19 +32,24 @@ export const CustomTooltipObserver = (): MutationObserver => {
                     }
                 });
 
-                // Add click tracking for external links in tooltips
+                // Add click tracking for external links in tooltips (beacon to avoid navigation loss)
                 document.querySelectorAll('.map-popover a[href^="http"]').forEach((link) => {
                     const href = link.getAttribute('href');
-                    if (href && !href.includes('tournois-tt.fr')) {
+                    if (href && !href.includes('tournois-tt.fr') && !(link as HTMLElement).dataset.tracked) {
+                        // ensure new tab to give GA time
+                        link.setAttribute('target', '_blank');
+                        link.setAttribute('rel', 'noopener noreferrer');
+                        (link as HTMLElement).dataset.tracked = '1';
                         link.addEventListener('click', () => {
                             if (typeof window !== 'undefined' && window.gtag) {
                                 window.gtag('event', 'click', {
                                     event_category: 'external_link',
                                     event_label: 'Map Tooltip External Link',
-                                    value: href,
                                     link_url: href,
                                     link_text: link.textContent || '',
-                                    source: 'map_tooltip'
+                                    content_group: 'map_tooltip',
+                                    link_source: 'rules',
+                                    transport_type: 'beacon'
                                 });
                             }
                         });
