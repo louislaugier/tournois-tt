@@ -67,8 +67,8 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({ isOpen, 
               Prochaines évolutions :
             </div>
             <ul style={{ margin: 0, paddingLeft: 16 }}>
-              <li>Affichage du lien d’inscription aux tableaux du tournoi dans l’infobulle quand il est disponible</li>
-              <li>Fonctionnalité d'alertes push/sms/email dès l’ouverture des inscriptions aux tableaux du tournoi (notifications par département, région ou partout)</li>
+              <li>Affichage du lien d’inscription aux tableaux d'un tournoi dans l’infobulle quand il est disponible</li>
+              <li>Fonctionnalité d'alertes push/sms/email dès l’ouverture des inscriptions aux tableaux d'un tournoi (notifications par département, région ou partout)</li>
               <li>Applications mobile iOS et Android (en cours de développement)</li>
             </ul>
           </div>
