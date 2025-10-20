@@ -61,10 +61,10 @@ func trackRedirect(c *gin.Context, tournamentID int, tournamentName, rulesURL st
 		"client_id": clientID,
 		"events": []map[string]any{
 			{
-				"name": "click",
+				"name": "page_view",
 				"params": map[string]any{
-					"event_category":       "short_link",
-					"event_label":          fmt.Sprintf("Tournament %d", tournamentID),
+					"page_location":        fmt.Sprintf("https://tournois-tt.fr/%d", tournamentID),
+					"page_title":           fmt.Sprintf("Règlement - %s", tournamentName),
 					"link_url":             rulesURL,
 					"link_type":            "rules",
 					"link_source":          "short_url",

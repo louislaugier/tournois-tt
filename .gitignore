@@ -7,4 +7,9 @@ certbot/data/*
 !certbot/conf/.gitkeep
 !certbot/data/.gitkeep 
 
+# Instagram
+instagram-token.json
+instagram-images/*
+!instagram-images/README.md
+
 .DS_Store

@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 	"tournois-tt/api/internal/crons"
+	instagramCron "tournois-tt/api/internal/crons/instagram"
 	"tournois-tt/api/internal/crons/tournaments"
 	"tournois-tt/api/internal/router"
 	"tournois-tt/api/pkg/cache"
@@ -27,6 +28,9 @@ import (
 // }()
 
 func start() {
+	// Check and refresh Instagram token on startup
+	instagramCron.RefreshTokenOnStartup()
+
 	go tournaments.RefreshListWithGeocoding()
 	// go tournaments.RefreshSignupURLs()
 

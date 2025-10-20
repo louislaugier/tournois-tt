@@ -1,4 +1,4 @@
-FROM --platform=linux/amd64 golang:1.23
+FROM --platform=linux/amd64 golang:1.24
 
 WORKDIR /go/src/tournois-tt/api
 
@@ -56,13 +56,11 @@ RUN apt-get update && apt-get install -y \
     libgraphene-1.0-0 \
     libxslt1.1 \
     libwoff1 \
-    libvpx7 \
     libevent-2.1-7 \
     libopus0 \
     gstreamer1.0-plugins-base \
     gstreamer1.0-plugins-good \
     libwebpdemux2 \
-    libavif15 \
     libharfbuzz-icu0 \
     libwebpmux3 \
     libenchant-2-2 \
@@ -100,8 +98,8 @@ COPY . .
 
 RUN go install github.com/air-verse/air@v1.61.0
 
-# Install Playwright browsers with optimized Docker configuration
-RUN go run github.com/playwright-community/playwright-go/cmd/playwright install --with-deps chromium
+# Install Playwright browsers without deps (we already installed them manually)
+RUN go run github.com/playwright-community/playwright-go/cmd/playwright install chromium
 
 # Prepare browser sandbox configuration
 RUN echo '#!/bin/bash\nexec "$@"' > /usr/local/sbin/chrome-devel-sandbox \

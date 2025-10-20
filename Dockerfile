@@ -1,7 +1,7 @@
 # Multi-stage build for tournois-tt project
 
 # API build stage
-FROM --platform=linux/amd64 golang:1.23 AS api-build
+FROM --platform=linux/amd64 golang:1.24 AS api-build
 WORKDIR /go/src/tournois-tt/api
 COPY api/go.mod api/go.sum ./
 RUN go mod download
@@ -100,9 +100,9 @@ RUN mkdir -p /usr/local/ms-playwright \
     && chmod 0700 ${XDG_RUNTIME_DIR}
 
 # Install Go to install playwright browsers easier
-RUN wget https://dl.google.com/go/go1.23.3.linux-amd64.tar.gz \
-    && tar -C /usr/local -xzf go1.23.3.linux-amd64.tar.gz \
-    && rm go1.23.3.linux-amd64.tar.gz
+RUN wget https://dl.google.com/go/go1.24.0.linux-amd64.tar.gz \
+    && tar -C /usr/local -xzf go1.24.0.linux-amd64.tar.gz \
+    && rm go1.24.0.linux-amd64.tar.gz
 
 ENV PATH=$PATH:/usr/local/go/bin
 

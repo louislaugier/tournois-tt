@@ -9,6 +9,9 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+
+	"tournois-tt/api/internal/config"
+	"tournois-tt/api/pkg/instagram"
 )
 
 // GenericCache is a thread-safe in-memory cache with JSON persistence capabilities
@@ -277,9 +280,20 @@ func SaveTournamentsToCache(tournaments []TournamentCache) error {
 		return err
 	}
 
+	// Track new tournaments for Instagram DM notifications
+	var newTournaments []TournamentCache
+
 	// Add tournaments to the in-memory cache
 	for _, tournament := range tournaments {
 		key := GenerateTournamentCacheKey(tournament)
+
+		// Check if tournament already exists in cache
+		_, exists := DefaultTournamentCache.Get(key)
+		if !exists {
+			newTournaments = append(newTournaments, tournament)
+			log.Printf("New tournament detected: %s (ID: %d)", tournament.Name, tournament.ID)
+		}
+
 		DefaultTournamentCache.Set(key, tournament)
 	}
 
@@ -290,6 +304,19 @@ func SaveTournamentsToCache(tournaments []TournamentCache) error {
 
 	// Update sitemap automatically after saving tournaments
 	go updateSitemap()
+
+	// Send Instagram DM for new tournaments
+	if len(newTournaments) > 0 {
+		go func() {
+			// Recover from any panics to prevent goroutine crashes
+			defer func() {
+				if r := recover(); r != nil {
+					log.Printf("ERROR: Panic in Instagram notifications: %v", r)
+				}
+			}()
+			sendInstagramNotifications(newTournaments)
+		}()
+	}
 
 	return nil
 }
@@ -535,4 +562,121 @@ func updateSitemap() {
 			}
 		}
 	}
+}
+
+// sendInstagramNotifications sends Instagram DM notifications for new tournaments
+func sendInstagramNotifications(tournaments []TournamentCache) {
+	// Check if Instagram is enabled
+	if !config.InstagramEnabled {
+		log.Println("Instagram DM notifications disabled - skipping")
+		return
+	}
+
+	// Validate required credentials are present
+	if config.InstagramAccessToken == "" {
+		log.Println("Warning: Instagram is enabled but INSTAGRAM_ACCESS_TOKEN is not set - skipping Instagram notifications")
+		return
+	}
+	if config.InstagramPageID == "" {
+		log.Println("Warning: Instagram is enabled but INSTAGRAM_PAGE_ID is not set - skipping Instagram notifications")
+		return
+	}
+	if config.InstagramRecipientID == "" {
+		log.Println("Warning: Instagram is enabled but INSTAGRAM_RECIPIENT_ID is not set - skipping Instagram notifications")
+		return
+	}
+
+	// Create Instagram client
+	instagramConfig := instagram.Config{
+		AccessToken: config.InstagramAccessToken,
+		PageID:      config.InstagramPageID,
+		RecipientID: config.InstagramRecipientID,
+		Enabled:     config.InstagramEnabled,
+	}
+
+	client := instagram.NewClient(instagramConfig)
+
+	// Test connection first
+	if err := client.TestConnection(); err != nil {
+		log.Printf("Warning: Instagram API connection test failed: %v", err)
+		log.Println("Skipping Instagram notifications")
+		return
+	}
+
+	log.Printf("Posting to Instagram for %d new tournament(s)", len(tournaments))
+
+	// Send notification for each new tournament
+	for _, tournament := range tournaments {
+		// Convert tournament to image data
+		imageData := convertTournamentToImageData(tournament)
+
+		// Post to Instagram
+		notification, err := client.PostTournament(imageData)
+		if err != nil {
+			log.Printf("Error posting to Instagram for tournament %d (%s): %v",
+				tournament.ID, tournament.Name, err)
+			continue
+		}
+
+		if notification.Success {
+			log.Printf("Successfully posted to Instagram for tournament %d (%s) - Post ID: %s",
+				tournament.ID, tournament.Name, notification.MessageID)
+		} else {
+			log.Printf("Failed to post to Instagram for tournament %d (%s): %s",
+				tournament.ID, tournament.Name, notification.Error)
+		}
+	}
+}
+
+// convertTournamentToImageData converts a TournamentCache to TournamentImage for image generation
+func convertTournamentToImageData(tournament TournamentCache) instagram.TournamentImage {
+	// Format address
+	address := formatTournamentAddress(tournament.Address)
+
+	// Build rules URL
+	rulesURL := ""
+	if tournament.Rules != nil && tournament.Rules.URL != "" {
+		rulesURL = tournament.Rules.URL
+	}
+
+	// Build tournament URL
+	tournamentURL := fmt.Sprintf("https://tournois-tt.fr/%d", tournament.ID)
+
+	return instagram.TournamentImage{
+		Name:          tournament.Name,
+		Type:          tournament.Type,
+		Club:          tournament.Club.Name,
+		Endowment:     tournament.Endowment,
+		StartDate:     tournament.StartDate,
+		EndDate:       tournament.EndDate,
+		Address:       address,
+		RulesURL:      rulesURL,
+		TournamentID:  tournament.ID,
+		TournamentURL: tournamentURL,
+	}
+}
+
+// formatTournamentAddress formats the tournament address for display
+func formatTournamentAddress(addr Address) string {
+	parts := []string{}
+
+	if addr.DisambiguatingDescription != "" {
+		parts = append(parts, addr.DisambiguatingDescription)
+	}
+
+	if addr.StreetAddress != "" {
+		parts = append(parts, addr.StreetAddress)
+	}
+
+	if addr.PostalCode != "" && addr.AddressLocality != "" {
+		parts = append(parts, fmt.Sprintf("%s %s", addr.PostalCode, addr.AddressLocality))
+	} else if addr.AddressLocality != "" {
+		parts = append(parts, addr.AddressLocality)
+	}
+
+	if len(parts) > 0 {
+		return strings.Join(parts, ", ")
+	}
+
+	return "Adresse non disponible"
 }

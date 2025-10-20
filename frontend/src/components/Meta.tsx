@@ -125,7 +125,7 @@ const Meta: React.FC<MetaProps> = ({ tournament, isIndex = false, totalTournamen
   ].filter(Boolean).join(', ');
 
   const title = `${tournament.name} - Tournoi ${mapTournamentType(tournament.type)} | FFTT`;
-  const description = `Tournoi de tennis de table ${mapTournamentType(tournament.type)} organisé par ${tournament.club.name} le ${formatDateDDMMYYYY(tournament.startDate)}${tournament.startDate !== tournament.endDate ? ` au ${formatDateDDMMYYYY(tournament.endDate)}` : ''} à ${tournament.address.addressLocality}. ${tournament.endowment > 0 ? `Dotation: ${tournament.endowment.toLocaleString('fr-FR')}€.` : ''} Informations pratiques, règlement et inscription.`;
+  const description = `Tournoi de tennis de table ${mapTournamentType(tournament.type)} organisé par ${tournament.club.name} le ${formatDateDDMMYYYY(tournament.startDate)}${tournament.startDate !== tournament.endDate ? ` au ${formatDateDDMMYYYY(tournament.endDate)}` : ''} à ${tournament.address.addressLocality}. ${tournament.endowment > 0 ? `Dotation: ${(tournament.endowment / 100).toLocaleString('fr-FR')}€.` : ''} Informations pratiques, règlement et inscription.`;
 
   return (
     <Helmet>
@@ -190,7 +190,7 @@ const Meta: React.FC<MetaProps> = ({ tournament, isIndex = false, totalTournamen
           "offers": tournament.endowment > 0 ? {
             "@type": "Offer",
             "url": `https://tournois-tt.fr/feed/${tournament.id}`,
-            "price": tournament.endowment.toString(),
+            "price": (tournament.endowment / 100).toString(),
             "priceCurrency": "EUR",
             "availability": "https://schema.org/InStock"
           } : undefined

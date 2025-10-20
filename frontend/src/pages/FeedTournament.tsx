@@ -95,7 +95,7 @@ const FeedTournament: React.FC = () => {
               <div className="flex items-center gap-2 mb-2">
                 {tournament.endowment > 0 && (
                   <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                    Dotation totale : {tournament.endowment.toLocaleString('fr-FR')}€
+                    Dotation totale : {(tournament.endowment / 100).toLocaleString('fr-FR')}€
                   </span>
                 )}
               </div>

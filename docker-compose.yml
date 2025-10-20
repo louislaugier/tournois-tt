@@ -6,6 +6,7 @@ services:
       - "80:80"
     volumes:
       - ./nginx.dev.conf:/etc/nginx/nginx.conf:ro
+      - ./api/instagram-images:/var/www/instagram-images:ro
     depends_on:
       - frontend
       - api
@@ -53,6 +54,10 @@ services:
       - XDG_RUNTIME_DIR=/tmp/runtime-dir
       - GA_MEASUREMENT_ID=${GA_MEASUREMENT_ID}
       - GA_API_SECRET=${GA_API_SECRET}
+      - INSTAGRAM_ENABLED=${INSTAGRAM_ENABLED}
+      - INSTAGRAM_ACCESS_TOKEN=${INSTAGRAM_ACCESS_TOKEN}
+      - INSTAGRAM_PAGE_ID=${INSTAGRAM_PAGE_ID}
+      - INSTAGRAM_RECIPIENT_ID=${INSTAGRAM_RECIPIENT_ID}
     networks:
       - vpc_local
     cap_add:
