@@ -6,6 +6,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -119,7 +120,7 @@ func (c *Client) postImage(imagePath string, tournament TournamentImage) (string
 // createMediaContainer creates a media container with the image
 // Note: Instagram requires the image to be accessible via a public HTTPS URL
 func (c *Client) createMediaContainer(imagePath string, tournament TournamentImage) (string, error) {
-	// Prepare caption
+	// Prepare caption (convert endowment from cents to euros)
 	caption := fmt.Sprintf(`🎾 %s
 
 🏆 Type: %s
@@ -134,7 +135,7 @@ func (c *Client) createMediaContainer(imagePath string, tournament TournamentIma
 		tournament.Name,
 		tournament.Type,
 		tournament.Club,
-		tournament.Endowment,
+		tournament.Endowment/100, // Convert cents to euros
 		formatDate(tournament.StartDate),
 		formatDate(tournament.EndDate),
 		tournament.Address,
@@ -168,13 +169,13 @@ func (c *Client) createMediaContainer(imagePath string, tournament TournamentIma
 
 	log.Printf("📸 Using image URL: %s", imageURL)
 
-	// Create container via Instagram API
+	// Create container via Instagram API (URL-encode parameters)
 	createURL := fmt.Sprintf("%s/%s/media?image_url=%s&caption=%s&access_token=%s",
 		GraphAPIBaseURL,
 		c.config.PageID,
-		imageURL,
-		caption,
-		c.config.AccessToken,
+		url.QueryEscape(imageURL),
+		url.QueryEscape(caption),
+		url.QueryEscape(c.config.AccessToken),
 	)
 
 	resp, err := c.httpClient.Post(createURL, "application/json", nil)
@@ -208,8 +209,8 @@ func (c *Client) publishMediaContainer(containerID string) (string, error) {
 	publishURL := fmt.Sprintf("%s/%s/media_publish?creation_id=%s&access_token=%s",
 		GraphAPIBaseURL,
 		c.config.PageID,
-		containerID,
-		c.config.AccessToken,
+		url.QueryEscape(containerID),
+		url.QueryEscape(c.config.AccessToken),
 	)
 
 	resp, err := c.httpClient.Post(publishURL, "application/json", nil)
