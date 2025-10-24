@@ -581,16 +581,11 @@ func sendInstagramNotifications(tournaments []TournamentCache) {
 		log.Println("Warning: Instagram is enabled but INSTAGRAM_PAGE_ID is not set - skipping Instagram notifications")
 		return
 	}
-	if config.InstagramRecipientID == "" {
-		log.Println("Warning: Instagram is enabled but INSTAGRAM_RECIPIENT_ID is not set - skipping Instagram notifications")
-		return
-	}
 
 	// Create Instagram client
 	instagramConfig := instagram.Config{
 		AccessToken: config.InstagramAccessToken,
 		PageID:      config.InstagramPageID,
-		RecipientID: config.InstagramRecipientID,
 		Enabled:     config.InstagramEnabled,
 	}
 
@@ -642,10 +637,16 @@ func convertTournamentToImageData(tournament TournamentCache) instagram.Tourname
 	// Build tournament URL
 	tournamentURL := fmt.Sprintf("https://tournois-tt.fr/%d", tournament.ID)
 
+	// Format club name with identifier
+	clubName := tournament.Club.Name
+	if tournament.Club.Identifier != "" {
+		clubName = fmt.Sprintf("%s (%s)", tournament.Club.Name, tournament.Club.Identifier)
+	}
+
 	return instagram.TournamentImage{
 		Name:          tournament.Name,
 		Type:          tournament.Type,
-		Club:          tournament.Club.Name,
+		Club:          clubName,
 		Endowment:     tournament.Endowment,
 		StartDate:     tournament.StartDate,
 		EndDate:       tournament.EndDate,

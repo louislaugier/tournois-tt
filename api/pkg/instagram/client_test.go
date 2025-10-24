@@ -29,7 +29,6 @@ func TestClient_TestConnection_Disabled(t *testing.T) {
 	config := Config{
 		AccessToken: "test-token",
 		PageID:      "test-page",
-		RecipientID: "test-recipient",
 		Enabled:     false,
 	}
 
@@ -51,7 +50,6 @@ func TestClient_PostTournament_Disabled(t *testing.T) {
 	config := Config{
 		AccessToken: "test-token",
 		PageID:      "test-page",
-		RecipientID: "test-recipient",
 		Enabled:     false,
 	}
 
@@ -92,7 +90,6 @@ func TestConfig_Validation(t *testing.T) {
 			config: Config{
 				AccessToken: "token",
 				PageID:      "page",
-				RecipientID: "recipient",
 				Enabled:     true,
 			},
 			wantEnabled: true,
@@ -102,7 +99,6 @@ func TestConfig_Validation(t *testing.T) {
 			config: Config{
 				AccessToken: "token",
 				PageID:      "page",
-				RecipientID: "recipient",
 				Enabled:     false,
 			},
 			wantEnabled: false,
@@ -112,7 +108,6 @@ func TestConfig_Validation(t *testing.T) {
 			config: Config{
 				AccessToken: "",
 				PageID:      "page",
-				RecipientID: "recipient",
 				Enabled:     true,
 			},
 			wantEnabled: true, // Config doesn't validate, just stores

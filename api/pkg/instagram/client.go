@@ -9,21 +9,12 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
-	"strings"
 	"time"
-
-	"tournois-tt/api/internal/config"
 )
 
 const (
 	// Instagram Graph API base URL
 	GraphAPIBaseURL = "https://graph.instagram.com/v18.0"
-
-	// Retry configuration
-	maxRetries       = 3
-	initialBackoff   = 1 * time.Second
-	maxBackoff       = 30 * time.Second
-	rateLimitBackoff = 60 * time.Second
 )
 
 // Client represents an Instagram API client
@@ -109,9 +100,15 @@ func (c *Client) postImage(imagePath string, tournament TournamentImage) (string
 
 	log.Printf("✅ Post published: %s", postID)
 
-	// Also save locally for record keeping
-	if err := c.saveImageLocally(imagePath, tournament); err != nil {
-		log.Printf("Warning: Failed to save image locally: %v", err)
+	// Step 3: Wait for Instagram to download the image, then cleanup
+	log.Printf("⏳ Waiting 30 seconds for Instagram to download the image...")
+	time.Sleep(30 * time.Second)
+
+	// Delete the local image to save disk space
+	if err := os.Remove(imagePath); err != nil {
+		log.Printf("⚠️  Warning: failed to cleanup image %s: %v", imagePath, err)
+	} else {
+		log.Printf("🗑️  Cleaned up local image: %s", imagePath)
 	}
 
 	return postID, nil
@@ -142,30 +139,9 @@ func (c *Client) createMediaContainer(imagePath string, tournament TournamentIma
 		tournament.TournamentURL,
 	)
 
-	// TEMPORARY: Use mock image for E2E testing
-	// TODO: Implement proper image hosting and uncomment the code below
-	imageURL := "https://us-metro.org/wp-content/uploads/2022/06/banniere-tennis-de-table-1400x788-1.jpg"
-
-	// // Save image to public directory first
-	// timestamp := time.Now().Unix()
-	// publicFilename := fmt.Sprintf("tournament_%d_%d.png", tournament.TournamentID, timestamp)
-	// publicPath := filepath.Join("./instagram-images", publicFilename)
-	//
-	// if err := os.MkdirAll("./instagram-images", 0755); err != nil {
-	// 	return "", fmt.Errorf("failed to create images directory: %w", err)
-	// }
-	//
-	// imageData, err := os.ReadFile(imagePath)
-	// if err != nil {
-	// 	return "", fmt.Errorf("failed to read image: %w", err)
-	// }
-	//
-	// if err := os.WriteFile(publicPath, imageData, 0644); err != nil {
-	// 	return "", fmt.Errorf("failed to save image: %w", err)
-	// }
-	//
-	// // Construct public URL - Instagram requires HTTPS
-	// imageURL := fmt.Sprintf("https://tournois-tt.fr/instagram-images/%s", publicFilename)
+	// Construct URL from the saved image
+	filename := filepath.Base(imagePath)
+	imageURL := fmt.Sprintf("https://tournois-tt.fr/instagram-images/%s", filename)
 
 	log.Printf("📸 Using image URL: %s", imageURL)
 
@@ -239,34 +215,6 @@ func (c *Client) publishMediaContainer(containerID string) (string, error) {
 	return result.ID, nil
 }
 
-// saveImageLocally saves the generated tournament image to a local folder
-func (c *Client) saveImageLocally(imagePath string, tournament TournamentImage) error {
-	// Create instagram-images directory if it doesn't exist
-	imagesDir := "./instagram-images"
-	if err := os.MkdirAll(imagesDir, 0755); err != nil {
-		return fmt.Errorf("failed to create images directory: %w", err)
-	}
-
-	// Generate filename with tournament ID and timestamp
-	timestamp := time.Now().Format("20060102-150405")
-	destPath := filepath.Join(imagesDir, fmt.Sprintf("tournament_%d_%s.png",
-		tournament.TournamentID, timestamp))
-
-	// Read source file
-	sourceData, err := os.ReadFile(imagePath)
-	if err != nil {
-		return fmt.Errorf("failed to read source image: %w", err)
-	}
-
-	// Write to destination
-	if err := os.WriteFile(destPath, sourceData, 0644); err != nil {
-		return fmt.Errorf("failed to write image: %w", err)
-	}
-
-	log.Printf("Saved tournament image to: %s", destPath)
-	return nil
-}
-
 // formatDate formats a date string for display
 func formatDate(dateStr string) string {
 	t, err := time.Parse(time.RFC3339, dateStr)
@@ -305,106 +253,5 @@ func (c *Client) TestConnection() error {
 		return fmt.Errorf("Instagram API test failed with status %d: %s", resp.StatusCode, string(body))
 	}
 
-	return nil
-}
-
-// isTokenError checks if the error is related to an invalid/expired token
-func isTokenError(statusCode int, errResp *ErrorResponse) bool {
-	if statusCode == http.StatusUnauthorized {
-		return true
-	}
-
-	if errResp != nil {
-		// Check for token-related error codes and messages
-		tokenErrorCodes := []int{190, 102, 104} // OAuthException codes
-		for _, code := range tokenErrorCodes {
-			if errResp.Error.Code == code {
-				return true
-			}
-		}
-
-		// Check error message for token-related keywords
-		msg := strings.ToLower(errResp.Error.Message)
-		if strings.Contains(msg, "token") ||
-			strings.Contains(msg, "expired") ||
-			strings.Contains(msg, "invalid") ||
-			strings.Contains(msg, "authentication") {
-			return true
-		}
-	}
-
-	return false
-}
-
-// isRateLimitError checks if the error is a rate limit error
-func isRateLimitError(statusCode int, errResp *ErrorResponse) bool {
-	if statusCode == http.StatusTooManyRequests {
-		return true
-	}
-
-	if errResp != nil && errResp.Error.Code == 4 { // Rate limit error code
-		return true
-	}
-
-	return false
-}
-
-// isRetriableError checks if the error can be retried
-func isRetriableError(statusCode int) bool {
-	// Network errors, server errors, and service unavailable are retriable
-	return statusCode >= 500 || statusCode == 408 || statusCode == 429
-}
-
-// retryWithBackoff executes a function with exponential backoff retry logic
-func (c *Client) retryWithBackoff(operation string, fn func() error) error {
-	var lastErr error
-	backoff := initialBackoff
-
-	for attempt := 0; attempt <= maxRetries; attempt++ {
-		if attempt > 0 {
-			log.Printf("Retrying %s (attempt %d/%d) after %v...", operation, attempt, maxRetries, backoff)
-			time.Sleep(backoff)
-
-			// Exponential backoff with max limit
-			backoff *= 2
-			if backoff > maxBackoff {
-				backoff = maxBackoff
-			}
-		}
-
-		err := fn()
-		if err == nil {
-			return nil // Success
-		}
-
-		lastErr = err
-
-		// If it's not a retriable error, don't retry
-		if !strings.Contains(err.Error(), "status 5") &&
-			!strings.Contains(err.Error(), "status 408") &&
-			!strings.Contains(err.Error(), "status 429") {
-			return err
-		}
-
-		log.Printf("Attempt %d failed for %s: %v", attempt+1, operation, err)
-	}
-
-	return fmt.Errorf("failed after %d attempts: %w", maxRetries+1, lastErr)
-}
-
-// handleTokenError attempts to refresh the token and update the client config
-func (c *Client) handleTokenError() error {
-	log.Println("WARNING: Instagram API returned token error - attempting to refresh token...")
-
-	// Try to refresh the token
-	if err := ForceRefreshToken(config.InstagramAccessToken); err != nil {
-		return fmt.Errorf("failed to refresh token after error: %w", err)
-	}
-
-	// Update the client's token from config (it should have been updated by ForceRefreshToken)
-	// Note: The config package variables are global, so they should be updated
-	c.config.AccessToken = config.InstagramAccessToken
-
-	log.Println("SUCCESS: Token refreshed successfully after error")
 	return nil
 }

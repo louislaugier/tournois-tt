@@ -10,188 +10,248 @@ import (
 	"strings"
 	"time"
 
+	"tournois-tt/api/pkg/utils"
+
 	"golang.org/x/image/draw"
 	"golang.org/x/image/font"
-	"golang.org/x/image/font/basicfont"
+	"golang.org/x/image/font/gofont/gobold"
+	"golang.org/x/image/font/gofont/goregular"
+	"golang.org/x/image/font/opentype"
 	"golang.org/x/image/math/fixed"
 )
 
-// Brand colors
+// Modern color palette for Instagram
 var (
-	// Primary color - Tournois-TT cyan/turquoise
-	ColorPrimary = color.RGBA{31, 186, 214, 255} // #1FBAD6
-	// Secondary color - Purple
-	ColorSecondary = color.RGBA{155, 89, 182, 255} // #9B59B6
-	// Dark background
-	ColorDark = color.RGBA{36, 39, 48, 255} // #242730
-	// White text
-	ColorWhite = color.RGBA{255, 255, 255, 255}
-	// Light gray text
-	ColorGray = color.RGBA{200, 200, 200, 255}
+	// Gradient colors
+	ColorGradientStart = color.RGBA{31, 186, 214, 255} // #1FBAD6 - Turquoise
+	ColorGradientEnd   = color.RGBA{155, 89, 182, 255} // #9B59B6 - Purple
+
+	// Clean backgrounds
+	ColorWhite     = color.RGBA{255, 255, 255, 255}
+	ColorLightGray = color.RGBA{248, 249, 250, 255}
+	ColorDarkGray  = color.RGBA{73, 80, 87, 255}
+	ColorBlack     = color.RGBA{33, 37, 41, 255}
+
+	// Accent colors
+	ColorOrange  = color.RGBA{255, 127, 80, 255} // Coral orange for emphasis
+	ColorSuccess = color.RGBA{40, 167, 69, 255}  // Green for positive info
 )
 
 const (
-	// Image dimensions optimized for Instagram
+	// Instagram optimal size (square)
 	ImageWidth  = 1080
 	ImageHeight = 1080
-
-	// Padding and margins
-	Padding        = 60
-	LineSpacing    = 35
-	SectionSpacing = 50
 )
 
-// GenerateTournamentImage creates a tournament announcement image with brand identity
+var (
+	regularFont *opentype.Font
+	boldFont    *opentype.Font
+)
+
+func init() {
+	var err error
+	regularFont, err = opentype.Parse(goregular.TTF)
+	if err != nil {
+		panic(err)
+	}
+	boldFont, err = opentype.Parse(gobold.TTF)
+	if err != nil {
+		panic(err)
+	}
+}
+
+// GenerateTournamentImage creates a modern, minimalistic tournament image for Instagram
 func GenerateTournamentImage(tournamentData TournamentImage) (string, error) {
-	// Create a new image
+	// Create canvas
 	img := image.NewRGBA(image.Rect(0, 0, ImageWidth, ImageHeight))
 
-	// Fill background with dark color
-	draw.Draw(img, img.Bounds(), &image.Uniform{ColorDark}, image.Point{}, draw.Src)
+	// Fill with clean white background
+	draw.Draw(img, img.Bounds(), &image.Uniform{ColorWhite}, image.Point{}, draw.Src)
 
-	// Add header bar with primary color
-	headerHeight := 180
-	headerRect := image.Rect(0, 0, ImageWidth, headerHeight)
-	draw.Draw(img, headerRect, &image.Uniform{ColorPrimary}, image.Point{}, draw.Src)
+	// Add subtle gradient accent bar at top
+	gradientHeight := 12
+	drawGradientBar(img, 0, gradientHeight)
 
-	// Add accent bar with secondary color
-	accentHeight := 10
-	accentRect := image.Rect(0, headerHeight, ImageWidth, headerHeight+accentHeight)
-	draw.Draw(img, accentRect, &image.Uniform{ColorSecondary}, image.Point{}, draw.Src)
+	y := 65
 
-	// Draw content
-	y := Padding + 20
+	// Header section - centered
+	y = drawCenteredText(img, "Nouvelle homologation", y, ColorBlack, 46, boldFont)
+	y += 50
 
-	// Header: "NOUVEAU TOURNOI"
-	y = drawText(img, "NOUVEAU TOURNOI", Padding, y, ColorWhite, 2.0)
+	// Tournament name (biggest text, bold, in quotes, centered)
+	tournamentName := wrapText(tournamentData.Name, 32)
+	tournamentNameWithQuotes := fmt.Sprintf("\"%s\"", tournamentName)
+	y = drawCenteredText(img, tournamentNameWithQuotes, y, ColorBlack, 44, boldFont)
 
-	// Site name with smaller font
-	y += 30
-	y = drawText(img, "tournois-tt.fr", Padding, y, ColorGray, 1.2)
+	y += 40
 
-	// Move to content area
-	y = headerHeight + accentHeight + SectionSpacing
+	// Tournament type badge (centered)
+	mappedType := utils.MapTournamentType(tournamentData.Type)
+	y = drawCenteredBadge(img, mappedType, y, ColorGradientStart)
+	y += 40
 
-	// Tournament name (title)
-	y = drawText(img, wrapText(tournamentData.Name, 35), Padding, y, ColorPrimary, 1.8)
-	y += SectionSpacing
-
-	// Tournament details
-	details := []struct {
-		label string
-		value string
-		color color.RGBA
-	}{
-		{"Type:", tournamentData.Type, ColorWhite},
-		{"Club:", wrapText(tournamentData.Club, 40), ColorWhite},
-	}
-
-	// Add endowment if available
+	// Key info - centered
 	if tournamentData.Endowment > 0 {
-		details = append(details, struct {
-			label string
-			value string
-			color color.RGBA
-		}{"Dotation:", fmt.Sprintf("%d €", tournamentData.Endowment), ColorSecondary})
+		y = drawCenteredInfoLine(img, "DOTATION TOTALE", fmt.Sprintf("%d €", tournamentData.Endowment/100), y)
+		y += 43
 	}
 
-	// Add dates
 	dateStr := formatDates(tournamentData.StartDate, tournamentData.EndDate)
-	details = append(details, struct {
-		label string
-		value string
-		color color.RGBA
-	}{"Date(s):", dateStr, ColorWhite})
+	// Use "DATE" for single day, "DATES" for multiple days
+	dateLabel := "DATE"
+	if tournamentData.StartDate != tournamentData.EndDate {
+		dateLabel = "DATES"
+	}
+	y = drawCenteredInfoLine(img, dateLabel, dateStr, y)
+	y += 43
 
-	// Add address
-	details = append(details, struct {
-		label string
-		value string
-		color color.RGBA
-	}{"Lieu:", wrapText(tournamentData.Address, 40), ColorWhite})
+	clubName := wrapText(tournamentData.Club, 38)
+	y = drawCenteredInfoLine(img, "CLUB ORGANISATEUR", clubName, y)
+	y += 43
 
-	// Draw details
-	for _, detail := range details {
-		y = drawText(img, detail.label, Padding, y, ColorGray, 1.2)
-		y += LineSpacing
-		y = drawText(img, detail.value, Padding, y, detail.color, 1.3)
-		y += LineSpacing + 15
+	address := wrapText(tournamentData.Address, 38)
+	y = drawCenteredInfoLine(img, "LIEU", address, y)
+	y += 45
+
+	// Footer with URL - centered
+	footerY := y
+
+	// Subtle separator
+	drawSeparator(img, 60, ImageWidth-60, footerY)
+	footerY += 22
+
+	// URL in accent color (centered)
+	_ = drawCenteredText(img, tournamentData.TournamentURL, footerY, ColorGradientStart, 28, boldFont)
+
+	// Save to instagram-images folder
+	imagesDir := "./instagram-images"
+	if err := os.MkdirAll(imagesDir, 0755); err != nil {
+		return "", fmt.Errorf("failed to create images directory: %w", err)
 	}
 
-	// Footer section
-	y = ImageHeight - 220
+	timestamp := time.Now().Format("20060102-150405")
+	filename := fmt.Sprintf("tournament_%d_%s.png", tournamentData.TournamentID, timestamp)
+	filePath := filepath.Join(imagesDir, filename)
 
-	// Separator line
-	lineY := y - 30
-	for x := Padding; x < ImageWidth-Padding; x++ {
-		img.Set(x, lineY, ColorPrimary)
-		img.Set(x, lineY+1, ColorPrimary)
-	}
-
-	// Tournament URL
-	y = drawText(img, "Plus d'informations:", Padding, y, ColorGray, 1.1)
-	y += LineSpacing
-	y = drawText(img, tournamentData.TournamentURL, Padding, y, ColorPrimary, 1.4)
-
-	y += SectionSpacing
-
-	// Call to action
-	y = drawText(img, "🎾 Consultez le règlement et inscrivez-vous!", Padding, y, ColorWhite, 1.2)
-
-	// Save image to temporary file
-	tmpDir := os.TempDir()
-	filename := fmt.Sprintf("tournament_%d_%d.png", tournamentData.TournamentID, time.Now().Unix())
-	filepath := filepath.Join(tmpDir, filename)
-
-	file, err := os.Create(filepath)
+	file, err := os.Create(filePath)
 	if err != nil {
 		return "", fmt.Errorf("failed to create image file: %w", err)
 	}
 	defer file.Close()
 
-	// Encode as PNG
 	if err := png.Encode(file, img); err != nil {
 		return "", fmt.Errorf("failed to encode image: %w", err)
 	}
 
-	return filepath, nil
+	return filePath, nil
 }
 
-// drawText draws text on the image at the specified position
-// Returns the new Y position after the text
-func drawText(img *image.RGBA, text string, x, y int, col color.RGBA, scale float64) int {
-	// Use basic font (we'll use basicfont.Face7x13 scaled)
-	// For production, you'd want to use truetype fonts
-	face := basicfont.Face7x13
-
-	point := fixed.Point26_6{
-		X: fixed.Int26_6(x * 64),
-		Y: fixed.Int26_6(y * 64),
+// drawGradientBar draws a horizontal gradient bar
+func drawGradientBar(img *image.RGBA, y, height int) {
+	for row := y; row < y+height; row++ {
+		for col := 0; col < ImageWidth; col++ {
+			// Simple linear gradient
+			ratio := float64(col) / float64(ImageWidth)
+			r := uint8(float64(ColorGradientStart.R)*(1-ratio) + float64(ColorGradientEnd.R)*ratio)
+			g := uint8(float64(ColorGradientStart.G)*(1-ratio) + float64(ColorGradientEnd.G)*ratio)
+			b := uint8(float64(ColorGradientStart.B)*(1-ratio) + float64(ColorGradientEnd.B)*ratio)
+			img.Set(col, row, color.RGBA{r, g, b, 255})
+		}
 	}
+}
+
+// drawTextWithFont draws text with a TrueType font at specified size
+func drawTextWithFont(img *image.RGBA, text string, x, y int, col color.RGBA, size float64, ttfFont *opentype.Font) int {
+	face, err := opentype.NewFace(ttfFont, &opentype.FaceOptions{
+		Size:    size,
+		DPI:     72,
+		Hinting: font.HintingFull,
+	})
+	if err != nil {
+		return y
+	}
+	defer face.Close()
 
 	drawer := &font.Drawer{
 		Dst:  img,
 		Src:  &image.Uniform{col},
 		Face: face,
-		Dot:  point,
+		Dot:  fixed.Point26_6{X: fixed.I(x), Y: fixed.I(y)},
 	}
 
-	// Handle multi-line text
 	lines := strings.Split(text, "\n")
-	lineHeight := int(float64(face.Metrics().Height.Ceil()) * scale)
+	metrics := face.Metrics()
+	lineHeight := metrics.Height.Ceil() + int(size*0.4) // Add more line spacing
 
+	currentY := y
 	for i, line := range lines {
 		if i > 0 {
-			y += lineHeight
-			drawer.Dot = fixed.Point26_6{
-				X: fixed.Int26_6(x * 64),
-				Y: fixed.Int26_6(y * 64),
-			}
+			currentY += lineHeight
+			drawer.Dot = fixed.Point26_6{X: fixed.I(x), Y: fixed.I(currentY)}
 		}
 		drawer.DrawString(line)
 	}
 
-	return y + lineHeight
+	// Return Y position after all lines
+	return currentY + lineHeight
+}
+
+// drawInfoLine draws an info line with emoji and text
+func drawInfoLine(img *image.RGBA, emoji, text string, x, y int) int {
+	// Draw emoji
+	drawTextWithFont(img, emoji, x, y, ColorBlack, 44, regularFont)
+
+	// Draw text next to emoji (handle multiline properly)
+	endY := drawTextWithFont(img, text, x+80, y, ColorBlack, 42, regularFont)
+	return endY
+}
+
+// drawInfoLineWithLabel draws an info line with a text label (instead of emoji)
+func drawInfoLineWithLabel(img *image.RGBA, label, text string, x, y int) int {
+	// Draw label in smaller, uppercase, gray text
+	drawTextWithFont(img, label, x, y, ColorDarkGray, 20, boldFont)
+
+	// Draw main text below the label (more spacing for better readability)
+	endY := drawTextWithFont(img, text, x, y+32, ColorBlack, 32, regularFont)
+	return endY
+}
+
+// drawBadge draws a colored badge with text
+func drawBadge(img *image.RGBA, text string, x, y int, bgColor color.RGBA) int {
+	// Get text dimensions
+	face, _ := opentype.NewFace(boldFont, &opentype.FaceOptions{
+		Size:    26,
+		DPI:     72,
+		Hinting: font.HintingFull,
+	})
+	defer face.Close()
+
+	// Measure text width more accurately
+	drawer := &font.Drawer{Face: face}
+	textWidth := drawer.MeasureString(text).Ceil()
+
+	// Draw rounded rectangle background with proper padding
+	padding := 18
+	badgeWidth := textWidth + (padding * 2)
+	badgeHeight := 42
+
+	// Fill badge background
+	for row := y - 32; row < y-32+badgeHeight; row++ {
+		for col := x; col < x+badgeWidth && col < ImageWidth; col++ {
+			img.Set(col, row, bgColor)
+		}
+	}
+
+	// Draw white text on badge (centered with padding)
+	return drawTextWithFont(img, text, x+padding, y, ColorWhite, 26, boldFont)
+}
+
+// drawSeparator draws a thin horizontal line
+func drawSeparator(img *image.RGBA, x1, x2, y int) {
+	for x := x1; x < x2; x++ {
+		img.Set(x, y, ColorLightGray)
+		img.Set(x, y+1, ColorLightGray)
+	}
 }
 
 // wrapText wraps text to fit within a certain character width
@@ -216,7 +276,6 @@ func wrapText(text string, maxWidth int) string {
 				lines = append(lines, currentLine)
 				currentLine = word
 			} else {
-				// Single word is too long, just add it
 				lines = append(lines, word)
 				currentLine = ""
 			}
@@ -232,16 +291,106 @@ func wrapText(text string, maxWidth int) string {
 	return strings.Join(lines, "\n")
 }
 
+// drawCenteredText draws centered text on the image
+func drawCenteredText(img *image.RGBA, text string, y int, col color.RGBA, size float64, ttfFont *opentype.Font) int {
+	face, err := opentype.NewFace(ttfFont, &opentype.FaceOptions{
+		Size:    size,
+		DPI:     72,
+		Hinting: font.HintingFull,
+	})
+	if err != nil {
+		return y
+	}
+	defer face.Close()
+
+	drawer := &font.Drawer{Face: face}
+	lines := strings.Split(text, "\n")
+	metrics := face.Metrics()
+	lineHeight := metrics.Height.Ceil() + int(size*0.4)
+
+	currentY := y
+	for i, line := range lines {
+		if i > 0 {
+			currentY += lineHeight
+		}
+
+		// Measure line width and center it
+		textWidth := drawer.MeasureString(line).Ceil()
+		x := (ImageWidth - textWidth) / 2
+
+		// Draw the line
+		drawer.Dst = img
+		drawer.Src = &image.Uniform{col}
+		drawer.Dot = fixed.Point26_6{X: fixed.I(x), Y: fixed.I(currentY)}
+		drawer.DrawString(line)
+	}
+
+	return currentY + lineHeight
+}
+
+// drawCenteredInfoLine draws a centered info line with label and text
+func drawCenteredInfoLine(img *image.RGBA, label, text string, y int) int {
+	// Draw label centered
+	y = drawCenteredText(img, label, y, ColorDarkGray, 20, boldFont)
+
+	// Draw main text centered below the label
+	endY := drawCenteredText(img, text, y+7, ColorBlack, 32, regularFont)
+	return endY
+}
+
+// drawCenteredBadge draws a centered colored badge with text
+func drawCenteredBadge(img *image.RGBA, text string, y int, bgColor color.RGBA) int {
+	// Get text dimensions
+	face, _ := opentype.NewFace(boldFont, &opentype.FaceOptions{
+		Size:    26,
+		DPI:     72,
+		Hinting: font.HintingFull,
+	})
+	defer face.Close()
+
+	// Measure text width
+	drawer := &font.Drawer{Face: face}
+	textWidth := drawer.MeasureString(text).Ceil()
+
+	// Calculate centered position
+	padding := 18
+	badgeWidth := textWidth + (padding * 2)
+	badgeHeight := 42
+	x := (ImageWidth - badgeWidth) / 2
+
+	// Fill badge background
+	for row := y - 32; row < y-32+badgeHeight; row++ {
+		for col := x; col < x+badgeWidth && col < ImageWidth; col++ {
+			img.Set(col, row, bgColor)
+		}
+	}
+
+	// Draw white text on badge (centered)
+	return drawCenteredText(img, text, y, ColorWhite, 26, boldFont)
+}
+
 // formatDates formats start and end dates for display
 func formatDates(startDate, endDate string) string {
 	if startDate == "" {
 		return "Date non disponible"
 	}
 
-	// Parse dates
-	start, err := time.Parse("2006-01-02", startDate)
+	// Parse dates (handle multiple formats)
+	var start time.Time
+	var err error
+
+	// Try RFC3339 first
+	start, err = time.Parse(time.RFC3339, startDate)
 	if err != nil {
-		return startDate
+		// Try without timezone (common format from backend)
+		start, err = time.Parse("2006-01-02T15:04:05", startDate)
+		if err != nil {
+			// Try simple date format
+			start, err = time.Parse("2006-01-02", startDate)
+			if err != nil {
+				return startDate // Return as-is if all parsing fails
+			}
+		}
 	}
 
 	// If no end date or same as start date, show single date
@@ -249,9 +398,17 @@ func formatDates(startDate, endDate string) string {
 		return start.Format("02/01/2006")
 	}
 
-	end, err := time.Parse("2006-01-02", endDate)
+	var end time.Time
+	// Try same parsing logic for end date
+	end, err = time.Parse(time.RFC3339, endDate)
 	if err != nil {
-		return start.Format("02/01/2006")
+		end, err = time.Parse("2006-01-02T15:04:05", endDate)
+		if err != nil {
+			end, err = time.Parse("2006-01-02", endDate)
+			if err != nil {
+				return start.Format("02/01/2006") // Just show start date if end parsing fails
+			}
+		}
 	}
 
 	// If same month, show range within month
@@ -276,4 +433,3 @@ func monthName(m time.Month) string {
 func CleanupImage(filepath string) error {
 	return os.Remove(filepath)
 }
-

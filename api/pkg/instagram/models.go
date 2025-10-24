@@ -8,8 +8,6 @@ type Config struct {
 	AccessToken string
 	// PageID is the Instagram Business Account ID (or IGSID)
 	PageID string
-	// RecipientID is the Instagram Scoped User ID (IGSID) to send DMs to
-	RecipientID string
 	// Enabled determines if Instagram DM sending is enabled
 	Enabled bool
 }
@@ -26,12 +24,6 @@ type TournamentImage struct {
 	RulesURL      string
 	TournamentID  int
 	TournamentURL string
-}
-
-// MessageResponse represents the response from Instagram API when sending a message
-type MessageResponse struct {
-	RecipientID string `json:"recipient_id"`
-	MessageID   string `json:"message_id"`
 }
 
 // ErrorResponse represents an error from Instagram API
@@ -52,4 +44,3 @@ type TournamentNotification struct {
 	Success    bool
 	Error      string
 }
-

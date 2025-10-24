@@ -68,8 +68,8 @@ const FeedTournament: React.FC = () => {
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           {/* Breadcrumb */}
           <nav className="mb-8">
-            <Link to="/feed" className="hover:text-gray-700 transition-colors duration-200">
-              Retour aux tournois
+            <Link to="/" className="hover:text-gray-700 transition-colors duration-200">
+              Retour à la carte des tournois
             </Link>
           </nav>
 

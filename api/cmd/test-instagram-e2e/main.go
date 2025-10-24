@@ -7,6 +7,7 @@ import (
 	"math/rand"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"tournois-tt/api/pkg/cache"
@@ -85,13 +86,38 @@ func main() {
 	fmt.Printf("✅ Loaded %d tournaments from data.json\n", len(tournaments))
 	fmt.Println()
 
-	// Pick random tournament
-	randomIndex := rand.Intn(len(tournaments))
-	selectedTournament := tournaments[randomIndex]
+	// Pick tournament - either specific ID or random
+	var selectedTournament cache.TournamentCache
+	var randomIndex int
 
-	fmt.Printf("🎲 Randomly selected tournament #%d: %s (ID: %d)\n",
-		randomIndex+1, selectedTournament.Name, selectedTournament.ID)
-	fmt.Println()
+	if testID := os.Getenv("TEST_TOURNAMENT_ID"); testID != "" {
+		// Use specific tournament for testing
+		tournamentID := 0
+		fmt.Sscanf(testID, "%d", &tournamentID)
+
+		for _, t := range tournaments {
+			if t.ID == tournamentID {
+				selectedTournament = t
+				break
+			}
+		}
+
+		if selectedTournament.ID == 0 {
+			log.Fatalf("❌ Tournament ID %s not found in data.json", testID)
+		}
+
+		fmt.Printf("🎯 Using specified tournament: %s (ID: %d)\n",
+			selectedTournament.Name, selectedTournament.ID)
+		fmt.Println()
+	} else {
+		// Pick random tournament
+		randomIndex = rand.Intn(len(tournaments))
+		selectedTournament = tournaments[randomIndex]
+
+		fmt.Printf("🎲 Randomly selected tournament #%d: %s (ID: %d)\n",
+			randomIndex+1, selectedTournament.Name, selectedTournament.ID)
+		fmt.Println()
+	}
 
 	// Convert to TournamentImage
 	tournamentImage := convertToImage(selectedTournament)
@@ -106,13 +132,13 @@ func main() {
 	fmt.Printf("  • URL: %s\n", tournamentImage.TournamentURL)
 	fmt.Println()
 
-	// Generate image (locally for testing, but won't be used for posting)
-	fmt.Println("🖼️  Generating tournament image locally...")
+	// Generate image (saved to instagram-images folder)
+	fmt.Println("🖼️  Generating tournament image...")
 	imagePath, err := instagram.GenerateTournamentImage(tournamentImage)
 	if err != nil {
 		log.Fatalf("❌ Failed to generate image: %v", err)
 	}
-	defer instagram.CleanupImage(imagePath)
+	// Don't cleanup - we want to keep the image in instagram-images folder
 
 	fileInfo, err := os.Stat(imagePath)
 	if err != nil {
@@ -121,10 +147,6 @@ func main() {
 
 	fmt.Printf("✅ Image generated: %s\n", imagePath)
 	fmt.Printf("   Size: %d bytes (%.2f KB)\n", fileInfo.Size(), float64(fileInfo.Size())/1024)
-	fmt.Println()
-	fmt.Println("ℹ️  NOTE: For E2E testing, we're using a MOCK image URL instead:")
-	fmt.Println("   https://us-metro.org/wp-content/uploads/2022/06/banniere-tennis-de-table-1400x788-1.jpg")
-	fmt.Println("   (Configured in api/pkg/instagram/client.go line ~146)")
 	fmt.Println()
 
 	// Final confirmation
@@ -232,10 +254,16 @@ func convertToImage(t cache.TournamentCache) instagram.TournamentImage {
 	// Build tournament URL
 	tournamentURL := fmt.Sprintf("https://tournois-tt.fr/%d", t.ID)
 
+	// Format club name with identifier
+	clubName := t.Club.Name
+	if t.Club.Identifier != "" {
+		clubName = fmt.Sprintf("%s (%s)", t.Club.Name, t.Club.Identifier)
+	}
+
 	return instagram.TournamentImage{
 		Name:          t.Name,
 		Type:          t.Type,
-		Club:          t.Club.Name,
+		Club:          clubName,
 		Endowment:     t.Endowment,
 		StartDate:     t.StartDate,
 		EndDate:       t.EndDate,
@@ -265,7 +293,7 @@ func formatAddress(addr cache.Address) string {
 	}
 
 	if len(parts) > 0 {
-		return parts[0]
+		return strings.Join(parts, ", ")
 	}
 
 	return "Adresse non disponible"
