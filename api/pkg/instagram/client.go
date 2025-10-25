@@ -1,10 +1,12 @@
 package instagram
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
 	"log"
+	"mime/multipart"
 	"net/http"
 	"net/url"
 	"os"
@@ -139,11 +141,25 @@ func (c *Client) createMediaContainer(imagePath string, tournament TournamentIma
 		tournament.TournamentURL,
 	)
 
-	// Construct URL from the saved image
-	filename := filepath.Base(imagePath)
-	imageURL := fmt.Sprintf("https://tournois-tt.fr/instagram-images/%s", filename)
+	// Determine image URL based on environment
+	var imageURL string
+	ginMode := os.Getenv("GIN_MODE")
 
-	log.Printf("📸 Using image URL: %s", imageURL)
+	if ginMode == "release" {
+		// Production: use our server
+		filename := filepath.Base(imagePath)
+		imageURL = fmt.Sprintf("https://tournois-tt.fr/instagram-images/%s", filename)
+		log.Printf("📸 [PROD] Using server URL: %s", imageURL)
+	} else {
+		// Development: upload to free image hosting (Catbox.moe)
+		log.Println("📸 [DEV] Uploading image to Catbox.moe for testing...")
+		uploadedURL, err := uploadToImgBB(imagePath)
+		if err != nil {
+			return "", fmt.Errorf("failed to upload image to Catbox.moe: %w", err)
+		}
+		imageURL = uploadedURL
+		log.Printf("✅ [DEV] Image uploaded to Catbox.moe: %s", imageURL)
+	}
 
 	// Create container via Instagram API (URL-encode parameters)
 	createURL := fmt.Sprintf("%s/%s/media?image_url=%s&caption=%s&access_token=%s",
@@ -213,6 +229,78 @@ func (c *Client) publishMediaContainer(containerID string) (string, error) {
 	}
 
 	return result.ID, nil
+}
+
+// uploadToImgBB uploads an image to Catbox.moe (free image hosting, no API key needed) and returns the URL
+// This is used for local development testing when GIN_MODE != "release"
+func uploadToImgBB(imagePath string) (string, error) {
+	// Open the image file
+	file, err := os.Open(imagePath)
+	if err != nil {
+		return "", fmt.Errorf("failed to open image: %w", err)
+	}
+	defer file.Close()
+
+	// Prepare multipart form data
+	var requestBody bytes.Buffer
+	writer := multipart.NewWriter(&requestBody)
+
+	// Add file field
+	part, err := writer.CreateFormFile("fileToUpload", filepath.Base(imagePath))
+	if err != nil {
+		return "", fmt.Errorf("failed to create form file: %w", err)
+	}
+
+	// Copy file content
+	if _, err := io.Copy(part, file); err != nil {
+		return "", fmt.Errorf("failed to copy file: %w", err)
+	}
+
+	// Add reqtype field (required by Catbox)
+	if err := writer.WriteField("reqtype", "fileupload"); err != nil {
+		return "", fmt.Errorf("failed to write reqtype field: %w", err)
+	}
+
+	// Close the writer
+	if err := writer.Close(); err != nil {
+		return "", fmt.Errorf("failed to close writer: %w", err)
+	}
+
+	// Catbox.moe API - completely free, no API key required
+	uploadURL := "https://catbox.moe/user/api.php"
+
+	// Create request
+	req, err := http.NewRequest("POST", uploadURL, &requestBody)
+	if err != nil {
+		return "", fmt.Errorf("failed to create request: %w", err)
+	}
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+
+	// Send request
+	client := &http.Client{Timeout: 30 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		return "", fmt.Errorf("failed to upload: %w", err)
+	}
+	defer resp.Body.Close()
+
+	// Read response (Catbox returns just the URL as plain text)
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", fmt.Errorf("failed to read response: %w", err)
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("upload failed with status %d: %s", resp.StatusCode, string(body))
+	}
+
+	// Trim whitespace and validate URL
+	imageURL := string(bytes.TrimSpace(body))
+	if imageURL == "" {
+		return "", fmt.Errorf("upload succeeded but no URL returned")
+	}
+
+	return imageURL, nil
 }
 
 // formatDate formats a date string for display
