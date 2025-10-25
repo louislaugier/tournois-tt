@@ -13,6 +13,11 @@ threads-token.json
 instagram-images/*
 !instagram-images/README.md
 
+# Meme Generator
+meme-templates/
+meme-output/
+**/*.mp4
+
 # Binaries
 api/main
 api/test-instagram-e2e
