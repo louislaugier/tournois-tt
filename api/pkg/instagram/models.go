@@ -2,14 +2,20 @@ package instagram
 
 import "time"
 
-// Config holds Instagram API configuration
+// Config holds Instagram and Threads API configuration
 type Config struct {
 	// AccessToken is the Instagram Graph API access token
 	AccessToken string
 	// PageID is the Instagram Business Account ID (or IGSID)
 	PageID string
-	// Enabled determines if Instagram DM sending is enabled
+	// ThreadsAccessToken is the Threads API access token
+	ThreadsAccessToken string
+	// ThreadsUserID is the Threads user ID for posting
+	ThreadsUserID string
+	// Enabled determines if Instagram posting is enabled
 	Enabled bool
+	// ThreadsEnabled determines if Threads posting is enabled
+	ThreadsEnabled bool
 }
 
 // TournamentImage represents the data needed to generate a tournament image

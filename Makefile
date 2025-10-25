@@ -45,16 +45,17 @@ test-instagram:
 # E2E Instagram test
 e2e-instagram:
 	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-	@echo "  Instagram Post E2E Test (Docker)"
+	@echo "  Instagram & Threads E2E Test (Docker)"
 	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 	@echo ""
-	@echo "⚠️  WARNING: This will post a REAL image to your Instagram feed!"
+	@echo "⚠️  WARNING: This will post REAL content to Instagram & Threads!"
 	@echo ""
 	@echo "Prerequisites:"
 	@echo "  1. INSTAGRAM_ENABLED=true in .env"
 	@echo "  2. INSTAGRAM_ACCESS_TOKEN set in .env"
 	@echo "  3. INSTAGRAM_PAGE_ID set in .env"
-	@echo "  4. Instagram Business Account connected to Facebook Page"
+	@echo "  4. THREADS_ENABLED=true (optional) in .env"
+	@echo "  5. THREADS_USER_ID (optional) in .env"
 	@echo "Running E2E test in API container..."
 	docker-compose exec -e E2E_TEST_ENABLED=true api go run -a ./cmd/test-instagram-e2e/
 

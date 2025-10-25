@@ -36,9 +36,12 @@ func main() {
 
 	// Load configuration
 	config := instagram.Config{
-		AccessToken: os.Getenv("INSTAGRAM_ACCESS_TOKEN"),
-		PageID:      os.Getenv("INSTAGRAM_PAGE_ID"),
-		Enabled:     os.Getenv("INSTAGRAM_ENABLED") == "true",
+		AccessToken:        os.Getenv("INSTAGRAM_ACCESS_TOKEN"),
+		PageID:             os.Getenv("INSTAGRAM_PAGE_ID"),
+		ThreadsAccessToken: os.Getenv("THREADS_ACCESS_TOKEN"),
+		ThreadsUserID:      os.Getenv("THREADS_USER_ID"),
+		Enabled:            os.Getenv("INSTAGRAM_ENABLED") == "true",
+		ThreadsEnabled:     os.Getenv("THREADS_ENABLED") == "true",
 	}
 
 	// Validate configuration
@@ -151,14 +154,14 @@ func main() {
 
 	// Final confirmation
 	fmt.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-	fmt.Println("⚠️  ABOUT TO POST TO INSTAGRAM FEED")
+	fmt.Println("⚠️  ABOUT TO POST TO INSTAGRAM FEED, STORY & THREADS")
 	fmt.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
 	fmt.Println()
-	fmt.Println("This will create a REAL post on your Instagram account.")
+	fmt.Println("This will create REAL posts on Instagram feed, story, and Threads.")
 	fmt.Println()
 
 	fmt.Println()
-	fmt.Println("📱 Posting to Instagram...")
+	fmt.Println("📱 Posting to Instagram & Threads...")
 
 	// Post to Instagram
 	notification, err := client.PostTournament(tournamentImage)
@@ -173,14 +176,16 @@ func main() {
 	// Success!
 	fmt.Println()
 	fmt.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-	fmt.Println("🎉 SUCCESS! Instagram post created successfully!")
+	fmt.Println("🎉 SUCCESS! Posted to Instagram & Threads!")
 	fmt.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
 	fmt.Println()
 	fmt.Printf("  • Post ID: %s\n", notification.MessageID)
 	fmt.Printf("  • Posted at: %s\n", notification.SentAt.Format(time.RFC3339))
 	fmt.Printf("  • Tournament: %s (ID: %d)\n", tournamentImage.Name, tournamentImage.TournamentID)
 	fmt.Println()
-	fmt.Println("✅ Check your Instagram profile to see the post")
+	fmt.Println("✅ Check your Instagram profile for the feed post")
+	fmt.Println("✅ Check your Instagram story for the story")
+	fmt.Println("✅ Check your Threads profile for the thread (if enabled)")
 	fmt.Println()
 }
 

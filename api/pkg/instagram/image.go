@@ -90,10 +90,10 @@ func GenerateTournamentImage(tournamentData TournamentImage) (string, error) {
 	y = drawCenteredBadge(img, mappedType, y, ColorGradientStart)
 	y += 40
 
-	// Key info - centered
+	// Key info - centered (with tighter spacing to prevent bottom cutoff)
 	if tournamentData.Endowment > 0 {
 		y = drawCenteredInfoLine(img, "DOTATION TOTALE", fmt.Sprintf("%d €", tournamentData.Endowment/100), y)
-		y += 43
+		y += 40
 	}
 
 	dateStr := formatDates(tournamentData.StartDate, tournamentData.EndDate)
@@ -103,25 +103,25 @@ func GenerateTournamentImage(tournamentData TournamentImage) (string, error) {
 		dateLabel = "DATES"
 	}
 	y = drawCenteredInfoLine(img, dateLabel, dateStr, y)
-	y += 43
+	y += 40
 
 	clubName := wrapText(tournamentData.Club, 38)
 	y = drawCenteredInfoLine(img, "CLUB ORGANISATEUR", clubName, y)
-	y += 43
+	y += 40
 
 	address := wrapText(tournamentData.Address, 38)
 	y = drawCenteredInfoLine(img, "LIEU", address, y)
-	y += 45
+	y += 40
 
-	// Footer with URL - centered
+	// Footer with URL - centered (ensure enough bottom margin)
 	footerY := y
 
 	// Subtle separator
 	drawSeparator(img, 60, ImageWidth-60, footerY)
-	footerY += 22
+	footerY += 20
 
-	// URL in accent color (centered)
-	_ = drawCenteredText(img, tournamentData.TournamentURL, footerY, ColorGradientStart, 28, boldFont)
+	// URL in accent color (centered) - smaller font to ensure it fits
+	_ = drawCenteredText(img, tournamentData.TournamentURL, footerY, ColorGradientStart, 24, boldFont)
 
 	// Save to instagram-images folder
 	imagesDir := "./instagram-images"
