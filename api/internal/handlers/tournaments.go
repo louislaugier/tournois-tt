@@ -22,6 +22,7 @@ type TournamentResponse struct {
 	Club      fftt.Club         `json:"club"`
 	Rules     *fftt.Rules       `json:"rules,omitempty"`
 	SignupURL string            `json:"signupUrl,omitempty"`
+	Page      string            `json:"page,omitempty"`
 	Endowment int               `json:"endowment"`
 }
 
@@ -60,6 +61,7 @@ func TournamentsHandler(c *gin.Context) {
 				Identifier: cachedTournament.Club.Identifier,
 			},
 			SignupURL: cachedTournament.SignupUrl,
+			Page:      cachedTournament.Page,
 			Endowment: cachedTournament.Endowment,
 		})
 

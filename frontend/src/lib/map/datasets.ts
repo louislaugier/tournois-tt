@@ -83,21 +83,27 @@ export const getTournamentRows = (allTournamentsForMap: any) => {
                 // If affiche is available, display it
                 if (t.affiche) {
                     const afficheDisplay = location.count > 1 ? t.affiche.replace('https://', '') : t.affiche;
-                    return t.rules ? afficheDisplay : `Pas de règlement (Affiche: ${afficheDisplay})`;
+                    return t.rules ? afficheDisplay : `Pas encore de règlement (Affiche: ${afficheDisplay})`;
                 }
                 
                 // Default case: no rules, no affiche
-                return 'Pas de règlement';
+                return 'Pas encore de règlement';
             }).join(' | '),
             location.tournaments.map(t => {
-                // Display signup URL if available
+                // Display page URL (signup link) if available, fallback to signupUrl
+                if (t.page) {
+                    const utmParams = 'utm_source=tournois-tt.fr&utm_medium=website&utm_campaign=page_signup&utm_content=map_tooltip';
+                    const separator = t.page.includes('?') ? '&' : '?';
+                    const urlWithUTM = `${t.page}${separator}${utmParams}`;
+                    return location.count > 1 ? urlWithUTM.replace('https://', '') : urlWithUTM;
+                }
                 if (t.signupUrl) {
                     const utmParams = 'utm_source=tournois-tt.fr&utm_medium=website&utm_campaign=fftt_signup&utm_content=map_tooltip';
                     const separator = t.signupUrl.includes('?') ? '&' : '?';
                     const urlWithUTM = `${t.signupUrl}${separator}${utmParams}`;
                     return location.count > 1 ? urlWithUTM.replace('https://', '') : urlWithUTM;
                 }
-                return '/';
+                return 'Pas encore de lien d\'inscription';
             }).join(' | '),
             postalCode,
             formatCityName(location.tournaments[0].address.addressLocality),

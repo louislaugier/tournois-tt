@@ -76,8 +76,16 @@ func (g *MemeGenerator) GenerateMemeWithBackground(videoPath, text string, outpu
 	videoDir := filepath.Dir(absVideoPath)
 	videoFilename := filepath.Base(absVideoPath)
 
-	// Escape text for FFmpeg
-	escapedText := escapeFFmpegText(text)
+	// Wrap text to fit screen (15 chars per line max)
+	wrappedText := wrapTextForFFmpeg(text, 15)
+
+	// Escape only what FFmpeg drawtext needs (not shell escaping)
+	// Use %{...} expansion which is more reliable
+	ffmpegText := strings.ReplaceAll(wrappedText, "\\", "\\\\")
+	ffmpegText = strings.ReplaceAll(ffmpegText, ":", "\\:")
+	ffmpegText = strings.ReplaceAll(ffmpegText, "\n", "\\n")
+	// For quotes in the text itself, escape them for the shell string
+	ffmpegText = strings.ReplaceAll(ffmpegText, "'", "'\"'\"'")
 
 	// Docker command to overlay text on existing video
 	cmd := exec.Command("docker", "run", "--rm",
@@ -85,7 +93,7 @@ func (g *MemeGenerator) GenerateMemeWithBackground(videoPath, text string, outpu
 		"-v", fmt.Sprintf("%s:/output", absOutputDir),
 		"linuxserver/ffmpeg:latest",
 		"-i", fmt.Sprintf("/input/%s", videoFilename),
-		"-vf", fmt.Sprintf(`drawtext=text='%s':fontsize=40:fontcolor=white:x=(w-text_w)/2:y=(h-text_h)/2:box=1:boxcolor=black@0.8:boxborderw=15:line_spacing=8:fontfile=/usr/share/fonts/dejavu/DejaVuSans-Bold.ttf`, escapedText),
+		"-vf", fmt.Sprintf("drawtext=text='%s':fontsize=36:fontcolor=white:x=(w-text_w)/2:y=(h-text_h)/2:box=1:boxcolor=black@0.8:boxborderw=15:line_spacing=6:fontfile=/usr/share/fonts/dejavu/DejaVuSans-Bold.ttf", ffmpegText),
 		"-c:a", "copy",
 		"-c:v", "libx264",
 		"-pix_fmt", "yuv420p",
@@ -168,14 +176,15 @@ func wrapTextForFFmpeg(text string, maxCharsPerLine int) string {
 
 // escapeFFmpegText escapes special characters for FFmpeg drawtext filter
 func escapeFFmpegText(text string) string {
-	// First wrap text to reasonable line length (18 chars for 40pt font on 1080p video)
-	text = wrapTextForFFmpeg(text, 18)
+	// Wrap text to fit screen (15 chars per line max)
+	text = wrapTextForFFmpeg(text, 15)
 
-	// FFmpeg requires escaping: : \ ' and newlines
+	// Escape for FFmpeg drawtext
 	text = strings.ReplaceAll(text, "\\", "\\\\")
-	text = strings.ReplaceAll(text, "'", "\\'")
 	text = strings.ReplaceAll(text, ":", "\\:")
-	// Convert newlines to FFmpeg format
 	text = strings.ReplaceAll(text, "\n", "\\n")
+	// Escape single quotes for shell
+	text = strings.ReplaceAll(text, "'", "'\"'\"'")
+
 	return text
 }

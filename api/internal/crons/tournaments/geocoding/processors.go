@@ -94,6 +94,11 @@ func ProcessTournamentForCache(t fftt.Tournament, cachedTournaments map[string]c
 		}
 	}
 
+	// Add Page (signup link) if available
+	if t.Page != "" {
+		newCacheEntry.Page = t.Page
+	}
+
 	// Check if already in cache with complete geocoding
 	cacheKey := fmt.Sprintf("%d", t.ID)
 	if cachedTournament, exists := cachedTournaments[cacheKey]; exists {

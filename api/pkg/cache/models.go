@@ -27,6 +27,7 @@ type TournamentCache struct {
 	IsSiteExistenceChecked bool              `json:"isSiteExistenceChecked,omitempty"`
 	SiteUrl                string            `json:"siteUrl,omitempty"`
 	SignupUrl              string            `json:"signupUrl,omitempty"`
+	Page                   string            `json:"page,omitempty"`
 	Timestamp              time.Time         `json:"timestamp"`
 }
 

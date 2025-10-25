@@ -10,7 +10,7 @@ export const tooltipFields = [
     { name: 'Date(s)', format: null },
     { name: 'Adresse', format: null },
     { name: 'Règlement', format: null },
-    // { name: 'Inscription', format: null }
+    { name: 'Inscription', format: null },
 ]
 
 export const getMapConfig = (tournaments: Tournament[]) => {

@@ -20,6 +20,7 @@ type Tournament struct {
 	IsSiteExistenceChecked bool              `json:"isSiteExistenceChecked,omitempty"`
 	SiteURL                string            `json:"siteUrl,omitempty"`
 	SignupURL              string            `json:"signupUrl,omitempty"`
+	Page                   string            `json:"page,omitempty"`
 }
 
 // Response represents tournament responses

@@ -149,6 +149,35 @@ const FeedTournament: React.FC = () => {
               </div>
             )}
 
+            {new Date(tournament.startDate) >= new Date() && (
+              <div className="mt-4 pt-4 border-t border-gray-200">
+                {tournament.page ? (
+                  <a 
+                    href={`${tournament.page}${tournament.page.includes('?') ? '&' : '?'}utm_source=tournois-tt.fr&utm_medium=website&utm_campaign=page_signup&utm_content=feed_detail`} 
+                    target="_blank" 
+                    rel="noopener noreferrer" 
+                    className="inline-flex items-center text-blue-600 hover:text-blue-800 font-medium text-sm transition-colors duration-200"
+                    onClick={() => {
+                      if (typeof window !== 'undefined' && window.gtag) {
+                        window.gtag('event', 'click', {
+                          event_category: 'external_link',
+                          event_label: 'Page Signup - Feed Detail',
+                          value: tournament.page,
+                          link_url: tournament.page,
+                          link_text: 'Inscription',
+                          tournament_name: tournament.name
+                        });
+                      }
+                    }}
+                  >
+                    Inscription
+                  </a>
+                ) : (
+                  <span className="text-gray-500 text-sm">Pas encore de lien d'inscription</span>
+                )}
+              </div>
+            )}
+
           </article>
 
           {/* Structured Data JSON-LD */}
