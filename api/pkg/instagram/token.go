@@ -14,13 +14,14 @@ import (
 )
 
 const (
-	// Token storage file path
-	tokenStoragePath = "./instagram-token.json"
+	// Token storage file paths
+	tokenStoragePath        = "./instagram-token.json"
+	threadsTokenStoragePath = "./threads-token.json"
 
 	// Refresh token when less than this many days remain
 	refreshThresholdDays = 7
 
-	// Instagram token validity period (60 days)
+	// Token validity period (60 days for both Instagram and Threads)
 	tokenValidityDays = 60
 )
 
@@ -235,6 +236,148 @@ func saveTokenStorage(storage *TokenStorage) error {
 
 	if err := os.WriteFile(tokenStoragePath, data, 0600); err != nil {
 		return fmt.Errorf("failed to write token storage: %w", err)
+	}
+
+	return nil
+}
+
+// LoadThreadsToken loads the Threads token from persistent storage or falls back to env var
+func LoadThreadsToken() (string, error) {
+	// Try to load from persistent storage first
+	storage, err := loadThreadsTokenStorage()
+	if err == nil && storage.AccessToken != "" {
+		// Check if token needs refresh
+		if shouldRefreshToken(storage) {
+			log.Println("Threads token needs refresh, attempting refresh...")
+			if err := RefreshThreadsToken(); err != nil {
+				log.Printf("Failed to refresh Threads token: %v", err)
+				// Still return the current token, it might still be valid
+			} else {
+				// Reload after refresh
+				storage, err = loadThreadsTokenStorage()
+				if err != nil {
+					return "", fmt.Errorf("failed to reload Threads token after refresh: %w", err)
+				}
+			}
+		}
+		return storage.AccessToken, nil
+	}
+
+	// Fall back to environment variable (initial setup)
+	envToken := config.ThreadsAccessToken
+	if envToken == "" {
+		return "", fmt.Errorf("no Threads token found in storage or environment")
+	}
+
+	log.Println("Using Threads token from environment variable (first time setup)")
+
+	// Initialize storage with env token
+	storage = &TokenStorage{
+		AccessToken: envToken,
+		ExpiresAt:   time.Now().Add(tokenValidityDays * 24 * time.Hour),
+		LastRefresh: time.Now(),
+		Version:     1,
+	}
+
+	if err := saveThreadsTokenStorage(storage); err != nil {
+		log.Printf("Warning: Failed to save initial Threads token to storage: %v", err)
+	}
+
+	return envToken, nil
+}
+
+// RefreshThreadsToken refreshes the Threads access token and persists it
+func RefreshThreadsToken() error {
+	// Load current token
+	storage, err := loadThreadsTokenStorage()
+	if err != nil || storage.AccessToken == "" {
+		// Fall back to env token
+		envToken := config.ThreadsAccessToken
+		if envToken == "" {
+			return fmt.Errorf("no Threads token available to refresh")
+		}
+		storage = &TokenStorage{
+			AccessToken: envToken,
+			ExpiresAt:   time.Now().Add(tokenValidityDays * 24 * time.Hour),
+			LastRefresh: time.Now(),
+			Version:     1,
+		}
+	}
+
+	// Check if token is already expired
+	if time.Now().After(storage.ExpiresAt) {
+		return fmt.Errorf("Threads token has expired, manual regeneration required")
+	}
+
+	// Call Threads refresh API (uses same endpoint as Instagram)
+	refreshURL := fmt.Sprintf("https://graph.threads.net/refresh_access_token?grant_type=th_refresh_token&access_token=%s",
+		storage.AccessToken)
+
+	resp, err := http.Get(refreshURL)
+	if err != nil {
+		return fmt.Errorf("failed to call Threads refresh API: %w", err)
+	}
+	defer resp.Body.Close()
+
+	body, _ := io.ReadAll(resp.Body)
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("Threads refresh failed with status %d: %s", resp.StatusCode, string(body))
+	}
+
+	var refreshResp TokenRefreshResponse
+	if err := json.Unmarshal(body, &refreshResp); err != nil {
+		return fmt.Errorf("failed to parse Threads refresh response: %w", err)
+	}
+
+	// Update storage with new token
+	storage.AccessToken = refreshResp.AccessToken
+	storage.ExpiresAt = time.Now().Add(time.Duration(refreshResp.ExpiresIn) * time.Second)
+	storage.LastRefresh = time.Now()
+
+	// Persist updated token
+	if err := saveThreadsTokenStorage(storage); err != nil {
+		return fmt.Errorf("failed to save refreshed Threads token: %w", err)
+	}
+
+	// Update global config variable for immediate use
+	config.ThreadsAccessToken = refreshResp.AccessToken
+
+	log.Printf("Successfully refreshed Threads token. New expiration: %s", storage.ExpiresAt.Format(time.RFC3339))
+
+	return nil
+}
+
+// loadThreadsTokenStorage loads Threads token data from persistent storage
+func loadThreadsTokenStorage() (*TokenStorage, error) {
+	data, err := os.ReadFile(threadsTokenStoragePath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read Threads token storage: %w", err)
+	}
+
+	var storage TokenStorage
+	if err := json.Unmarshal(data, &storage); err != nil {
+		return nil, fmt.Errorf("failed to parse Threads token storage: %w", err)
+	}
+
+	return &storage, nil
+}
+
+// saveThreadsTokenStorage saves Threads token data to persistent storage
+func saveThreadsTokenStorage(storage *TokenStorage) error {
+	// Ensure directory exists
+	dir := filepath.Dir(threadsTokenStoragePath)
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return fmt.Errorf("failed to create Threads storage directory: %w", err)
+	}
+
+	data, err := json.MarshalIndent(storage, "", "  ")
+	if err != nil {
+		return fmt.Errorf("failed to marshal Threads token storage: %w", err)
+	}
+
+	if err := os.WriteFile(threadsTokenStoragePath, data, 0600); err != nil {
+		return fmt.Errorf("failed to write Threads token storage: %w", err)
 	}
 
 	return nil

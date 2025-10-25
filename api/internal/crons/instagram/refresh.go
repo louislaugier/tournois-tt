@@ -26,3 +26,23 @@ func RefreshTokenOnStartup() {
 
 	CheckAndRefreshToken()
 }
+
+// RefreshThreadsTokenOnStartup checks and refreshes the Threads token when the app starts
+func RefreshThreadsTokenOnStartup() {
+	if !config.ThreadsEnabled {
+		log.Println("INFO: Threads is disabled, skipping startup token refresh")
+		return
+	}
+
+	if config.ThreadsAccessToken == "" {
+		log.Println("INFO: No Threads access token configured, skipping startup token refresh")
+		return
+	}
+
+	log.Println("INFO: Checking if Threads token needs refresh on startup...")
+
+	// Wait a bit to let the app fully start
+	time.Sleep(5 * time.Second)
+
+	CheckAndRefreshThreadsToken()
+}

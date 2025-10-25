@@ -44,8 +44,15 @@ func Schedule() {
 		log.Fatal("Error adding Instagram token refresh cron job:", err)
 	}
 
-	// Check Instagram token on startup (in background)
+	// Schedule Threads token refresh to run daily at 3:15 AM Paris time
+	_, err = c.AddFunc("15 3 * * *", instagramCron.CheckAndRefreshThreadsToken)
+	if err != nil {
+		log.Fatal("Error adding Threads token refresh cron job:", err)
+	}
+
+	// Check tokens on startup (in background)
 	go instagramCron.RefreshTokenOnStartup()
+	go instagramCron.RefreshThreadsTokenOnStartup()
 
 	// Start the cron scheduler in a separate goroutine
 	go func() {

@@ -29,9 +29,14 @@ type Client struct {
 
 // NewClient creates a new Instagram API client
 func NewClient(config Config) *Client {
-	// Try to load the latest token from storage
+	// Try to load the latest Instagram token from storage
 	if token, err := LoadToken(); err == nil && token != "" {
 		config.AccessToken = token
+	}
+
+	// Try to load the latest Threads token from storage
+	if token, err := LoadThreadsToken(); err == nil && token != "" {
+		config.ThreadsAccessToken = token
 	}
 
 	return &Client{

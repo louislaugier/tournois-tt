@@ -44,3 +44,28 @@ func CheckAndRefreshToken() {
 		log.Printf("✅ Token is valid (%.1f days remaining, threshold: 7 days)", daysRemaining)
 	}
 }
+
+// CheckAndRefreshThreadsToken checks if the Threads token needs refresh and refreshes if necessary
+func CheckAndRefreshThreadsToken() {
+	log.Println("🔑 Checking Threads token status...")
+
+	// Try to get token info from storage
+	token, err := instagram.LoadThreadsToken()
+	if err != nil {
+		log.Printf("⚠️  Failed to load Threads token: %v", err)
+		return
+	}
+
+	if token == "" {
+		log.Println("   No Threads token configured, skipping...")
+		return
+	}
+
+	log.Println("   Attempting to refresh Threads token...")
+	if err := instagram.RefreshThreadsToken(); err != nil {
+		log.Printf("❌ Threads token refresh failed: %v", err)
+		log.Println("   ⚠️  MANUAL ACTION REQUIRED: Generate new Threads token in Meta dashboard")
+	} else {
+		log.Println("✅ Threads token refreshed successfully")
+	}
+}
