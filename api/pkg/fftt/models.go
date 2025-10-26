@@ -4,23 +4,19 @@ import "tournois-tt/api/pkg/geocoding"
 
 // Tournament represents a complete tournament
 type Tournament struct {
-	ID                     int               `json:"id"`
-	Name                   string            `json:"name"`
-	Type                   string            `json:"type"`
-	StartDate              string            `json:"startDate"`
-	EndDate                string            `json:"endDate"`
-	Address                geocoding.Address `json:"address"`
-	Club                   Club              `json:"club"`
-	Rules                  *Rules            `json:"rules"`
-	Tables                 []Table           `json:"tables"`
-	Endowment              int               `json:"endowment"`
-	Organization           *Organization     `json:"organization,omitempty"`
-	Responses              []Response        `json:"responses,omitempty"`
-	IsRulesPdfChecked      bool              `json:"isRulesPdfChecked,omitempty"`
-	IsSiteExistenceChecked bool              `json:"isSiteExistenceChecked,omitempty"`
-	SiteURL                string            `json:"siteUrl,omitempty"`
-	SignupURL              string            `json:"signupUrl,omitempty"`
-	Page                   string            `json:"page,omitempty"`
+	ID           int               `json:"id"`
+	Name         string            `json:"name"`
+	Type         string            `json:"type"`
+	StartDate    string            `json:"startDate"`
+	EndDate      string            `json:"endDate"`
+	Address      geocoding.Address `json:"address"`
+	Club         Club              `json:"club"`
+	Rules        *Rules            `json:"rules"`
+	Tables       []Table           `json:"tables"`
+	Endowment    int               `json:"endowment"`
+	Organization *Organization     `json:"organization,omitempty"`
+	Responses    []Response        `json:"responses,omitempty"`
+	Page         string            `json:"page,omitempty"`
 }
 
 // Response represents tournament responses

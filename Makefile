@@ -1,4 +1,4 @@
-.PHONY: help build up down restart logs test test-instagram e2e-instagram meme-list meme-random meme-gen meme-all build-prd run-prd
+.PHONY: help build up down restart logs test test-instagram e2e-instagram build-prd run-prd
 
 # Default target
 help:
@@ -14,12 +14,6 @@ help:
 	@echo "  make e2e-instagram      - Run Instagram E2E test in API container (posts REAL image!)"
 	@echo "  make shell-api          - Open shell in API container"
 	@echo ""
-	@echo "Meme Generator commands:"
-	@echo "  make meme-list          - List all meme templates"
-	@echo "  make meme-list-cat CAT=fftt - List memes by category (fftt, match, club, etc.)"
-	@echo "  make meme-random        - Generate a random meme"
-	@echo "  make meme-gen ID=gratte_10_9 - Generate specific meme by ID"
-	@echo "  make meme-all           - Generate ALL memes (75+ videos!)"
 
 # Docker commands
 build:
@@ -65,52 +59,6 @@ e2e-instagram:
 	@echo "  5. THREADS_USER_ID (optional) in .env"
 	@echo "Running E2E test in API container..."
 	docker-compose exec -e E2E_TEST_ENABLED=true api go run -a ./cmd/test-instagram-e2e/
-
-# Meme Generator commands
-meme-list:
-	@echo "🏓 Listing all meme templates..."
-	@cd api && go run cmd/meme-generator/main.go -list
-
-meme-list-cat:
-ifndef CAT
-	@echo "❌ Error: Please specify category with CAT=<category>"
-	@echo "Examples: make meme-list-cat CAT=fftt"
-	@echo "Categories: fftt, match, club, competitive, championship, money, equipment, travel, tournament, classement, community, season"
-	@exit 1
-endif
-	@echo "🏓 Listing memes for category: $(CAT)"
-	@cd api && go run cmd/meme-generator/main.go -list -category $(CAT)
-
-meme-random:
-	@echo "🎲 Generating random meme..."
-	@cd api && go run cmd/meme-generator/main.go -random
-	@echo ""
-	@echo "✅ Check ./api/meme-output/ for the video"
-
-meme-gen:
-ifndef ID
-	@echo "❌ Error: Please specify meme ID with ID=<id>"
-	@echo "Example: make meme-gen ID=gratte_10_9"
-	@echo "Use 'make meme-list' to see all available IDs"
-	@exit 1
-endif
-	@echo "🎬 Generating meme: $(ID)"
-	@cd api && go run cmd/meme-generator/main.go -id $(ID)
-	@echo ""
-	@echo "✅ Check ./api/meme-output/ for the video"
-
-meme-all:
-	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-	@echo "  🏓 Generate ALL Memes (75+ videos)"
-	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-	@echo ""
-	@echo "⚠️  WARNING: This will generate 75+ video files!"
-	@echo "    This may take several minutes..."
-	@echo ""
-	@read -p "Press Enter to continue or Ctrl+C to cancel: " confirm
-	@cd api && go run cmd/meme-generator/main.go -all
-	@echo ""
-	@echo "✅ All memes generated in ./api/meme-output/"
 
 # Shell access
 shell-api:

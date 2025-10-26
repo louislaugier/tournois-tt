@@ -30,8 +30,8 @@ func filterTournamentsForProcessing(tournaments []cache.TournamentCache, startDa
 			continue
 		}
 
-		// Skip tournaments that already have signup URLs
-		if tournament.SignupUrl != "" {
+		// Skip tournaments that already have page URLs
+		if tournament.Page != "" {
 			continue
 		}
 

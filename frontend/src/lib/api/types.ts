@@ -72,7 +72,6 @@ export interface Tournament {
   tables?: Table[];
   endowment: number;
   id: number;
-  signupUrl?: string;
   organization?: {
     '@id': string;
     '@type': string;

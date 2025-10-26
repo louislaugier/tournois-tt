@@ -14,7 +14,7 @@ const Meta: React.FC<MetaProps> = ({ tournament, isIndex = false, totalTournamen
   if (isMainPage) {
     return (
       <Helmet>
-        <title>Carte des Tournois FFTT</title>
+        <title>La Carte des Tournois FFTT</title>
         <meta name="description" content="Carte interactive des tournois de tennis de table en France. Trouvez les prochains tournois FFTT près de chez vous. Tri & recherche par type de tournoi, club organisateur, date, région, code postal, ville, dotation." />
         <meta name="keywords" content="tennis de table, ping pong, tournois, FFTT, France, carte, compétition" />
         <meta property="og:title" content="Carte des Tournois FFTT" />

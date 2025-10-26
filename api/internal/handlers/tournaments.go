@@ -21,7 +21,6 @@ type TournamentResponse struct {
 	Address   geocoding.Address `json:"address"`
 	Club      fftt.Club         `json:"club"`
 	Rules     *fftt.Rules       `json:"rules,omitempty"`
-	SignupURL string            `json:"signupUrl,omitempty"`
 	Page      string            `json:"page,omitempty"`
 	Endowment int               `json:"endowment"`
 }
@@ -60,7 +59,6 @@ func TournamentsHandler(c *gin.Context) {
 				Region:     cachedTournament.Club.Region,
 				Identifier: cachedTournament.Club.Identifier,
 			},
-			SignupURL: cachedTournament.SignupUrl,
 			Page:      cachedTournament.Page,
 			Endowment: cachedTournament.Endowment,
 		})

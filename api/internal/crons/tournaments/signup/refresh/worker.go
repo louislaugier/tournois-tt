@@ -6,58 +6,18 @@ import (
 	"sync"
 
 	"tournois-tt/api/pkg/cache"
-	"tournois-tt/api/pkg/scraper/browser"
-	"tournois-tt/api/pkg/utils"
 
 	pw "github.com/playwright-community/playwright-go"
 )
 
-// processTournamentBatch processes a batch of tournaments using a worker pool to refresh signup URLs
+// processTournamentBatch processes a batch of tournaments to refresh Page field from FFTT
 func processTournamentBatch(tournaments []cache.TournamentCache) ([]cache.TournamentCache, error) {
 	if len(tournaments) == 0 {
 		return nil, nil
 	}
 
-	// Create a channel to communicate tournaments to workers
-	tournamentChan := make(chan cache.TournamentCache, len(tournaments))
-	resultChan := make(chan cache.TournamentCache, len(tournaments))
-	errorChan := make(chan error, len(tournaments))
-
-	// Start worker pool
-	var wg sync.WaitGroup
-	for i := 0; i < NumWorkers; i++ {
-		wg.Add(1)
-		go worker(tournamentChan, resultChan, errorChan, &wg)
-	}
-
-	// Send tournaments to process
-	for _, tournament := range tournaments {
-		tournamentChan <- tournament
-	}
-	close(tournamentChan)
-
-	// Wait for all workers to finish
-	wg.Wait()
-	close(resultChan)
-	close(errorChan)
-
-	// Check for errors
-	errCount := 0
-	for err := range errorChan {
-		errCount++
-		log.Printf("Error refreshing tournament signup URL: %v", err)
-	}
-
-	// Collect results
-	var processedTournaments []cache.TournamentCache
-	for result := range resultChan {
-		processedTournaments = append(processedTournaments, result)
-	}
-
-	log.Printf("Processed %d/%d tournaments, encountered %d errors",
-		len(processedTournaments), len(tournaments), errCount)
-
-	return processedTournaments, nil
+	// No browser needed anymore - just process with nil browser context
+	return ProcessWithExistingBrowser(tournaments, nil, nil)
 }
 
 // ProcessWithExistingBrowser processes a batch of tournaments using an existing browser context
@@ -127,7 +87,7 @@ func RunWorkers(workerCount int, tournamentsToProcess []cache.TournamentCache,
 	return processedTournaments, errors
 }
 
-// Worker processes tournaments from the input channel, refreshes signup URLs,
+// Worker processes tournaments from the input channel, refreshes Page field from FFTT,
 // and sends results to the result channel
 func Worker(workerID int, tournamentCh <-chan cache.TournamentCache, resultCh chan<- cache.TournamentCache,
 	errorCh chan<- error, wg *sync.WaitGroup, browserContext pw.BrowserContext, pwInstance *pw.Playwright) {
@@ -146,31 +106,11 @@ func Worker(workerID int, tournamentCh <-chan cache.TournamentCache, resultCh ch
 	var modifiedTournaments []cache.TournamentCache
 
 	for tournament := range tournamentCh {
+		// Note: browserContext and pwInstance are no longer used but kept for backward compatibility
 		processedTournament, processed, err := ProcessTournament(workerID, tournament, browserContext, pwInstance)
 
 		if err != nil {
-			// Check if this is a critical browser error
-			if !IsNavigationError(err) {
-				// This is likely a critical browser error - terminate worker
-				log.Printf("Worker %d: Critical error in browser operation: %v", workerID, err)
-				errorCh <- fmt.Errorf("critical browser error: %w", err)
-
-				// Try to recover the browser if possible
-				if restarted, recoverErr := browser.RestartIfUnhealthy(); recoverErr != nil {
-					log.Printf("Worker %d: Failed to recover browser: %v", workerID, recoverErr)
-					// Exit the worker loop on critical browser errors
-					return
-				} else if restarted {
-					log.Printf("Worker %d: Browser successfully restarted, continuing operation", workerID)
-					// We could continue here, but it's safer to exit and let the next run handle remaining tournaments
-					return
-				}
-
-				// Exit the worker loop on critical browser errors
-				return
-			}
-
-			// For navigation errors, report but continue processing
+			log.Printf("Worker %d: Error processing tournament %s: %v", workerID, tournament.Name, err)
 			errorCh <- err
 		}
 
@@ -184,17 +124,6 @@ func Worker(workerID int, tournamentCh <-chan cache.TournamentCache, resultCh ch
 
 	// Save all modified tournaments at once
 	SaveModifiedTournaments(workerID, modifiedTournaments, errorCh)
-}
-
-// worker is the internal worker function called by the processTournamentBatch method
-func worker(input <-chan cache.TournamentCache, output chan<- cache.TournamentCache,
-	errChan chan<- error, wg *sync.WaitGroup) {
-
-	defer wg.Done()
-
-	for tournament := range input {
-		processTournament(tournament, output, errChan)
-	}
 }
 
 // CollectResults collects processed tournaments from the result channel
@@ -227,13 +156,4 @@ func SaveModifiedTournaments(workerID int, modifiedTournaments []cache.Tournamen
 			log.Printf("Worker %d: Saved %d modified tournaments to cache", workerID, len(modifiedTournaments))
 		}
 	}
-}
-
-// IsNavigationError determines if an error is a navigation error (timeout, network issue)
-// that can be skipped rather than a critical browser error that requires termination
-func IsNavigationError(err error) bool {
-	if err == nil {
-		return false
-	}
-	return utils.IsNavigationError(err.Error())
 }

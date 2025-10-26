@@ -12,7 +12,7 @@ const CookiePolicy: React.FC = () => {
         `}
       </style>
       <Helmet>
-        <title>A propos | Carte des Tournois FFTT</title>
+        <title>A propos | La Carte des Tournois FFTT</title>
         <meta name="description" content="Politique de confidentialité et utilisation des cookies pour la carte des tournois de tennis de table. Informations sur l'utilisation de Google Analytics et la protection de vos données." />
         <meta name="robots" content="index, follow" />
         <link rel="canonical" href="https://tournois-tt.fr/a-propos" />

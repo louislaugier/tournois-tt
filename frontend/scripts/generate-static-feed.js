@@ -60,7 +60,7 @@ function generateTournamentHTML(tournament) {
     <meta property="og:type" content="sports_event">
     <meta property="og:url" content="https://tournois-tt.fr/feed/${tournament.id}">
     <meta property="og:image" content="https://tournois-tt.fr/thumbnail.png">
-    <meta property="og:site_name" content="Carte des Tournois FFTT">
+    <meta property="og:site_name" content="La Carte des Tournois FFTT">
     <meta property="og:event:start_time" content="${tournament.startDate}">
     <meta property="og:event:end_time" content="${tournament.endDate}">
     <meta property="og:event:location" content="${fullAddress}">
@@ -293,7 +293,7 @@ function generateIndexHTML(tournaments) {
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://tournois-tt.fr/feed">
     <meta property="og:image" content="https://tournois-tt.fr/thumbnail.png">
-    <meta property="og:site_name" content="Carte des Tournois FFTT">
+    <meta property="og:site_name" content="La Carte des Tournois FFTT">
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:site" content="@tournoistt">
     <meta name="twitter:title" content="Liste des Tournois de Tennis de Table en France">
