@@ -74,9 +74,10 @@ export const getTournamentRows = (allTournamentsForMap: any) => {
                 
                 // Display rules URL if available
                 if (t.rules?.url) {
+                    // Remove existing query parameters from the URL
+                    const urlWithoutParams = t.rules.url.split('?')[0];
                     const utmParams = 'utm_source=tournois-tt.fr&utm_medium=website&utm_campaign=fftt_rules&utm_content=map_tooltip';
-                    const separator = t.rules.url.includes('?') ? '&' : '?';
-                    const urlWithUTM = `${t.rules.url}${separator}${utmParams}`;
+                    const urlWithUTM = `${urlWithoutParams}?${utmParams}`;
                     return location.count > 1 ? urlWithUTM.replace('https://', '') : urlWithUTM;
                 }
                 

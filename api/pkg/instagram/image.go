@@ -120,6 +120,10 @@ func GenerateTournamentImage(tournamentData TournamentImage) (string, error) {
 	drawSeparator(img, 60, ImageWidth-60, footerY)
 	footerY += 20
 
+	// "Règlement" label
+	footerY = drawCenteredText(img, "RÈGLEMENT", footerY, ColorDarkGray, 20, boldFont)
+	footerY += 7
+
 	// URL in accent color (centered) - smaller font to ensure it fits
 	_ = drawCenteredText(img, tournamentData.TournamentURL, footerY, ColorGradientStart, 24, boldFont)
 

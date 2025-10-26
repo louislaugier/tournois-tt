@@ -260,7 +260,7 @@ func (c *Client) postThread(imagePath string, tournament TournamentImage) (strin
 	}
 
 	// Prepare thread text (in French)
-	threadText := fmt.Sprintf(`🎾 %s
+	threadText := fmt.Sprintf(`🏓 %s
 
 🏆 Type: %s
 💰 Dotation: %d €
@@ -280,13 +280,6 @@ func (c *Client) postThread(imagePath string, tournament TournamentImage) (strin
 		tournament.Address,
 		tournament.TournamentURL,
 	)
-
-	// Add rules URL if available
-	if tournament.RulesURL != "" {
-		threadText = fmt.Sprintf(`%s
-
-📄 Règlement : %s`, threadText, tournament.RulesURL)
-	}
 
 	// Add inscription link if available
 	if tournament.Page != "" {
@@ -438,7 +431,7 @@ func (c *Client) waitForThreadContainerReady(containerID string) error {
 // Note: Instagram requires the image to be accessible via a public HTTPS URL
 func (c *Client) createMediaContainer(imagePath string, tournament TournamentImage) (string, error) {
 	// Prepare caption (convert endowment from cents to euros)
-	caption := fmt.Sprintf(`🎾 %s
+	caption := fmt.Sprintf(`🏓 %s
 
 🏆 Type: %s
 🏓 Club: %s

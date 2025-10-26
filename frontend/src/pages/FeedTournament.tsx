@@ -104,7 +104,7 @@ const FeedTournament: React.FC = () => {
             <div className="space-y-2 text-sm text-gray-600">
               <div className="flex items-center">
 
-                <span className="font-medium">{tournament.club.name}</span>
+                <span className="font-medium">{tournament.club.name} ({tournament.club.identifier})</span>
               </div>
 
               <div className="flex items-center">

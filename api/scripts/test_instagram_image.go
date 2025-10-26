@@ -12,7 +12,7 @@ import (
 // Usage: go run scripts/test_instagram_image.go
 
 func main() {
-	fmt.Println("🎾 Generating sample tournament image...")
+	fmt.Println("🏓 Generating sample tournament image...")
 
 	// Create sample tournament data
 	tournament := instagram.TournamentImage{
