@@ -32,6 +32,36 @@ export const CustomTooltipObserver = (): MutationObserver => {
                     }
                 });
 
+                // Hide "Inscription" row when value is empty or only contains separators (for past tournaments)
+                document.querySelectorAll('.map-popover').forEach((tooltip) => {
+                    const rows = tooltip.querySelectorAll('.row');
+                    rows.forEach((row) => {
+                        const nameEl = row.querySelector('.row__name');
+                        const valueEl = row.querySelector('.row__value');
+                        
+                        if (nameEl?.textContent?.trim() === 'Inscription') {
+                            // Get all text content and check for links
+                            const textValue = (valueEl?.textContent || '').trim();
+                            const hasLinks = valueEl?.querySelector('a[href]');
+                            
+                            // Remove all whitespace, pipes, and slashes to check if truly empty
+                            const cleanedValue = textValue.replace(/[\s|/]+/g, '');
+                            
+                            // Hide if:
+                            // 1. No text content at all
+                            // 2. Only contains empty separators (pipes/slashes)
+                            // 3. No actual links
+                            const shouldHide = (!cleanedValue || cleanedValue === '') && !hasLinks;
+                            
+                            if (shouldHide) {
+                                (row as HTMLElement).style.display = 'none';
+                            } else {
+                                (row as HTMLElement).style.display = '';
+                            }
+                        }
+                    });
+                });
+
                 // Add click tracking for external links in tooltips (beacon to avoid navigation loss)
                 document.querySelectorAll('.map-popover a[href^="http"]').forEach((link) => {
                     const href = link.getAttribute('href');

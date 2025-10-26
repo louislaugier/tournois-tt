@@ -35,8 +35,11 @@ module.exports = merge(common, {
     allowedHosts: 'all',
     historyApiFallback: {
       index: '/index.html',
+      verbose: true,
       rewrites: [
-        { from: /.*/, to: '/index.html' }
+        // Serve static feed HTML files - do NOT rewrite to index.html
+        { from: /^\/feed\/\d+$/, to: (context) => `/feed/${context.parsedUrl.pathname.split('/').pop()}.html` },
+        { from: /^\/feed\/?$/, to: '/feed/index.html' },
       ]
     },
     client: {

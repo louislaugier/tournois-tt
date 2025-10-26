@@ -20,6 +20,7 @@ services:
     volumes:
       - ./frontend/src/:/tournois-tt/frontend/src
       - ./frontend/public/:/tournois-tt/frontend/public
+      - ./frontend/build/:/tournois-tt/frontend/build
       - ./frontend/package.json/:/tournois-tt/frontend/package.json
       - ./frontend/package-lock.json/:/tournois-tt/frontend/package-lock.json
       - ./frontend/tsconfig.json/:/tournois-tt/frontend/tsconfig.json

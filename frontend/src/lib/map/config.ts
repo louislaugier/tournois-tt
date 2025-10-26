@@ -2,7 +2,8 @@ import { Tournament } from "../api/types";
 import { getMapFilters } from "./filters";
 import { getMapLayers } from "./layers";
 
-export const tooltipFields = [
+// Tooltip fields for upcoming tournaments (with inscription)
+export const tooltipFieldsWithInscription = [
     { name: 'Nom du tournoi', format: null },
     { name: 'Type de tournoi', format: null },
     { name: 'Club organisateur', format: null },
@@ -13,15 +14,26 @@ export const tooltipFields = [
     { name: 'Inscription', format: null },
 ]
 
+// Tooltip fields for past tournaments (without inscription)
+export const tooltipFieldsWithoutInscription = [
+    { name: 'Nom du tournoi', format: null },
+    { name: 'Type de tournoi', format: null },
+    { name: 'Club organisateur', format: null },
+    { name: 'Dotation totale (€)', format: null },
+    { name: 'Date(s)', format: null },
+    { name: 'Adresse', format: null },
+    { name: 'Règlement', format: null },
+]
+
 export const getMapConfig = (tournaments: Tournament[]) => {
     return {
         visState: {
             interactionConfig: {
                 tooltip: {
                     fieldsToShow: {
-                        current_tournaments: tooltipFields,
-                        past_current_tournaments: tooltipFields,
-                        past_tournaments: tooltipFields,
+                        current_tournaments: tooltipFieldsWithInscription,
+                        past_current_tournaments: tooltipFieldsWithInscription,
+                        past_tournaments: tooltipFieldsWithoutInscription,
                         france: []
                     },
                     enabled: true,
