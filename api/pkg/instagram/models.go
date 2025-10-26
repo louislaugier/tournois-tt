@@ -28,6 +28,7 @@ type TournamentImage struct {
 	EndDate       string
 	Address       string
 	RulesURL      string
+	Page          string
 	TournamentID  int
 	TournamentURL string
 }

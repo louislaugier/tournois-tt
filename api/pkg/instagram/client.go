@@ -288,6 +288,13 @@ func (c *Client) postThread(imagePath string, tournament TournamentImage) (strin
 📄 Règlement : %s`, threadText, tournament.RulesURL)
 	}
 
+	// Add inscription link if available
+	if tournament.Page != "" {
+		threadText = fmt.Sprintf(`%s
+
+✍️ Inscription : %s`, threadText, tournament.Page)
+	}
+
 	log.Printf("📸 Thread image URL: %s", imageURL)
 	log.Printf("📝 Thread text length: %d characters", len(threadText))
 

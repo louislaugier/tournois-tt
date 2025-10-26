@@ -655,6 +655,7 @@ func convertTournamentToImageData(tournament TournamentCache) instagram.Tourname
 		EndDate:       tournament.EndDate,
 		Address:       address,
 		RulesURL:      rulesURL,
+		Page:          tournament.Page,
 		TournamentID:  tournament.ID,
 		TournamentURL: tournamentURL,
 	}

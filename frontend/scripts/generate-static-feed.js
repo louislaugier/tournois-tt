@@ -45,7 +45,7 @@ function generateTournamentHTML(tournament) {
   ].filter(Boolean).join(', ');
 
   const title = `${tournament.name} - Tournoi ${mapTournamentType(tournament.type)} | FFTT`;
-  const description = `Tournoi de tennis de table ${mapTournamentType(tournament.type)} organisé par ${tournament.club.name} le ${formatDate(tournament.startDate)}${tournament.startDate !== tournament.endDate ? ` au ${formatDate(tournament.endDate)}` : ''} à ${tournament.address.addressLocality}. ${tournament.endowment > 0 ? `Dotation: ${tournament.endowment.toLocaleString('fr-FR')}€.` : ''} Informations pratiques, règlement et inscription.`;
+  const description = `Tournoi de tennis de table ${mapTournamentType(tournament.type)} organisé par ${tournament.club.name} le ${formatDate(tournament.startDate)}${tournament.startDate !== tournament.endDate ? ` au ${formatDate(tournament.endDate)}` : ''} à ${tournament.address.addressLocality}. ${tournament.endowment > 0 ? `Dotation: ${(tournament.endowment / 100).toLocaleString('fr-FR')}€.` : ''} Informations pratiques, règlement et inscription.`;
 
   return `<!DOCTYPE html>
 <html lang="fr">
@@ -114,7 +114,7 @@ function generateTournamentHTML(tournament) {
         "offers": {
             "@type": "Offer",
             "url": "https://tournois-tt.fr/feed/${tournament.id}",
-            "price": "${tournament.endowment}",
+            "price": "${tournament.endowment / 100}",
             "priceCurrency": "EUR",
             "availability": "https://schema.org/InStock"
         }` : ''}
@@ -141,7 +141,7 @@ function generateTournamentHTML(tournament) {
                         ${mapTournamentType(tournament.type)}
                     </span>
                     ${tournament.endowment > 0 ? `<span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-500 bg-opacity-20">
-                        Dotation: ${tournament.endowment.toLocaleString('fr-FR')}€
+                        Dotation: ${(tournament.endowment / 100).toLocaleString('fr-FR')}€
                     </span>` : ''}
                 </div>
                 <h1 class="text-3xl font-bold mb-2">${tournament.name}</h1>
@@ -178,7 +178,7 @@ function generateTournamentHTML(tournament) {
                                 ${tournament.endowment > 0 ? `<div>
                                     <dt class="text-sm font-medium text-gray-500">Dotation</dt>
                                     <dd class="text-sm text-gray-900 font-semibold">
-                                        ${tournament.endowment.toLocaleString('fr-FR')}€
+                                        ${(tournament.endowment / 100).toLocaleString('fr-FR')}€
                                     </dd>
                                 </div>` : ''}
                             </dl>
@@ -220,7 +220,7 @@ function generateTournamentHTML(tournament) {
                             </a>
                         </section>` : ''}
 
-                        ${tournament.signupUrl ? `<!-- Inscription -->
+                        ${(tournament.page && new Date(tournament.startDate) >= new Date()) ? `<!-- Inscription -->
                         <section>
                             <h2 class="text-xl font-semibold text-gray-900 mb-4 flex items-center">
                                 <svg style="width: 12px; height: 12px; margin-right: 8px; color: #2563eb; display: inline-block; vertical-align: middle;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -228,12 +228,21 @@ function generateTournamentHTML(tournament) {
                                 </svg>
                                 Inscription
                             </h2>
-                            <a href="${tournament.signupUrl}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors duration-200">
+                            <a href="${tournament.page}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors duration-200">
                                 <svg style="width: 12px; height: 12px; margin-right: 8px; display: inline-block; vertical-align: middle;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
                                 </svg>
                                 S'inscrire au tournoi
                             </a>
+                        </section>` : (!tournament.page && new Date(tournament.startDate) >= new Date()) ? `<!-- Inscription -->
+                        <section>
+                            <h2 class="text-xl font-semibold text-gray-900 mb-4 flex items-center">
+                                <svg style="width: 12px; height: 12px; margin-right: 8px; color: #2563eb; display: inline-block; vertical-align: middle;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                                </svg>
+                                Inscription
+                            </h2>
+                            <p class="text-sm text-gray-500">Pas encore de lien d'inscription</p>
                         </section>` : ''}
 
                         <!-- Navigation -->
@@ -262,7 +271,12 @@ function generateIndexHTML(tournaments) {
   const title = `Liste des Tournois de Tennis de Table`;
   const description = `Découvrez ${tournaments.length} tournoi${tournaments.length > 1 ? 's' : ''} de tennis de table en France. Informations détaillées sur les dates, lieux, dotations et règlements des compétitions FFTT.`;
 
-  const tournamentCards = tournaments.map(tournament => `
+  // Sort tournaments by start date: furthest in the future first, then furthest in the past
+  const sortedTournaments = [...tournaments].sort((a, b) => {
+    return new Date(b.startDate) - new Date(a.startDate);
+  });
+
+  const tournamentCards = sortedTournaments.map(tournament => `
     <article class="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow duration-200 p-6">
         <div class="mb-4">
             <h2 class="text-xl font-semibold text-gray-900 mb-2">
@@ -275,7 +289,7 @@ function generateIndexHTML(tournaments) {
                     ${mapTournamentType(tournament.type)}
                 </span>
                 ${tournament.endowment > 0 ? `<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                    ${tournament.endowment.toLocaleString('fr-FR')}€
+                    ${(tournament.endowment / 100).toLocaleString('fr-FR')}€
                 </span>` : ''}
             </div>
         </div>
@@ -354,12 +368,8 @@ function generateIndexHTML(tournaments) {
     <div style="max-width: 1280px; margin: 0 auto; padding: 32px 16px;">
         <header style="margin-bottom: 32px;">
             <h1 style="font-size: 36px; font-weight: bold; color: #111; margin-bottom: 16px;">
-                Tournois de Tennis de Table
+                Tournois FFTT homologués
             </h1>
-            <p style="font-size: 18px; color: #666;">
-                Découvrez tous les tournois de tennis de table en France. 
-                <span style="font-weight: 600;"> ${tournaments.length} tournoi${tournaments.length > 1 ? 's' : ''} disponible${tournaments.length > 1 ? 's' : ''}.</span>
-            </p>
         </header>
 
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 24px;">

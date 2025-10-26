@@ -90,6 +90,15 @@ export const getTournamentRows = (allTournamentsForMap: any) => {
                 return 'Pas encore de règlement';
             }).join(' | '),
             location.tournaments.map(t => {
+                // Only show inscription for upcoming tournaments
+                const today = getTodayMidnight();
+                const tournamentDate = new Date(t.startDate);
+                
+                if (tournamentDate < today) {
+                    // Past tournament - don't show inscription link
+                    return '';
+                }
+                
                 // Display page URL (signup link) if available, fallback to signupUrl
                 if (t.page) {
                     const utmParams = 'utm_source=tournois-tt.fr&utm_medium=website&utm_campaign=page_signup&utm_content=map_tooltip';
