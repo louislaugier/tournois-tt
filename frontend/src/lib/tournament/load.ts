@@ -35,18 +35,6 @@ export const loadTournaments = async (setIsLoading: (value: React.SetStateAction
             .itemsPerPage(999999);
 
         const allTournamentsData = await query.executeAndLogAll();
-        
-        // Debug: Check if Draveil tournament has page field from API
-        const draveilFromAPI = allTournamentsData.filter(t => t.name && t.name.includes('DRAVEIL'));
-        if (draveilFromAPI.length > 0) {
-            console.log('🔍 DRAVEIL from API response:', draveilFromAPI.map(t => ({
-                id: t.id,
-                name: t.name,
-                page: t.page,
-                hasPageField: 'page' in t,
-                pageValue: t.page
-            })));
-        }
 
         // Get date ranges
         const yesterdayMidnight = getYesterdayMidnight();

@@ -2,7 +2,7 @@ package instagram
 
 import "time"
 
-// Config holds Instagram and Threads API configuration
+// Config holds Instagram, Threads, and Facebook API configuration
 type Config struct {
 	// AccessToken is the Instagram Graph API access token
 	AccessToken string
@@ -12,10 +12,16 @@ type Config struct {
 	ThreadsAccessToken string
 	// ThreadsUserID is the Threads user ID for posting
 	ThreadsUserID string
+	// FacebookAccessToken is the Facebook Page access token
+	FacebookAccessToken string
+	// FacebookPageID is the Facebook Page ID for posting
+	FacebookPageID string
 	// Enabled determines if Instagram posting is enabled
 	Enabled bool
 	// ThreadsEnabled determines if Threads posting is enabled
 	ThreadsEnabled bool
+	// FacebookEnabled determines if Facebook posting is enabled
+	FacebookEnabled bool
 }
 
 // TournamentImage represents the data needed to generate a tournament image

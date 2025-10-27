@@ -25,6 +25,13 @@ var (
 	ThreadsUserID      string
 )
 
+// Facebook configuration
+var (
+	FacebookEnabled     bool
+	FacebookAccessToken string
+	FacebookPageID      string
+)
+
 func init() {
 	if err := godotenv.Load("../.env"); err != nil {
 		godotenv.Load("./.env")
@@ -41,4 +48,9 @@ func init() {
 	ThreadsEnabled, _ = strconv.ParseBool(os.Getenv("THREADS_ENABLED"))
 	ThreadsAccessToken = os.Getenv("THREADS_ACCESS_TOKEN")
 	ThreadsUserID = os.Getenv("THREADS_USER_ID")
+
+	// Load Facebook configuration
+	FacebookEnabled, _ = strconv.ParseBool(os.Getenv("FACEBOOK_ENABLED"))
+	FacebookAccessToken = os.Getenv("FACEBOOK_ACCESS_TOKEN")
+	FacebookPageID = os.Getenv("FACEBOOK_PAGE_ID")
 }

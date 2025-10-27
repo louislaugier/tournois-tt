@@ -25,17 +25,6 @@ export const tournamentFields = [
 ]
 
 export const getTournamentRows = (allTournamentsForMap: any) => {
-    // Debug: Check if Draveil is in the tournaments being processed
-    const draveilTournaments = allTournamentsForMap.filter(t => t.name && t.name.includes('DRAVEIL'));
-    if (draveilTournaments.length > 0) {
-        console.log('🔍 DRAVEIL tournaments found in getTournamentRows:', draveilTournaments.map(t => ({
-            id: t.id,
-            name: t.name,
-            startDate: t.startDate,
-            page: t.page
-        })));
-    }
-    
     return Object.values(
         allTournamentsForMap.reduce((acc, t) => {
             const key = `${t.address.latitude},${t.address.longitude}`;
@@ -106,24 +95,8 @@ export const getTournamentRows = (allTournamentsForMap: any) => {
                 const today = getTodayMidnight();
                 const tournamentEndDate = new Date(t.endDate);
                 
-                // Debug: Log ALL tournaments being processed for inscription
-                if (t.id === 3214) {
-                    console.log('📌 Processing inscription for tournament 3214:', {
-                        name: t.name,
-                        startDate: t.startDate,
-                        endDate: t.endDate,
-                        tournamentEndDate: tournamentEndDate.toISOString(),
-                        today: today.toISOString(),
-                        hasEnded: tournamentEndDate < today,
-                        page: t.page,
-                        pageExists: !!t.page,
-                        pageTrimmed: t.page ? t.page.trim() : 'N/A'
-                    });
-                }
-                
                 if (tournamentEndDate < today) {
                     // Tournament has ended - don't show inscription link
-                    if (t.id === 3214) console.log('📌 Tournament 3214 has ENDED, returning empty');
                     return '';
                 }
                 
@@ -134,11 +107,9 @@ export const getTournamentRows = (allTournamentsForMap: any) => {
                     const separator = t.page.includes('?') ? '&' : '?';
                     const urlWithUTM = `${t.page}${separator}${utmParams}`;
                     const result = location.count > 1 ? urlWithUTM.replace('https://', '') : urlWithUTM;
-                    if (t.id === 3214) console.log('📌 Tournament 3214 returning PAGE URL:', result);
                     return result;
                 }
                 // Upcoming tournament but no signup link available yet
-                if (t.id === 3214) console.log('📌 Tournament 3214 returning FALLBACK MESSAGE');
                 return 'Pas encore de lien d\'inscription';
             }).join(' | '),
             postalCode,

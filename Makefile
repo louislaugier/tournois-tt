@@ -1,4 +1,4 @@
-.PHONY: help build up down restart logs test test-instagram e2e-instagram build-prd run-prd
+.PHONY: help build up down restart logs test test-instagram e2e-meta build-prd run-prd
 
 # Default target
 help:
@@ -11,7 +11,7 @@ help:
 	@echo "  make logs-api           - Show logs from API service"
 	@echo "  make test               - Run all tests in API container"
 	@echo "  make test-instagram     - Run Instagram unit tests in API container"
-	@echo "  make e2e-instagram      - Run Instagram E2E test in API container (posts REAL image!)"
+	@echo "  make e2e-meta      	 - Run Meta E2E test in API container (posts REAL image post, story, thread & FB post!)"
 	@echo "  make shell-api          - Open shell in API container"
 	@echo ""
 
@@ -43,13 +43,13 @@ test-instagram:
 	@echo "Running Instagram unit tests..."
 	docker-compose exec api go test -v ./pkg/instagram/
 
-# E2E Instagram test
-e2e-instagram:
+# E2E Meta test
+e2e-meta:
 	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-	@echo "  Instagram & Threads E2E Test (Docker)"
+	@echo "  Meta E2E Test (Docker)"
 	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 	@echo ""
-	@echo "⚠️  WARNING: This will post REAL content to Instagram & Threads!"
+	@echo "⚠️  WARNING: This will post REAL content to Meta Platforms!"
 	@echo ""
 	@echo "Prerequisites:"
 	@echo "  1. INSTAGRAM_ENABLED=true in .env"

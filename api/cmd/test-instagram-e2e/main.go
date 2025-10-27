@@ -36,43 +36,42 @@ func main() {
 
 	// Load configuration
 	config := instagram.Config{
-		AccessToken:        os.Getenv("INSTAGRAM_ACCESS_TOKEN"),
-		PageID:             os.Getenv("INSTAGRAM_PAGE_ID"),
-		ThreadsAccessToken: os.Getenv("THREADS_ACCESS_TOKEN"),
-		ThreadsUserID:      os.Getenv("THREADS_USER_ID"),
-		Enabled:            os.Getenv("INSTAGRAM_ENABLED") == "true",
-		ThreadsEnabled:     os.Getenv("THREADS_ENABLED") == "true",
+		AccessToken:         os.Getenv("INSTAGRAM_ACCESS_TOKEN"),
+		PageID:              os.Getenv("INSTAGRAM_PAGE_ID"),
+		ThreadsAccessToken:  os.Getenv("THREADS_ACCESS_TOKEN"),
+		ThreadsUserID:       os.Getenv("THREADS_USER_ID"),
+		FacebookAccessToken: os.Getenv("FACEBOOK_ACCESS_TOKEN"),
+		FacebookPageID:      os.Getenv("FACEBOOK_PAGE_ID"),
+		Enabled:             os.Getenv("INSTAGRAM_ENABLED") == "true",
+		ThreadsEnabled:      os.Getenv("THREADS_ENABLED") == "true",
+		FacebookEnabled:     os.Getenv("FACEBOOK_ENABLED") == "true",
 	}
 
-	// Validate configuration
-	if !config.Enabled {
-		log.Fatal("❌ INSTAGRAM_ENABLED must be set to 'true'")
+	// Validate configuration (TEMPORARY: Only check Facebook)
+	if !config.FacebookEnabled {
+		log.Fatal("❌ FACEBOOK_ENABLED must be set to 'true'")
 	}
-	if config.AccessToken == "" {
-		log.Fatal("❌ INSTAGRAM_ACCESS_TOKEN is required")
+	if config.FacebookAccessToken == "" {
+		log.Fatal("❌ FACEBOOK_ACCESS_TOKEN is required")
 	}
-	if config.PageID == "" {
-		log.Fatal("❌ INSTAGRAM_PAGE_ID is required")
+	if config.FacebookPageID == "" {
+		log.Fatal("❌ FACEBOOK_PAGE_ID is required")
 	}
 
 	fmt.Println("✅ Configuration loaded")
 	fmt.Println()
-	fmt.Printf("  • Page ID: %s\n", config.PageID)
-	fmt.Printf("  • Token: %s...%s (length: %d)\n",
-		config.AccessToken[:min(10, len(config.AccessToken))],
-		config.AccessToken[max(0, len(config.AccessToken)-10):],
-		len(config.AccessToken))
+	fmt.Printf("  • Facebook Page ID: %s\n", config.FacebookPageID)
+	fmt.Printf("  • Facebook Token: %s...%s (length: %d)\n",
+		config.FacebookAccessToken[:min(10, len(config.FacebookAccessToken))],
+		config.FacebookAccessToken[max(0, len(config.FacebookAccessToken)-10):],
+		len(config.FacebookAccessToken))
 	fmt.Println()
 
-	// Create Instagram client
+	// Create Instagram client (still using the same client struct)
 	client := instagram.NewClient(config)
 
-	// Test connection
-	fmt.Println("🔌 Testing Instagram API connection...")
-	if err := client.TestConnection(); err != nil {
-		log.Fatalf("❌ Failed to connect to Instagram API: %v\n\nCheck your credentials!", err)
-	}
-	fmt.Println("✅ Instagram API connection successful")
+	// Skip Instagram API connection test
+	fmt.Println("⏭️  Skipping Instagram API connection test (Facebook-only mode)")
 	fmt.Println()
 
 	// Load tournaments
@@ -154,14 +153,14 @@ func main() {
 
 	// Final confirmation
 	fmt.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-	fmt.Println("⚠️  ABOUT TO POST TO INSTAGRAM FEED, STORY & THREADS")
+	fmt.Println("⚠️  ABOUT TO POST TO FACEBOOK ONLY (TEMPORARY)")
 	fmt.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
 	fmt.Println()
-	fmt.Println("This will create REAL posts on Instagram feed, story, and Threads.")
+	fmt.Println("This will create a REAL post on Facebook ONLY (Instagram & Threads disabled).")
 	fmt.Println()
 
 	fmt.Println()
-	fmt.Println("📱 Posting to Instagram & Threads...")
+	fmt.Println("📘 Posting to Facebook...")
 
 	// Post to Instagram
 	notification, err := client.PostTournament(tournamentImage)
@@ -176,16 +175,14 @@ func main() {
 	// Success!
 	fmt.Println()
 	fmt.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-	fmt.Println("🎉 SUCCESS! Posted to Instagram & Threads!")
+	fmt.Println("🎉 SUCCESS! Posted to Facebook!")
 	fmt.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
 	fmt.Println()
-	fmt.Printf("  • Post ID: %s\n", notification.MessageID)
+	fmt.Printf("  • Facebook Post ID: %s\n", notification.MessageID)
 	fmt.Printf("  • Posted at: %s\n", notification.SentAt.Format(time.RFC3339))
 	fmt.Printf("  • Tournament: %s (ID: %d)\n", tournamentImage.Name, tournamentImage.TournamentID)
 	fmt.Println()
-	fmt.Println("✅ Check your Instagram profile for the feed post")
-	fmt.Println("✅ Check your Instagram story for the story")
-	fmt.Println("✅ Check your Threads profile for the thread (if enabled)")
+	fmt.Println("✅ Check your Facebook page for the post: https://www.facebook.com/61582857840582")
 	fmt.Println()
 }
 

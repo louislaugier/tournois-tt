@@ -34,6 +34,14 @@ echo "Container environment ready."
 echo "Browser location: $PLAYWRIGHT_BROWSERS_PATH"
 echo "Running with container optimizations"
 
+# Generate static feed pages, sitemap, and RSS with latest tournament data
+echo "Generating static feed pages, sitemap, and RSS..."
+cd /app/frontend && node scripts/generate-static-feed.js
+cp -r /app/frontend/build/feed /usr/share/nginx/html/feed 2>/dev/null || true
+OUTPUT_DIR=/usr/share/nginx/html node scripts/generate-sitemap.js
+OUTPUT_DIR=/usr/share/nginx/html node scripts/generate-rss.js
+echo "Static content generated successfully"
+
 # Start API service
 echo "Starting API service..."
 cd /app/api && ./api

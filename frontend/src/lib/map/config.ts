@@ -32,7 +32,7 @@ export const getMapConfig = (tournaments: Tournament[]) => {
                 tooltip: {
                     fieldsToShow: {
                         current_tournaments: tooltipFieldsWithInscription,
-                        past_current_tournaments: tooltipFieldsWithInscription,
+                        past_current_tournaments: tooltipFieldsWithoutInscription,
                         past_tournaments: tooltipFieldsWithoutInscription,
                         france: []
                     },

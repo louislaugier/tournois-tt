@@ -115,9 +115,6 @@ RUN git clone https://github.com/playwright-community/playwright-go.git \
 # Create /app/api directory and other necessary directories
 RUN mkdir -p /app/api/cache
 
-# Copy built frontend
-COPY --from=frontend-build /app/frontend/build /usr/share/nginx/html
-
 # Copy built API binary
 COPY --from=api-build /go/bin/api /app/api
 
@@ -131,7 +128,22 @@ COPY api/cache/ /app/api/cache/
 COPY frontend/package.json /app/frontend/
 COPY frontend/scripts/ /app/frontend/scripts/
 
+# Copy built frontend to both nginx html AND /app/frontend/build for script access
+COPY --from=frontend-build /app/frontend/build /usr/share/nginx/html
+COPY --from=frontend-build /app/frontend/build /app/frontend/build
+
+# Generate static feed pages, sitemap, and RSS (using data from cache)
+# Note: These scripts only use Node.js built-in modules, so no npm install needed
+WORKDIR /app/frontend
+RUN node scripts/generate-static-feed.js && \
+    OUTPUT_DIR=/usr/share/nginx/html node scripts/generate-sitemap.js && \
+    OUTPUT_DIR=/usr/share/nginx/html node scripts/generate-rss.js
+
+# Copy generated feed pages to nginx html
+RUN cp -r /app/frontend/build/feed /usr/share/nginx/html/feed 2>/dev/null || true
+
 # Create entrypoint script
+WORKDIR /app
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
