@@ -9,7 +9,7 @@ COPY api ./
 RUN CGO_ENABLED=0 GOOS=linux go build -o /go/bin/api ./cmd/main.go
 
 # Frontend build stage
-FROM --platform=linux/amd64 node:20.18.1-alpine AS frontend-build
+FROM --platform=linux/amd64 node:20.18.1-slim AS frontend-build
 WORKDIR /app/frontend
 
 # Install global dependencies
@@ -34,8 +34,6 @@ WORKDIR /app
 # Install necessary packages for stable Chromium operation
 RUN apt-get update && apt-get install -y \
     nginx \
-    nodejs \
-    npm \
     wget \
     git \
     ca-certificates \
@@ -84,6 +82,14 @@ RUN apt-get update && apt-get install -y \
     xdg-utils \
     poppler-utils \
     && rm -rf /var/lib/apt/lists/*
+
+# Copy Node.js from frontend-build stage (v20.18.1 with modern JS support)
+COPY --from=frontend-build /usr/local/bin/node /usr/local/bin/node
+COPY --from=frontend-build /usr/local/lib/node_modules /usr/local/lib/node_modules
+RUN chmod +x /usr/local/bin/node && \
+    ln -s /usr/local/lib/node_modules/npm/bin/npm-cli.js /usr/local/bin/npm && \
+    ln -s /usr/local/lib/node_modules/npm/bin/npx-cli.js /usr/local/bin/npx && \
+    node --version && npm --version
 
 # Configure environment for stable browser operation
 ENV PLAYWRIGHT_BROWSERS_PATH=/usr/local/ms-playwright \
