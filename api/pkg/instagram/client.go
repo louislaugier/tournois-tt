@@ -502,7 +502,7 @@ func (c *Client) postFacebook(imagePath string, tournament TournamentImage) (str
 	log.Printf("📸 Facebook image URL: %s", imageURL)
 	log.Printf("📝 Facebook post text length: %d characters", len(postText))
 
-	// Facebook Graph API endpoint for posting a photo
+	// Facebook Graph API endpoint for posting a photo to a Page
 	postURL := fmt.Sprintf("https://graph.facebook.com/v18.0/%s/photos", c.config.FacebookPageID)
 
 	// Prepare form data
@@ -510,6 +510,7 @@ func (c *Client) postFacebook(imagePath string, tournament TournamentImage) (str
 	formData.Set("url", imageURL)
 	formData.Set("message", postText)
 	formData.Set("access_token", c.config.FacebookAccessToken)
+	formData.Set("published", "true") // Explicitly publish the post
 
 	resp, err := c.httpClient.PostForm(postURL, formData)
 	if err != nil {

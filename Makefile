@@ -57,6 +57,11 @@ e2e-meta:
 	@echo "  3. INSTAGRAM_PAGE_ID set in .env"
 	@echo "  4. THREADS_ENABLED=true (optional) in .env"
 	@echo "  5. THREADS_USER_ID (optional) in .env"
+	@echo ""
+	@echo "🔄 Rebuilding API container to pick up .env changes..."
+	docker-compose up -d --force-recreate --build api
+	@echo "⏳ Waiting 10 seconds for API to start..."
+	sleep 10
 	@echo "Running E2E test in API container..."
 	docker-compose exec -e E2E_TEST_ENABLED=true api go run -a ./cmd/test-instagram-e2e/
 

@@ -10,6 +10,7 @@ certbot/data/*
 # Instagram & Threads
 instagram-token.json
 threads-token.json
+facebook-token.json
 instagram-images/*
 !instagram-images/README.md
 
