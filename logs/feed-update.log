@@ -1,9 +1,0 @@
-[2025-10-08 18:10:58] 🚀 Début de la mise à jour du feed HTML
-[2025-10-08 18:10:58] ⚠️  Les données de l'API sont anciennes (plus de 24h). Vérifiez le processus de mise à jour.
-[2025-10-08 18:10:58] 🔨 Génération du feed HTML statique et du sitemap...
-[2025-10-08 18:11:46] ✅ Feed HTML et sitemap générés avec succès
-[2025-10-08 18:11:46] 📊      682 fichiers HTML générés dans /Users/dev/tournois-tt/frontend/build/feed
-[2025-10-08 18:11:46] 💾 Taille du feed:  10M
-[2025-10-08 18:11:46] 🗺️  Sitemap principal généré: 120K
-[2025-10-08 18:11:46] 🎉 Mise à jour du feed terminée avec succès
-[2025-10-08 18:11:46] 🧹 Nettoyage des anciens logs terminé

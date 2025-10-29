@@ -145,8 +145,9 @@ RUN node scripts/generate-static-feed.js && \
     OUTPUT_DIR=/usr/share/nginx/html node scripts/generate-sitemap.js && \
     OUTPUT_DIR=/usr/share/nginx/html node scripts/generate-rss.js
 
-# Copy generated feed pages to nginx html
-RUN cp -r /app/frontend/build/feed /usr/share/nginx/html/feed 2>/dev/null || true
+# Copy generated feed pages to nginx html (overwrite contents, no nesting)
+RUN mkdir -p /usr/share/nginx/html/feed \
+    && cp -r /app/frontend/build/feed/. /usr/share/nginx/html/feed/
 
 # Create entrypoint script
 WORKDIR /app

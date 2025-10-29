@@ -17,5 +17,10 @@ instagram-images/*
 # Binaries
 api/main
 api/test-instagram-e2e
+api/tmp/
+api/**/main
+
+# Root logs directory
+logs/
 
 .DS_Store

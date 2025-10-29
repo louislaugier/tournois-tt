@@ -38,6 +38,9 @@ function mapTournamentType(type) {
 
 // Fonction pour générer le HTML d'une page de tournoi
 function generateTournamentHTML(tournament) {
+  const clubDisplayName = tournament.club?.identifier
+    ? `${tournament.club.name} (${tournament.club.identifier})`
+    : tournament.club.name;
   const fullAddress = [
     tournament.address.streetAddress,
     tournament.address.postalCode,
@@ -45,7 +48,7 @@ function generateTournamentHTML(tournament) {
   ].filter(Boolean).join(', ');
 
   const title = `${tournament.name} - Tournoi ${mapTournamentType(tournament.type)} | FFTT`;
-  const description = `Tournoi de tennis de table ${mapTournamentType(tournament.type)} organisé par ${tournament.club.name} le ${formatDate(tournament.startDate)}${tournament.startDate !== tournament.endDate ? ` au ${formatDate(tournament.endDate)}` : ''} à ${tournament.address.addressLocality}. ${tournament.endowment > 0 ? `Dotation: ${(tournament.endowment / 100).toLocaleString('fr-FR')}€.` : ''} Informations pratiques, règlement et inscription.`;
+  const description = `Tournoi de tennis de table ${mapTournamentType(tournament.type)} organisé par ${clubDisplayName} le ${formatDate(tournament.startDate)}${tournament.startDate !== tournament.endDate ? ` au ${formatDate(tournament.endDate)}` : ''} à ${tournament.address.addressLocality}. ${tournament.endowment > 0 ? `Dotation: ${(tournament.endowment / 100).toLocaleString('fr-FR')}€.` : ''} Informations pratiques, règlement et inscription.`;
 
   return `<!DOCTYPE html>
 <html lang="fr">
@@ -54,7 +57,7 @@ function generateTournamentHTML(tournament) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>${title}</title>
     <meta name="description" content="${description}">
-    <meta name="keywords" content="tennis de table, tournoi, ${mapTournamentType(tournament.type)}, ${tournament.club.name}, ${tournament.address.addressLocality}, FFTT, ping pong, compétition">
+    <meta name="keywords" content="tennis de table, tournoi, ${mapTournamentType(tournament.type)}, ${clubDisplayName}, ${tournament.address.addressLocality}, FFTT, ping pong, compétition">
     <meta property="og:title" content="${title}">
     <meta property="og:description" content="${description}">
     <meta property="og:type" content="sports_event">
@@ -145,7 +148,7 @@ function generateTournamentHTML(tournament) {
                         Dotation: ${(tournament.endowment / 100).toLocaleString('fr-FR')}€
                     </span>` : ''}
                 </div>
-                <p class="text-gray-600 text-sm">Organisé par <span class="font-medium">${tournament.club.name}</span></p>
+                <p class="text-gray-600 text-sm">Organisé par <span class="font-medium">${clubDisplayName}</span></p>
             </div>
 
             <!-- Content -->
@@ -225,7 +228,11 @@ function generateIndexHTML(tournaments) {
     return new Date(b.startDate) - new Date(a.startDate);
   });
 
-  const tournamentCards = sortedTournaments.map(tournament => `
+  const tournamentCards = sortedTournaments.map(tournament => {
+    const clubDisplayName = tournament.club?.identifier
+      ? `${tournament.club.name} (${tournament.club.identifier})`
+      : tournament.club.name;
+    return `
     <article class="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow duration-200 p-6">
         <div class="mb-4">
             <h2 class="text-xl font-semibold text-gray-900 mb-2">
@@ -248,7 +255,7 @@ function generateIndexHTML(tournaments) {
                 <svg style="width: 10px; height: 10px; margin-right: 5px; color: #666; display: inline-block; vertical-align: middle;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
                 </svg>
-                <span class="font-medium">${tournament.club.name}</span>
+                <span class="font-medium">${clubDisplayName}</span>
             </div>
             
             <div class="flex items-center">
@@ -278,7 +285,7 @@ function generateIndexHTML(tournaments) {
             </a>
         </div>
     </article>
-  `).join('');
+  `}).join('');
 
   return `<!DOCTYPE html>
 <html lang="fr">
