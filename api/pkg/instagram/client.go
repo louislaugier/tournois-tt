@@ -438,7 +438,7 @@ func (c *Client) createMediaContainer(imagePath string, tournament TournamentIma
 📅 %s
 📍 %s
 
-🔗 Plus d'infos: %s
+🔗 Règlement: %s
 
 #TennisDeTable #PingPong #FFTT #Tournoi`,
 		tournament.Name,
