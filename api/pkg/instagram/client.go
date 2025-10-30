@@ -12,6 +12,8 @@ import (
 	"os"
 	"path/filepath"
 	"time"
+
+	"tournois-tt/api/pkg/utils"
 )
 
 const (
@@ -258,6 +260,7 @@ func (c *Client) postThread(imagePath string, tournament TournamentImage) (strin
 	threadText := fmt.Sprintf(`🏓 %s
 
 🏆 Type: %s
+🏓 Club: %s
 💰 Dotation: %d €
 📅 %s
 
@@ -269,7 +272,8 @@ func (c *Client) postThread(imagePath string, tournament TournamentImage) (strin
 
 #TennisDeTable #PingPong #FFTT`,
 		tournament.Name,
-		tournament.Type,
+		utils.MapTournamentType(tournament.Type),
+		tournament.Club,
 		tournament.Endowment/100,
 		formatDates(tournament.StartDate, tournament.EndDate),
 		tournament.Address,
@@ -438,7 +442,7 @@ func (c *Client) createMediaContainer(imagePath string, tournament TournamentIma
 
 #TennisDeTable #PingPong #FFTT #Tournoi`,
 		tournament.Name,
-		tournament.Type,
+		utils.MapTournamentType(tournament.Type),
 		tournament.Club,
 		tournament.Endowment/100, // Convert cents to euros
 		formatDate(tournament.StartDate),
