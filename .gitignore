@@ -20,7 +20,11 @@ api/test-instagram-e2e
 api/tmp/
 api/**/main
 
-# Root logs directory
+# Logs
 logs/
+*.log
+
+# Build artifacts
+tmp/
 
 .DS_Store
