@@ -22,6 +22,11 @@ const Meta: React.FC<MetaProps> = ({ tournament, isIndex = false, totalTournamen
         <meta property="og:type" content="website" />
         <meta property="og:url" content="https://tournois-tt.fr" />
         <meta property="og:image" content="https://tournois-tt.fr/thumbnail.png" />
+        <meta property="og:image:secure_url" content="https://tournois-tt.fr/thumbnail.png" />
+        <meta property="og:image:type" content="image/png" />
+        <meta property="og:image:width" content="1536" />
+        <meta property="og:image:height" content="1024" />
+        <meta property="og:image:alt" content="Carte des Tournois FFTT - Tennis de Table" />
         <meta property="og:site_name" content="Tournois FFTT" />
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:site" content="@tournoistt" />
@@ -60,7 +65,7 @@ const Meta: React.FC<MetaProps> = ({ tournament, isIndex = false, totalTournamen
               "@type": "SportsTeam",
               "name": "Joueurs de Tennis de Table"
             },
-            "image": "https://www.fftt.com/site/medias/header2017/logo.png",
+            "image": "https://tournois-tt.fr/thumbnail.png",
             "offers": {
               "@type": "Offer",
               "url": "https://tournois-tt.fr",
@@ -91,6 +96,11 @@ const Meta: React.FC<MetaProps> = ({ tournament, isIndex = false, totalTournamen
         <meta property="og:type" content="website" />
         <meta property="og:url" content="https://tournois-tt.fr/feed" />
         <meta property="og:image" content="https://tournois-tt.fr/thumbnail.png" />
+        <meta property="og:image:secure_url" content="https://tournois-tt.fr/thumbnail.png" />
+        <meta property="og:image:type" content="image/png" />
+        <meta property="og:image:width" content="1536" />
+        <meta property="og:image:height" content="1024" />
+        <meta property="og:image:alt" content="Liste des Tournois FFTT - Tennis de Table" />
         <meta property="og:site_name" content="Carte des Tournois FFTT" />
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:site" content="@tournoistt" />
@@ -137,6 +147,11 @@ const Meta: React.FC<MetaProps> = ({ tournament, isIndex = false, totalTournamen
       <meta property="og:type" content="sports_event" />
       <meta property="og:url" content={`https://tournois-tt.fr/feed/${tournament.id}`} />
         <meta property="og:image" content="https://tournois-tt.fr/thumbnail.png" />
+        <meta property="og:image:secure_url" content="https://tournois-tt.fr/thumbnail.png" />
+        <meta property="og:image:type" content="image/png" />
+        <meta property="og:image:width" content="1536" />
+        <meta property="og:image:height" content="1024" />
+        <meta property="og:image:alt" content={`${tournament.name} - Tournoi FFTT`} />
         <meta property="og:site_name" content="Carte des Tournois FFTT" />
         <meta property="og:event:start_time" content={tournament.startDate} />
         <meta property="og:event:end_time" content={tournament.endDate} />
