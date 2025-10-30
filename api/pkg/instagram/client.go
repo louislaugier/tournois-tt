@@ -435,7 +435,7 @@ func (c *Client) createMediaContainer(imagePath string, tournament TournamentIma
 🏆 Type: %s
 🏓 Club: %s
 💰 Dotation: %d €
-📅 Du %s au %s
+📅 %s
 📍 %s
 
 🔗 Plus d'infos: %s
@@ -445,8 +445,7 @@ func (c *Client) createMediaContainer(imagePath string, tournament TournamentIma
 		utils.MapTournamentType(tournament.Type),
 		tournament.Club,
 		tournament.Endowment/100, // Convert cents to euros
-		formatDate(tournament.StartDate),
-		formatDate(tournament.EndDate),
+		formatDates(tournament.StartDate, tournament.EndDate),
 		tournament.Address,
 		tournament.TournamentURL,
 	)
