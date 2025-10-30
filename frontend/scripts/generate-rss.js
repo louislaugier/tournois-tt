@@ -115,8 +115,8 @@ function generateRSS(tournaments) {
       <url>https://tournois-tt.fr/thumbnail.png</url>
       <title>Tournois FFTT</title>
       <link>https://tournois-tt.fr</link>
-      <width>1200</width>
-      <height>630</height>
+      <width>1536</width>
+      <height>1024</height>
     </image>
 ${items}
   </channel>

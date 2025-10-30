@@ -64,6 +64,7 @@ module.exports = {
       patterns: [
         { from: 'public/favicon.ico', to: 'favicon.ico' },
         { from: 'public/ads.txt', to: 'ads.txt' },
+        { from: 'public/thumbnail.png', to: 'thumbnail.png' },
         // { from: 'public/sw.js', to: 'sw.js' }
       ]
     }),
