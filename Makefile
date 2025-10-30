@@ -63,7 +63,7 @@ e2e-meta:
 	@echo "⏳ Waiting 10 seconds for API to start..."
 	sleep 10
 	@echo "Running E2E test in API container..."
-	docker-compose exec -e E2E_TEST_ENABLED=true api go run -a ./cmd/test-instagram-e2e/
+	docker-compose exec -e E2E_TEST_ENABLED=true -e TEST_TOURNAMENT_ID=$(TEST_TOURNAMENT_ID) api go run -a ./cmd/test-instagram-e2e/
 
 # Shell access
 shell-api:

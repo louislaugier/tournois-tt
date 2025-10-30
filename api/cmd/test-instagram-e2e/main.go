@@ -14,65 +14,67 @@ import (
 	"tournois-tt/api/pkg/instagram"
 )
 
-// E2E Test for Instagram Posting Integration
-// This posts a REAL Instagram post with a random tournament
+// E2E Test for Instagram & Threads Posting Integration
+// This posts a REAL Instagram post with a random or specified tournament
 //
 // Usage:
-//   E2E_TEST_ENABLED=true go run cmd/test-instagram-e2e/main.go
+//   go run cmd/test-instagram-e2e/main.go
 //
-// Or use the shell script:
-//   ./scripts/test-instagram-e2e.sh
+// Test specific tournament:
+//   TEST_TOURNAMENT_ID=3348 go run cmd/test-instagram-e2e/main.go
 //
 // Required environment variables:
 //   INSTAGRAM_ENABLED=true
 //   INSTAGRAM_ACCESS_TOKEN=your_token
 //   INSTAGRAM_PAGE_ID=your_page_id
+//   THREADS_ENABLED=true (optional)
+//   THREADS_ACCESS_TOKEN=your_token (if Threads enabled)
+//   THREADS_USER_ID=your_id (if Threads enabled)
 
 func main() {
 	fmt.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-	fmt.Println("  Instagram Post E2E Test")
+	fmt.Println("  Instagram & Threads Post E2E Test")
 	fmt.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
 	fmt.Println()
 
 	// Load configuration
 	config := instagram.Config{
-		AccessToken:         os.Getenv("INSTAGRAM_ACCESS_TOKEN"),
-		PageID:              os.Getenv("INSTAGRAM_PAGE_ID"),
-		ThreadsAccessToken:  os.Getenv("THREADS_ACCESS_TOKEN"),
-		ThreadsUserID:       os.Getenv("THREADS_USER_ID"),
-		FacebookAccessToken: os.Getenv("FACEBOOK_ACCESS_TOKEN"),
-		FacebookPageID:      os.Getenv("FACEBOOK_PAGE_ID"),
-		Enabled:             os.Getenv("INSTAGRAM_ENABLED") == "true",
-		ThreadsEnabled:      os.Getenv("THREADS_ENABLED") == "true",
-		FacebookEnabled:     os.Getenv("FACEBOOK_ENABLED") == "true",
+		AccessToken:        os.Getenv("INSTAGRAM_ACCESS_TOKEN"),
+		PageID:             os.Getenv("INSTAGRAM_PAGE_ID"),
+		ThreadsAccessToken: os.Getenv("THREADS_ACCESS_TOKEN"),
+		ThreadsUserID:      os.Getenv("THREADS_USER_ID"),
+		Enabled:            os.Getenv("INSTAGRAM_ENABLED") == "true",
+		ThreadsEnabled:     os.Getenv("THREADS_ENABLED") == "true",
 	}
 
-	// Validate configuration (TEMPORARY: Only check Facebook)
-	if !config.FacebookEnabled {
-		log.Fatal("❌ FACEBOOK_ENABLED must be set to 'true'")
+	// Validate Instagram configuration
+	if !config.Enabled {
+		log.Fatal("❌ INSTAGRAM_ENABLED must be set to 'true'")
 	}
-	if config.FacebookAccessToken == "" {
-		log.Fatal("❌ FACEBOOK_ACCESS_TOKEN is required")
+	if config.AccessToken == "" {
+		log.Fatal("❌ INSTAGRAM_ACCESS_TOKEN is required")
 	}
-	if config.FacebookPageID == "" {
-		log.Fatal("❌ FACEBOOK_PAGE_ID is required")
+	if config.PageID == "" {
+		log.Fatal("❌ INSTAGRAM_PAGE_ID is required")
 	}
 
 	fmt.Println("✅ Configuration loaded")
 	fmt.Println()
-	fmt.Printf("  • Facebook Page ID: %s\n", config.FacebookPageID)
-	fmt.Printf("  • Facebook Token: %s...%s (length: %d)\n",
-		config.FacebookAccessToken[:min(10, len(config.FacebookAccessToken))],
-		config.FacebookAccessToken[max(0, len(config.FacebookAccessToken)-10):],
-		len(config.FacebookAccessToken))
+	fmt.Printf("  • Instagram Page ID: %s\n", config.PageID)
+	fmt.Printf("  • Instagram Token: %s...%s (length: %d)\n",
+		config.AccessToken[:min(10, len(config.AccessToken))],
+		config.AccessToken[max(0, len(config.AccessToken)-10):],
+		len(config.AccessToken))
+	if config.ThreadsEnabled {
+		fmt.Printf("  • Threads User ID: %s\n", config.ThreadsUserID)
+		fmt.Printf("  • Threads enabled: ✅\n")
+	} else {
+		fmt.Printf("  • Threads enabled: ❌\n")
+	}
 	fmt.Println()
 
-	// Create Instagram client (still using the same client struct)
+	// Create Instagram client
 	client := instagram.NewClient(config)
-
-	// Skip Instagram API connection test
-	fmt.Println("⏭️  Skipping Instagram API connection test (Facebook-only mode)")
-	fmt.Println()
 
 	// Load tournaments
 	fmt.Println("📂 Loading tournaments from data.json...")
@@ -153,19 +155,24 @@ func main() {
 
 	// Final confirmation
 	fmt.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-	fmt.Println("⚠️  ABOUT TO POST TO FACEBOOK ONLY (TEMPORARY)")
+	fmt.Println("⚠️  ABOUT TO POST TO INSTAGRAM & THREADS")
 	fmt.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
 	fmt.Println()
-	fmt.Println("This will create a REAL post on Facebook ONLY (Instagram & Threads disabled).")
+	fmt.Println("This will create REAL posts on Instagram (feed + story)")
+	if config.ThreadsEnabled {
+		fmt.Println("and Threads.")
+	} else {
+		fmt.Println("(Threads is disabled).")
+	}
 	fmt.Println()
 
 	fmt.Println()
-	fmt.Println("📘 Posting to Facebook...")
+	fmt.Println("📸 Posting to Instagram & Threads...")
 
-	// Post to Instagram
+	// Post to Instagram & Threads
 	notification, err := client.PostTournament(tournamentImage)
 	if err != nil {
-		log.Fatalf("❌ Failed to post to Instagram: %v", err)
+		log.Fatalf("❌ Failed to post: %v", err)
 	}
 
 	if !notification.Success {
@@ -175,14 +182,14 @@ func main() {
 	// Success!
 	fmt.Println()
 	fmt.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-	fmt.Println("🎉 SUCCESS! Posted to Facebook!")
+	fmt.Println("🎉 SUCCESS! Posted to Instagram & Threads!")
 	fmt.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
 	fmt.Println()
-	fmt.Printf("  • Facebook Post ID: %s\n", notification.MessageID)
+	fmt.Printf("  • Instagram Post ID: %s\n", notification.MessageID)
 	fmt.Printf("  • Posted at: %s\n", notification.SentAt.Format(time.RFC3339))
 	fmt.Printf("  • Tournament: %s (ID: %d)\n", tournamentImage.Name, tournamentImage.TournamentID)
 	fmt.Println()
-	fmt.Println("✅ Check your Facebook page for the post: https://www.facebook.com/61582857840582")
+	fmt.Println("✅ Check your Instagram feed & story and Threads for the post")
 	fmt.Println()
 }
 

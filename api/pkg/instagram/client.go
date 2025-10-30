@@ -47,20 +47,19 @@ func NewClient(config Config) *Client {
 	}
 }
 
-// PostTournament posts a tournament image to Instagram feed
+// PostTournament posts a tournament image to Instagram feed and Threads
 func (c *Client) PostTournament(tournament TournamentImage) (*TournamentNotification, error) {
-	// TEMPORARY: Comment out Instagram validation for Facebook-only testing
-	// if !c.config.Enabled {
-	// 	return nil, fmt.Errorf("instagram posting is disabled in configuration")
-	// }
+	if !c.config.Enabled {
+		return nil, fmt.Errorf("instagram posting is disabled in configuration")
+	}
 
-	// // Validate credentials are present
-	// if c.config.AccessToken == "" {
-	// 	return nil, fmt.Errorf("instagram access token is not configured")
-	// }
-	// if c.config.PageID == "" {
-	// 	return nil, fmt.Errorf("instagram page ID is not configured")
-	// }
+	// Validate credentials are present
+	if c.config.AccessToken == "" {
+		return nil, fmt.Errorf("instagram access token is not configured")
+	}
+	if c.config.PageID == "" {
+		return nil, fmt.Errorf("instagram page ID is not configured")
+	}
 
 	notification := &TournamentNotification{
 		Tournament: tournament,
@@ -75,56 +74,39 @@ func (c *Client) PostTournament(tournament TournamentImage) (*TournamentNotifica
 		return notification, err
 	}
 
-	// TEMPORARY: Comment out Instagram feed posting
-	// // Post to feed (without cleanup yet - story needs the same image)
-	// postID, err := c.postImage(imagePath, tournament)
-	// if err != nil {
-	// 	CleanupImage(imagePath) // Cleanup on error
-	// 	notification.Error = fmt.Sprintf("failed to post image to feed: %v", err)
-	// 	return notification, err
-	// }
+	// Post to feed (without cleanup yet - story needs the same image)
+	postID, err := c.postImage(imagePath, tournament)
+	if err != nil {
+		CleanupImage(imagePath) // Cleanup on error
+		notification.Error = fmt.Sprintf("failed to post image to feed: %v", err)
+		return notification, err
+	}
 
-	// log.Printf("✅ Posted to feed - Post ID: %s", postID)
+	log.Printf("✅ Posted to feed - Post ID: %s", postID)
 
-	// TEMPORARY: Comment out Instagram story posting
-	// // Post to story (reusing same image, with clickable link)
-	// storyID, err := c.postStory(imagePath, tournament.TournamentURL)
-	// if err != nil {
-	// 	notification.Error = fmt.Sprintf("failed to post to story (feed succeeded): %v", err)
-	// 	log.Printf("⚠️  Warning: Story posting failed but feed post succeeded: %v", err)
-	// 	// Don't return error - feed post succeeded
-	// } else {
-	// 	log.Printf("✅ Posted to story - Story ID: %s", storyID)
-	// }
+	// Post to story (reusing same image, with clickable link)
+	storyID, err := c.postStory(imagePath, tournament.TournamentURL)
+	if err != nil {
+		notification.Error = fmt.Sprintf("failed to post to story (feed succeeded): %v", err)
+		log.Printf("⚠️  Warning: Story posting failed but feed post succeeded: %v", err)
+		// Don't return error - feed post succeeded
+	} else {
+		log.Printf("✅ Posted to story - Story ID: %s", storyID)
+	}
 
-	// TEMPORARY: Comment out Threads posting
-	// // Post to Threads
-	// if c.config.ThreadsEnabled {
-	// 	threadID, err := c.postThread(imagePath, tournament)
-	// 	if err != nil {
-	// 		log.Printf("⚠️  Warning: Threads posting failed: %v", err)
-	// 		// Don't fail - Instagram posts succeeded
-	// 	} else {
-	// 		log.Printf("✅ Posted to Threads - Thread ID: %s", threadID)
-	// 	}
-	// }
-
-	// Post to Facebook
-	var facebookPostID string
-	if c.config.FacebookEnabled {
-		facebookPostID, err = c.postFacebook(imagePath, tournament)
+	// Post to Threads
+	if c.config.ThreadsEnabled {
+		threadID, err := c.postThread(imagePath, tournament)
 		if err != nil {
-			log.Printf("⚠️  Warning: Facebook posting failed: %v", err)
-			notification.Error = fmt.Sprintf("failed to post to Facebook: %v", err)
-			CleanupImage(imagePath)
-			return notification, err
+			log.Printf("⚠️  Warning: Threads posting failed: %v", err)
+			// Don't fail - Instagram posts succeeded
 		} else {
-			log.Printf("✅ Posted to Facebook - Post ID: %s", facebookPostID)
+			log.Printf("✅ Posted to Threads - Thread ID: %s", threadID)
 		}
 	}
 
 	// Cleanup after ALL posts are done
-	log.Printf("⏳ Waiting 30 seconds for Facebook to finalize...")
+	log.Printf("⏳ Waiting 30 seconds for platforms to finalize...")
 	time.Sleep(30 * time.Second)
 
 	if err := os.Remove(imagePath); err != nil {
@@ -133,11 +115,10 @@ func (c *Client) PostTournament(tournament TournamentImage) (*TournamentNotifica
 		log.Printf("🗑️  Cleaned up local image: %s", imagePath)
 	}
 
-	notification.MessageID = facebookPostID // Using Facebook post ID
+	notification.MessageID = postID
 	notification.Success = true
 
-	// TEMPORARY: Updated for Facebook-only testing
-	log.Printf("Successfully posted tournament %d (%s) to Facebook",
+	log.Printf("Successfully posted tournament %d (%s) to Instagram and Threads",
 		tournament.TournamentID, tournament.Name)
 
 	return notification, nil
@@ -439,110 +420,6 @@ func (c *Client) waitForThreadContainerReady(containerID string) error {
 	}
 
 	return fmt.Errorf("timeout waiting for thread container to be ready after %d attempts", maxAttempts)
-}
-
-// postFacebook posts a tournament image to Facebook Page (same content as Threads)
-func (c *Client) postFacebook(imagePath string, tournament TournamentImage) (string, error) {
-	log.Printf("📘 Posting to Facebook...")
-
-	if c.config.FacebookAccessToken == "" {
-		return "", fmt.Errorf("facebook access token is not configured")
-	}
-
-	if c.config.FacebookPageID == "" {
-		return "", fmt.Errorf("facebook page ID is not configured")
-	}
-
-	// Get the image URL (same logic as other posts)
-	var imageURL string
-	ginMode := os.Getenv("GIN_MODE")
-
-	if ginMode == "release" {
-		// Production: use our server
-		filename := filepath.Base(imagePath)
-		imageURL = fmt.Sprintf("https://tournois-tt.fr/instagram-images/%s", filename)
-	} else {
-		// Development: upload to ImgBB
-		uploadedURL, err := uploadToImgBB(imagePath)
-		if err != nil {
-			return "", fmt.Errorf("failed to upload image for facebook: %w", err)
-		}
-		imageURL = uploadedURL
-	}
-
-	// Prepare Facebook post text (same as Threads)
-	postText := fmt.Sprintf(`🏓 %s
-
-🏆 Type: %s
-💰 Dotation: %d €
-📅 %s
-
-📍 %s
-
-%s
-
-🗺️ Découvrez d'autres tournois sur la carte : https://tournois-tt.fr
-
-#TennisDeTable #PingPong #FFTT`,
-		tournament.Name,
-		tournament.Type,
-		tournament.Endowment/100,
-		formatDates(tournament.StartDate, tournament.EndDate),
-		tournament.Address,
-		tournament.TournamentURL,
-	)
-
-	// Add inscription link if available
-	if tournament.Page != "" {
-		postText = fmt.Sprintf(`%s
-
-✍️ Inscription : %s`, postText, tournament.Page)
-	}
-
-	log.Printf("📸 Facebook image URL: %s", imageURL)
-	log.Printf("📝 Facebook post text length: %d characters", len(postText))
-
-	// Facebook Graph API endpoint for posting a photo to a Page
-	postURL := fmt.Sprintf("https://graph.facebook.com/v18.0/%s/photos", c.config.FacebookPageID)
-
-	// Prepare form data
-	formData := url.Values{}
-	formData.Set("url", imageURL)
-	formData.Set("message", postText)
-	formData.Set("access_token", c.config.FacebookAccessToken)
-	formData.Set("published", "true") // Explicitly publish the post
-
-	resp, err := c.httpClient.PostForm(postURL, formData)
-	if err != nil {
-		return "", fmt.Errorf("failed to post to facebook: %w", err)
-	}
-	defer resp.Body.Close()
-
-	body, _ := io.ReadAll(resp.Body)
-
-	if resp.StatusCode != http.StatusOK {
-		var errResp ErrorResponse
-		if json.Unmarshal(body, &errResp) == nil {
-			return "", fmt.Errorf("facebook API error: %s (code: %d)", errResp.Error.Message, errResp.Error.Code)
-		}
-		return "", fmt.Errorf("facebook post failed with status %d: %s", resp.StatusCode, string(body))
-	}
-
-	var result struct {
-		ID     string `json:"id"`
-		PostID string `json:"post_id"`
-	}
-	if err := json.Unmarshal(body, &result); err != nil {
-		return "", fmt.Errorf("failed to parse facebook response: %w", err)
-	}
-
-	// Return post_id if available, otherwise return id
-	postID := result.PostID
-	if postID == "" {
-		postID = result.ID
-	}
-
-	return postID, nil
 }
 
 // createMediaContainer creates a media container with the image

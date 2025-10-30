@@ -119,7 +119,7 @@ RUN git clone https://github.com/playwright-community/playwright-go.git \
     && rm -rf playwright-go
 
 # Create /app/api directory and other necessary directories
-RUN mkdir -p /app/api/cache
+RUN mkdir -p /app/api/cache /app/api/instagram-images
 
 # Copy built API binary
 COPY --from=api-build /go/bin/api /app/api

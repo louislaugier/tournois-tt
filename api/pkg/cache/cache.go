@@ -584,15 +584,12 @@ func sendInstagramNotifications(tournaments []TournamentCache) {
 
 	// Create Instagram client
 	instagramConfig := instagram.Config{
-		AccessToken:         config.InstagramAccessToken,
-		PageID:              config.InstagramPageID,
-		ThreadsAccessToken:  config.ThreadsAccessToken,
-		ThreadsUserID:       config.ThreadsUserID,
-		FacebookAccessToken: config.FacebookAccessToken,
-		FacebookPageID:      config.FacebookPageID,
-		Enabled:             config.InstagramEnabled,
-		ThreadsEnabled:      config.ThreadsEnabled,
-		FacebookEnabled:     config.FacebookEnabled,
+		AccessToken:        config.InstagramAccessToken,
+		PageID:             config.InstagramPageID,
+		ThreadsAccessToken: config.ThreadsAccessToken,
+		ThreadsUserID:      config.ThreadsUserID,
+		Enabled:            config.InstagramEnabled,
+		ThreadsEnabled:     config.ThreadsEnabled,
 	}
 
 	client := instagram.NewClient(instagramConfig)
