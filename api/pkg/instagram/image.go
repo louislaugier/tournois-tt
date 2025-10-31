@@ -5,6 +5,7 @@ import (
 	"image"
 	"image/color"
 	"image/png"
+	"math"
 	"os"
 	"path/filepath"
 	"strings"
@@ -62,72 +63,38 @@ func init() {
 
 // GenerateTournamentImage creates a modern, minimalistic tournament image for Instagram
 func GenerateTournamentImage(tournamentData TournamentImage) (string, error) {
-	// Create canvas
-	img := image.NewRGBA(image.Rect(0, 0, ImageWidth, ImageHeight))
+	scales := []float64{1.0, 0.95, 0.9, 0.85, 0.8, 0.75}
+	maxContentHeight := ImageHeight - 80
 
-	// Fill with clean white background
-	draw.Draw(img, img.Bounds(), &image.Uniform{ColorWhite}, image.Point{}, draw.Src)
+	var finalImg *image.RGBA
+	finalY := math.MaxInt32
 
-	// Add subtle gradient accent bar at top
-	gradientHeight := 12
-	drawGradientBar(img, 0, gradientHeight)
+	for idx, scale := range scales {
+		img := createBaseImage()
+		bottom := renderTournamentImage(img, tournamentData, scale)
 
-	y := 65
+		if bottom < finalY {
+			finalImg = img
+			finalY = bottom
+		}
 
-	// Header section - centered
-	y = drawCenteredText(img, "Nouvelle homologation", y, ColorBlack, 46, boldFont)
-	y += 50
+		if bottom <= maxContentHeight {
+			finalImg = img
+			finalY = bottom
+			break
+		}
 
-	// Tournament name (biggest text, bold, in quotes, centered)
-	tournamentName := wrapText(tournamentData.Name, 32)
-	tournamentNameWithQuotes := fmt.Sprintf("\"%s\"", tournamentName)
-	y = drawCenteredText(img, tournamentNameWithQuotes, y, ColorBlack, 44, boldFont)
-
-	y += 40
-
-	// Tournament type badge (centered)
-	mappedType := utils.MapTournamentType(tournamentData.Type)
-	y = drawCenteredBadge(img, mappedType, y, ColorGradientStart)
-	y += 40
-
-	// Key info - centered (with tighter spacing to prevent bottom cutoff)
-	if tournamentData.Endowment > 0 {
-		y = drawCenteredInfoLine(img, "DOTATION TOTALE", fmt.Sprintf("%d €", tournamentData.Endowment/100), y)
-		y += 40
+		// Ensure we keep at least the last attempt even if it doesn't fit perfectly
+		if idx == len(scales)-1 && finalImg == nil {
+			finalImg = img
+			finalY = bottom
+		}
 	}
 
-	dateStr := formatDates(tournamentData.StartDate, tournamentData.EndDate)
-	// Use "DATE" for single day, "DATES" for multiple days
-	dateLabel := "DATE"
-	if tournamentData.StartDate != tournamentData.EndDate {
-		dateLabel = "DATES"
+	if finalImg == nil {
+		return "", fmt.Errorf("failed to render tournament image")
 	}
-	y = drawCenteredInfoLine(img, dateLabel, dateStr, y)
-	y += 40
 
-	clubName := wrapText(tournamentData.Club, 38)
-	y = drawCenteredInfoLine(img, "CLUB ORGANISATEUR", clubName, y)
-	y += 40
-
-	address := wrapText(tournamentData.Address, 38)
-	y = drawCenteredInfoLine(img, "LIEU", address, y)
-	y += 40
-
-	// Footer with URL - centered (ensure enough bottom margin)
-	footerY := y
-
-	// Subtle separator
-	drawSeparator(img, 60, ImageWidth-60, footerY)
-	footerY += 20
-
-	// "Règlement" label
-	footerY = drawCenteredText(img, "RÈGLEMENT", footerY, ColorDarkGray, 20, boldFont)
-	footerY += 7
-
-	// URL in accent color (centered) - smaller font to ensure it fits
-	_ = drawCenteredText(img, tournamentData.TournamentURL, footerY, ColorGradientStart, 24, boldFont)
-
-	// Save to instagram-images folder
 	imagesDir := "./instagram-images"
 	if err := os.MkdirAll(imagesDir, 0755); err != nil {
 		return "", fmt.Errorf("failed to create images directory: %w", err)
@@ -143,11 +110,87 @@ func GenerateTournamentImage(tournamentData TournamentImage) (string, error) {
 	}
 	defer file.Close()
 
-	if err := png.Encode(file, img); err != nil {
+	if err := png.Encode(file, finalImg); err != nil {
 		return "", fmt.Errorf("failed to encode image: %w", err)
 	}
 
+	_ = finalY // retained for future diagnostics if needed
+
 	return filePath, nil
+}
+
+func createBaseImage() *image.RGBA {
+	img := image.NewRGBA(image.Rect(0, 0, ImageWidth, ImageHeight))
+	draw.Draw(img, img.Bounds(), &image.Uniform{ColorWhite}, image.Point{}, draw.Src)
+	drawGradientBar(img, 0, 12)
+	return img
+}
+
+func renderTournamentImage(img *image.RGBA, tournamentData TournamentImage, scale float64) int {
+	y := scaledSpacing(80, scale, 48)
+
+	headerSize := scaledFontSize(46, scale, 28)
+	y = drawCenteredText(img, "Nouvelle homologation (FFTT)", y, ColorBlack, headerSize, boldFont)
+	y += scaledSpacing(40, scale, 24)
+
+	tournamentName := wrapText(tournamentData.Name, 32, scale)
+	tournamentNameWithQuotes := fmt.Sprintf("\"%s\"", tournamentName)
+	nameSize := scaledFontSize(44, scale, 26)
+	y = drawCenteredText(img, tournamentNameWithQuotes, y, ColorBlack, nameSize, boldFont)
+	y += scaledSpacing(32, scale, 22)
+
+	mappedType := utils.MapTournamentType(tournamentData.Type)
+	y = drawCenteredBadge(img, mappedType, y, ColorGradientStart, scale)
+	y += scaledSpacing(28, scale, 20)
+
+	if tournamentData.Endowment > 0 {
+		y = drawCenteredInfoLine(img, "DOTATION TOTALE", fmt.Sprintf("%d €", tournamentData.Endowment/100), y, scale)
+		y += scaledSpacing(24, scale, 16)
+	}
+
+	dateStr := formatDates(tournamentData.StartDate, tournamentData.EndDate)
+	dateLabel := "DATE"
+	if tournamentData.StartDate != tournamentData.EndDate {
+		dateLabel = "DATES"
+	}
+	y = drawCenteredInfoLine(img, dateLabel, dateStr, y, scale)
+	y += scaledSpacing(24, scale, 16)
+
+	clubName := wrapText(tournamentData.Club, 38, scale)
+	y = drawCenteredInfoLine(img, "CLUB ORGANISATEUR", clubName, y, scale)
+	y += scaledSpacing(24, scale, 16)
+
+	address := wrapText(tournamentData.Address, 38, scale)
+	y = drawCenteredInfoLine(img, "LIEU", address, y, scale)
+	y += scaledSpacing(24, scale, 16)
+
+	footerY := y + scaledSpacing(16, scale, 12)
+
+	footerLabelSize := scaledFontSize(20, scale, 14)
+	footerY = drawCenteredText(img, "RÈGLEMENT", footerY, ColorDarkGray, footerLabelSize, boldFont)
+	footerY += scaledSpacing(6, scale, 5)
+
+	urlText := wrapURL(tournamentData.TournamentURL, 38, scale)
+	urlSize := scaledFontSize(24, scale, 16)
+	finalY := drawCenteredText(img, urlText, footerY, ColorGradientStart, urlSize, boldFont)
+
+	return finalY
+}
+
+func scaledFontSize(base float64, scale float64, min float64) float64 {
+	size := base * scale
+	if size < min {
+		return min
+	}
+	return size
+}
+
+func scaledSpacing(base int, scale float64, min int) int {
+	value := int(math.Round(float64(base) * scale))
+	if value < min {
+		return min
+	}
+	return value
 }
 
 // drawGradientBar draws a horizontal gradient bar
@@ -250,16 +293,19 @@ func drawBadge(img *image.RGBA, text string, x, y int, bgColor color.RGBA) int {
 	return drawTextWithFont(img, text, x+padding, y, ColorWhite, 26, boldFont)
 }
 
-// drawSeparator draws a thin horizontal line
-func drawSeparator(img *image.RGBA, x1, x2, y int) {
-	for x := x1; x < x2; x++ {
-		img.Set(x, y, ColorLightGray)
-		img.Set(x, y+1, ColorLightGray)
-	}
-}
-
 // wrapText wraps text to fit within a certain character width
-func wrapText(text string, maxWidth int) string {
+func wrapText(text string, maxWidth int, scale float64) string {
+	if maxWidth <= 0 {
+		return text
+	}
+
+	if scale < 1.0 {
+		adjusted := int(math.Round(float64(maxWidth) / scale))
+		if adjusted > maxWidth {
+			maxWidth = adjusted
+		}
+	}
+
 	if len(text) <= maxWidth {
 		return text
 	}
@@ -290,6 +336,48 @@ func wrapText(text string, maxWidth int) string {
 
 	if currentLine != "" {
 		lines = append(lines, currentLine)
+	}
+
+	return strings.Join(lines, "\n")
+}
+
+// wrapURL ensures URLs can break across multiple lines without being cut off
+func wrapURL(url string, maxWidth int, scale float64) string {
+	if maxWidth <= 0 {
+		return url
+	}
+
+	if scale < 1.0 {
+		adjusted := int(math.Round(float64(maxWidth) / scale))
+		if adjusted > maxWidth {
+			maxWidth = adjusted
+		}
+	}
+
+	if len(url) <= maxWidth {
+		return url
+	}
+
+	var lines []string
+	remaining := url
+
+	for len(remaining) > maxWidth {
+		segment := remaining
+		cut := maxWidth
+
+		if cut < len(remaining) {
+			if slash := strings.LastIndex(remaining[:cut], "/"); slash > 0 {
+				cut = slash + 1
+			}
+		}
+
+		segment = remaining[:cut]
+		lines = append(lines, segment)
+		remaining = remaining[cut:]
+	}
+
+	if len(remaining) > 0 {
+		lines = append(lines, remaining)
 	}
 
 	return strings.Join(lines, "\n")
@@ -333,20 +421,22 @@ func drawCenteredText(img *image.RGBA, text string, y int, col color.RGBA, size 
 }
 
 // drawCenteredInfoLine draws a centered info line with label and text
-func drawCenteredInfoLine(img *image.RGBA, label, text string, y int) int {
-	// Draw label centered
-	y = drawCenteredText(img, label, y, ColorDarkGray, 20, boldFont)
+func drawCenteredInfoLine(img *image.RGBA, label, text string, y int, scale float64) int {
+	labelSize := scaledFontSize(20, scale, 14)
+	textSize := scaledFontSize(32, scale, 18)
+	offset := scaledSpacing(7, scale, 4)
 
-	// Draw main text centered below the label
-	endY := drawCenteredText(img, text, y+7, ColorBlack, 32, regularFont)
+	y = drawCenteredText(img, label, y, ColorDarkGray, labelSize, boldFont)
+	endY := drawCenteredText(img, text, y+offset, ColorBlack, textSize, regularFont)
 	return endY
 }
 
 // drawCenteredBadge draws a centered colored badge with text
-func drawCenteredBadge(img *image.RGBA, text string, y int, bgColor color.RGBA) int {
+func drawCenteredBadge(img *image.RGBA, text string, y int, bgColor color.RGBA, scale float64) int {
 	// Get text dimensions
+	faceSize := scaledFontSize(26, scale, 16)
 	face, _ := opentype.NewFace(boldFont, &opentype.FaceOptions{
-		Size:    26,
+		Size:    faceSize,
 		DPI:     72,
 		Hinting: font.HintingFull,
 	})
@@ -357,9 +447,9 @@ func drawCenteredBadge(img *image.RGBA, text string, y int, bgColor color.RGBA) 
 	textWidth := drawer.MeasureString(text).Ceil()
 
 	// Calculate centered position
-	padding := 18
+	padding := scaledSpacing(18, scale, 10)
 	badgeWidth := textWidth + (padding * 2)
-	badgeHeight := 42
+	badgeHeight := scaledSpacing(42, scale, 24)
 	x := (ImageWidth - badgeWidth) / 2
 
 	// Fill badge background
@@ -370,7 +460,7 @@ func drawCenteredBadge(img *image.RGBA, text string, y int, bgColor color.RGBA) 
 	}
 
 	// Draw white text on badge (centered)
-	return drawCenteredText(img, text, y, ColorWhite, 26, boldFont)
+	return drawCenteredText(img, text, y, ColorWhite, faceSize, boldFont)
 }
 
 // formatDates formats start and end dates for display

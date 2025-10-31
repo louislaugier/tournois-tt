@@ -78,7 +78,7 @@ func TestWrapText(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := wrapText(tt.text, tt.maxWidth)
+			result := wrapText(tt.text, tt.maxWidth, 1.0)
 			lines := 1
 			for _, c := range result {
 				if c == '\n' {
@@ -142,4 +142,3 @@ func TestFormatDates(t *testing.T) {
 		})
 	}
 }
-
