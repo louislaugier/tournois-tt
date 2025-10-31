@@ -12,6 +12,7 @@ import { CustomTooltipObserver } from "../components/CustomTooltipObserver";
 import { getTournamentRows, tournamentFields } from "../lib/map/datasets";
 import ErrorBoundary from "../components/ErrorBoundary";
 import Meta from "../components/Meta";
+import { attachFrenchLanguageToMap } from "../lib/map/mapLanguage";
 
 export const Map: React.FC = () => {
     const [currentTournaments, setCurrentTournaments] = useState<Tournament[]>([]);

@@ -6,11 +6,10 @@ import { formatDateDDMMYYYY } from "../lib/utils/date";
 interface MetaProps {
   tournament?: Tournament;
   isIndex?: boolean;
-  totalTournaments?: number;
   isMainPage?: boolean;
 }
 
-const Meta: React.FC<MetaProps> = ({ tournament, isIndex = false, totalTournaments = 0, isMainPage = false }) => {
+const Meta: React.FC<MetaProps> = ({ tournament, isIndex = false, isMainPage = false }) => {
   if (isMainPage) {
     return (
       <Helmet>
@@ -85,13 +84,13 @@ const Meta: React.FC<MetaProps> = ({ tournament, isIndex = false, totalTournamen
         <title>Liste des Tournois de Tennis de Table</title>
         <meta 
           name="description" 
-          content={`Découvrez ${totalTournaments} tournoi${totalTournaments > 1 ? 's' : ''} de tennis de table en France. Informations détaillées sur les dates, lieux, dotations et règlements des compétitions FFTT.`} 
+          content="Découvrez les tournois de tennis de table en France. Informations détaillées sur les dates, lieux, dotations et règlements des compétitions FFTT." 
         />
         <meta name="keywords" content="tennis de table, tournois, FFTT, ping pong, France, liste, compétitions, dates, lieux" />
         <meta property="og:title" content="Liste des Tournois de Tennis de Table en France" />
         <meta 
           property="og:description" 
-          content={`${totalTournaments} tournoi${totalTournaments > 1 ? 's' : ''} de tennis de table disponibles en France avec toutes les informations pratiques.`} 
+          content="Tournois de tennis de table en France avec toutes les informations pratiques pour les compétitions FFTT." 
         />
         <meta property="og:type" content="website" />
         <meta property="og:url" content="https://tournois-tt.fr/feed" />
@@ -107,7 +106,7 @@ const Meta: React.FC<MetaProps> = ({ tournament, isIndex = false, totalTournamen
         <meta name="twitter:title" content="Liste des Tournois de Tennis de Table en France" />
         <meta 
           name="twitter:description" 
-          content={`${totalTournaments} tournoi${totalTournaments > 1 ? 's' : ''} de tennis de table disponibles en France.`} 
+          content="Tournois de tennis de table en France avec toutes les informations pratiques." 
         />
         <meta name="twitter:image" content="https://tournois-tt.fr/thumbnail.png" />
         <meta name="robots" content="index, follow" />
@@ -117,8 +116,7 @@ const Meta: React.FC<MetaProps> = ({ tournament, isIndex = false, totalTournamen
             "@context": "https://schema.org",
             "@type": "ItemList",
             "name": "Tournois de Tennis de Table en France",
-            "description": `Liste de ${totalTournaments} tournoi${totalTournaments > 1 ? 's' : ''} de tennis de table en France`,
-            "numberOfItems": totalTournaments,
+            "description": "Liste des tournois de tennis de table en France",
             "itemListElement": []
           })}
         </script>
