@@ -11,7 +11,8 @@ import (
 	"time"
 
 	"tournois-tt/api/pkg/cache"
-	"tournois-tt/api/pkg/instagram"
+	igimage "tournois-tt/api/pkg/image"
+	instagramapi "tournois-tt/api/pkg/instagram/api"
 )
 
 // E2E Test for Instagram & Threads Posting Integration
@@ -38,7 +39,7 @@ func main() {
 	fmt.Println()
 
 	// Load configuration
-	config := instagram.Config{
+	config := instagramapi.Config{
 		AccessToken:        os.Getenv("INSTAGRAM_ACCESS_TOKEN"),
 		PageID:             os.Getenv("INSTAGRAM_PAGE_ID"),
 		ThreadsAccessToken: os.Getenv("THREADS_ACCESS_TOKEN"),
@@ -74,7 +75,7 @@ func main() {
 	fmt.Println()
 
 	// Create Instagram client
-	client := instagram.NewClient(config)
+	client := instagramapi.NewClient(config)
 
 	// Load tournaments
 	fmt.Println("📂 Loading tournaments from data.json...")
@@ -138,7 +139,7 @@ func main() {
 
 	// Generate image (saved to instagram-images folder)
 	fmt.Println("🖼️  Generating tournament image...")
-	imagePath, err := instagram.GenerateTournamentImage(tournamentImage)
+	imagePath, err := igimage.GenerateTournamentImage(tournamentImage)
 	if err != nil {
 		log.Fatalf("❌ Failed to generate image: %v", err)
 	}
@@ -250,7 +251,7 @@ func loadTournaments() ([]cache.TournamentCache, error) {
 }
 
 // convertToImage converts TournamentCache to TournamentImage
-func convertToImage(t cache.TournamentCache) instagram.TournamentImage {
+func convertToImage(t cache.TournamentCache) igimage.TournamentImage {
 	// Format address
 	address := formatAddress(t.Address)
 
@@ -269,7 +270,7 @@ func convertToImage(t cache.TournamentCache) instagram.TournamentImage {
 		clubName = fmt.Sprintf("%s (%s)", t.Club.Name, t.Club.Identifier)
 	}
 
-	return instagram.TournamentImage{
+	return igimage.TournamentImage{
 		Name:          t.Name,
 		Type:          t.Type,
 		Club:          clubName,
