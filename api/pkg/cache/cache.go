@@ -11,7 +11,8 @@ import (
 	"sync"
 
 	"tournois-tt/api/internal/config"
-	"tournois-tt/api/pkg/instagram"
+instagramapi "tournois-tt/api/pkg/instagram/api"
+igimage "tournois-tt/api/pkg/image"
 )
 
 // GenericCache is a thread-safe in-memory cache with JSON persistence capabilities
@@ -583,7 +584,7 @@ func sendInstagramNotifications(tournaments []TournamentCache) {
 	}
 
 	// Create Instagram client
-	instagramConfig := instagram.Config{
+	instagramConfig := instagramapi.Config{
 		AccessToken:        config.InstagramAccessToken,
 		PageID:             config.InstagramPageID,
 		ThreadsAccessToken: config.ThreadsAccessToken,
@@ -592,7 +593,7 @@ func sendInstagramNotifications(tournaments []TournamentCache) {
 		ThreadsEnabled:     config.ThreadsEnabled,
 	}
 
-	client := instagram.NewClient(instagramConfig)
+	client := instagramapi.NewClient(instagramConfig)
 
 	// Test connection first
 	if err := client.TestConnection(); err != nil {
@@ -627,7 +628,7 @@ func sendInstagramNotifications(tournaments []TournamentCache) {
 }
 
 // convertTournamentToImageData converts a TournamentCache to TournamentImage for image generation
-func convertTournamentToImageData(tournament TournamentCache) instagram.TournamentImage {
+func convertTournamentToImageData(tournament TournamentCache) igimage.TournamentImage {
 	// Format address
 	address := formatTournamentAddress(tournament.Address)
 
@@ -646,7 +647,7 @@ func convertTournamentToImageData(tournament TournamentCache) instagram.Tourname
 		clubName = fmt.Sprintf("%s (%s)", tournament.Club.Name, tournament.Club.Identifier)
 	}
 
-	return instagram.TournamentImage{
+    return igimage.TournamentImage{
 		Name:          tournament.Name,
 		Type:          tournament.Type,
 		Club:          clubName,

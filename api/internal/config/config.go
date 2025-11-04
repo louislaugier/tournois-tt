@@ -25,6 +25,11 @@ var (
 	ThreadsUserID      string
 )
 
+// Instagram Bot configuration
+var (
+	InstagramBotEnabled bool
+)
+
 func init() {
 	if err := godotenv.Load("../.env"); err != nil {
 		godotenv.Load("./.env")
@@ -41,4 +46,8 @@ func init() {
 	ThreadsEnabled, _ = strconv.ParseBool(os.Getenv("THREADS_ENABLED"))
 	ThreadsAccessToken = os.Getenv("THREADS_ACCESS_TOKEN")
 	ThreadsUserID = os.Getenv("THREADS_USER_ID")
+
+	// Load Instagram Bot configuration
+	// Default to false if not set (safe default)
+	InstagramBotEnabled, _ = strconv.ParseBool(os.Getenv("INSTAGRAM_BOT_ENABLED"))
 }

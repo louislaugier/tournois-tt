@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"log"
 
-	"tournois-tt/api/pkg/instagram"
+	igimage "tournois-tt/api/pkg/image"
 )
 
 // test_instagram_image.go
@@ -15,7 +15,7 @@ func main() {
 	fmt.Println("🏓 Generating sample tournament image...")
 
 	// Create sample tournament data
-	tournament := instagram.TournamentImage{
+	tournament := igimage.TournamentImage{
 		Name:          "Tournoi National de Paris 2025",
 		Type:          "Tournoi jeunes",
 		Club:          "Paris Tennis de Table Club",
@@ -29,7 +29,7 @@ func main() {
 	}
 
 	// Generate image
-	imagePath, err := instagram.GenerateTournamentImage(tournament)
+	imagePath, err := igimage.GenerateTournamentImage(tournament)
 	if err != nil {
 		log.Fatalf("❌ Failed to generate image: %v", err)
 	}

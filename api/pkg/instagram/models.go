@@ -1,6 +1,9 @@
 package instagram
 
-import "time"
+import (
+    "time"
+    igimage "tournois-tt/api/pkg/image"
+)
 
 // Config holds Instagram and Threads API configuration
 type Config struct {
@@ -18,21 +21,6 @@ type Config struct {
 	ThreadsEnabled bool
 }
 
-// TournamentImage represents the data needed to generate a tournament image
-type TournamentImage struct {
-	Name          string
-	Type          string
-	Club          string
-	Endowment     int
-	StartDate     string
-	EndDate       string
-	Address       string
-	RulesURL      string
-	Page          string
-	TournamentID  int
-	TournamentURL string
-}
-
 // ErrorResponse represents an error from Instagram API
 type ErrorResponse struct {
 	Error struct {
@@ -45,7 +33,7 @@ type ErrorResponse struct {
 
 // TournamentNotification represents a notification about a new tournament
 type TournamentNotification struct {
-	Tournament TournamentImage
+    Tournament igimage.TournamentImage
 	SentAt     time.Time
 	MessageID  string
 	Success    bool

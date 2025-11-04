@@ -11,11 +11,13 @@ import (
     "strings"
 
     "tournois-tt/api/pkg/cache"
-    "tournois-tt/api/pkg/instagram"
+    igimage "tournois-tt/api/pkg/image"
 )
 
 func main() {
     idsFlag := flag.String("ids", "", "Comma-separated list of tournament IDs")
+    storyFlag := flag.Bool("story", true, "Generate story images (1080x1920) in addition to feed images")
+    feedFlag := flag.Bool("feed", true, "Generate feed images (1080x1080)")
     flag.Parse()
 
     if *idsFlag == "" {
@@ -45,13 +47,26 @@ func main() {
         }
 
         tournamentImage := convertToImage(tournament)
-        imagePath, err := instagram.GenerateTournamentImage(tournamentImage)
-        if err != nil {
-            log.Printf("❌ Failed to generate image for %d (%s): %v", id, tournament.Name, err)
-            continue
+        
+        // Generate feed image
+        if *feedFlag {
+            imagePath, err := igimage.GenerateTournamentImage(tournamentImage)
+            if err != nil {
+                log.Printf("❌ Failed to generate feed image for %d (%s): %v", id, tournament.Name, err)
+            } else {
+                fmt.Printf("✅ Generated feed image for %d (%s): %s\n", id, tournament.Name, imagePath)
+            }
         }
-
-        fmt.Printf("✅ Generated image for %d (%s): %s\n", id, tournament.Name, imagePath)
+        
+        // Generate story image
+        if *storyFlag {
+            storyPath, err := igimage.GenerateTournamentStoryImage(tournamentImage)
+            if err != nil {
+                log.Printf("❌ Failed to generate story image for %d (%s): %v", id, tournament.Name, err)
+            } else {
+                fmt.Printf("✅ Generated story image for %d (%s): %s\n", id, tournament.Name, storyPath)
+            }
+        }
     }
 }
 
@@ -125,7 +140,7 @@ func loadTournaments() ([]cache.TournamentCache, error) {
     return tournaments, nil
 }
 
-func convertToImage(t cache.TournamentCache) instagram.TournamentImage {
+func convertToImage(t cache.TournamentCache) igimage.TournamentImage {
     address := formatAddress(t.Address)
 
     rulesURL := ""
@@ -140,7 +155,7 @@ func convertToImage(t cache.TournamentCache) instagram.TournamentImage {
         clubName = fmt.Sprintf("%s (%s)", t.Club.Name, t.Club.Identifier)
     }
 
-    return instagram.TournamentImage{
+    return igimage.TournamentImage{
         Name:          t.Name,
         Type:          t.Type,
         Club:          clubName,

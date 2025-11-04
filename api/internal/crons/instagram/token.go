@@ -3,7 +3,7 @@ package instagram
 import (
 	"log"
 
-	"tournois-tt/api/pkg/instagram"
+	instagramapi "tournois-tt/api/pkg/instagram/api"
 )
 
 // CheckAndRefreshToken checks if the Instagram token needs refresh and refreshes if necessary
@@ -11,11 +11,11 @@ import (
 func CheckAndRefreshToken() {
 	log.Println("🔑 Checking Instagram token status...")
 
-	expiresAt, daysRemaining, err := instagram.GetTokenInfo()
+	expiresAt, daysRemaining, err := instagramapi.GetTokenInfo()
 	if err != nil {
 		log.Printf("⚠️  Failed to get token info: %v", err)
 		log.Println("   Attempting to refresh token anyway...")
-		if err := instagram.RefreshToken(); err != nil {
+		if err := instagramapi.RefreshToken(); err != nil {
 			log.Printf("❌ Token refresh failed: %v", err)
 			log.Println("   ⚠️  MANUAL ACTION REQUIRED: Generate new token in Meta dashboard")
 		} else {
@@ -29,14 +29,14 @@ func CheckAndRefreshToken() {
 
 	if daysRemaining < 7 {
 		log.Printf("⚠️  Token expires in %.1f days, refreshing...", daysRemaining)
-		if err := instagram.RefreshToken(); err != nil {
+		if err := instagramapi.RefreshToken(); err != nil {
 			log.Printf("❌ Token refresh failed: %v", err)
 			if daysRemaining < 1 {
 				log.Println("   🚨 URGENT: Token expires in less than 1 day!")
 				log.Println("   ⚠️  MANUAL ACTION REQUIRED: Generate new token in Meta dashboard")
 			}
 		} else {
-			newExpiresAt, newDaysRemaining, _ := instagram.GetTokenInfo()
+			newExpiresAt, newDaysRemaining, _ := instagramapi.GetTokenInfo()
 			log.Printf("✅ Token refreshed successfully")
 			log.Printf("   New expiration: %s (%.1f days)", newExpiresAt.Format("2006-01-02"), newDaysRemaining)
 		}
@@ -50,7 +50,7 @@ func CheckAndRefreshThreadsToken() {
 	log.Println("🔑 Checking Threads token status...")
 
 	// Try to get token info from storage
-	token, err := instagram.LoadThreadsToken()
+	token, err := instagramapi.LoadThreadsToken()
 	if err != nil {
 		log.Printf("⚠️  Failed to load Threads token: %v", err)
 		return
@@ -62,7 +62,7 @@ func CheckAndRefreshThreadsToken() {
 	}
 
 	log.Println("   Attempting to refresh Threads token...")
-	if err := instagram.RefreshThreadsToken(); err != nil {
+	if err := instagramapi.RefreshThreadsToken(); err != nil {
 		log.Printf("❌ Threads token refresh failed: %v", err)
 		log.Println("   ⚠️  MANUAL ACTION REQUIRED: Generate new Threads token in Meta dashboard")
 	} else {
