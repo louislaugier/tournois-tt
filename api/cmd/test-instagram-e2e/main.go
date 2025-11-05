@@ -89,7 +89,27 @@ func main() {
 	}
 
 	fmt.Printf("✅ Loaded %d tournaments from data.json\n", len(tournaments))
+
+	// Filter out past tournaments
+	var futureTournaments []cache.TournamentCache
+	var pastTournaments []cache.TournamentCache
+	for _, t := range tournaments {
+		if isTournamentInPast(t.EndDate) {
+			pastTournaments = append(pastTournaments, t)
+		} else {
+			futureTournaments = append(futureTournaments, t)
+		}
+	}
+
+	fmt.Printf("📅 Filtered tournaments: %d future, %d past\n", len(futureTournaments), len(pastTournaments))
 	fmt.Println()
+
+	if len(futureTournaments) == 0 {
+		log.Fatal("❌ No future tournaments available for testing. All tournaments have already ended.")
+	}
+
+	// Use only future tournaments for selection
+	tournaments = futureTournaments
 
 	// Pick tournament - either specific ID or random
 	var selectedTournament cache.TournamentCache
@@ -321,4 +341,25 @@ func max(a, b int) int {
 		return a
 	}
 	return b
+}
+
+// isTournamentInPast checks if a tournament has ended before the current date
+func isTournamentInPast(endDate string) bool {
+	if endDate == "" {
+		return false // If no end date, assume it's not in the past
+	}
+
+	end, err := time.Parse(time.RFC3339, endDate)
+	if err != nil {
+		if end, err = time.Parse("2006-01-02T15:04:05", endDate); err != nil {
+			if end, err = time.Parse("2006-01-02", endDate); err != nil {
+				// If we can't parse the date, assume it's not in the past to be safe
+				return false
+			}
+		}
+	}
+
+	now := time.Now()
+	// Consider a tournament past if it ended before today (not including today)
+	return end.Before(now.Truncate(24 * time.Hour))
 }

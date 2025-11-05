@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"time"
 
 	"tournois-tt/api/internal/config"
 instagramapi "tournois-tt/api/pkg/instagram/api"
@@ -306,8 +307,22 @@ func SaveTournamentsToCache(tournaments []TournamentCache) error {
 	// Update sitemap automatically after saving tournaments
 	go updateSitemap()
 
-	// Send Instagram DM for new tournaments
-	if len(newTournaments) > 0 {
+	// Filter out past tournaments before posting to Instagram
+	var futureTournaments []TournamentCache
+	var pastTournaments []TournamentCache
+	for _, tournament := range newTournaments {
+		if isTournamentInPast(tournament.EndDate) {
+			pastTournaments = append(pastTournaments, tournament)
+			log.Printf("Skipping Instagram post for past tournament: %s (ID: %d, ended: %s)",
+				tournament.Name, tournament.ID, tournament.EndDate)
+		} else {
+			futureTournaments = append(futureTournaments, tournament)
+		}
+	}
+
+	// Send Instagram DM for new future tournaments only
+	if len(futureTournaments) > 0 {
+		log.Printf("Posting %d new future tournament(s) to Instagram", len(futureTournaments))
 		go func() {
 			// Recover from any panics to prevent goroutine crashes
 			defer func() {
@@ -315,8 +330,13 @@ func SaveTournamentsToCache(tournaments []TournamentCache) error {
 					log.Printf("ERROR: Panic in Instagram notifications: %v", r)
 				}
 			}()
-			sendInstagramNotifications(newTournaments)
+			sendInstagramNotifications(futureTournaments)
 		}()
+	}
+
+	// Log summary if any tournaments were filtered
+	if len(pastTournaments) > 0 {
+		log.Printf("Filtered out %d past tournament(s) from Instagram posting", len(pastTournaments))
 	}
 
 	return nil
@@ -685,4 +705,25 @@ func formatTournamentAddress(addr Address) string {
 	}
 
 	return "Adresse non disponible"
+}
+
+// isTournamentInPast checks if a tournament has ended before the current date
+func isTournamentInPast(endDate string) bool {
+	if endDate == "" {
+		return false // If no end date, assume it's not in the past
+	}
+
+	end, err := time.Parse(time.RFC3339, endDate)
+	if err != nil {
+		if end, err = time.Parse("2006-01-02T15:04:05", endDate); err != nil {
+			if end, err = time.Parse("2006-01-02", endDate); err != nil {
+				// If we can't parse the date, assume it's not in the past to be safe
+				return false
+			}
+		}
+	}
+
+	now := time.Now()
+	// Consider a tournament past if it ended before today (not including today)
+	return end.Before(now.Truncate(24 * time.Hour))
 }
