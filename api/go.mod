@@ -1,6 +1,8 @@
 module tournois-tt/api
 
-go 1.23
+go 1.23.0
+
+toolchain go1.24.3
 
 require (
 	github.com/getbrevo/brevo-go v1.1.2
@@ -12,11 +14,13 @@ require (
 	github.com/robfig/cron/v3 v3.0.1
 	github.com/stretchr/testify v1.10.0
 	golang.org/x/image v0.18.0
-	golang.org/x/text v0.21.0
+	golang.org/x/text v0.24.0
 	golang.org/x/time v0.8.0
 )
 
 require (
+	github.com/PuerkitoBio/goquery v1.10.3 // indirect
+	github.com/andybalholm/cascadia v1.3.3 // indirect
 	github.com/antihax/optional v1.0.0 // indirect
 	github.com/boombuler/barcode v1.0.1 // indirect
 	github.com/bytedance/sonic v1.10.2 // indirect
@@ -32,9 +36,12 @@ require (
 	github.com/go-playground/validator/v10 v10.16.0 // indirect
 	github.com/go-stack/stack v1.8.1 // indirect
 	github.com/goccy/go-json v0.10.2 // indirect
+	github.com/golang/protobuf v1.5.0 // indirect
 	github.com/google/go-cmp v0.6.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/klauspost/cpuid/v2 v2.2.6 // indirect
+	github.com/koffeinsource/go-imgur v0.4.1 // indirect
+	github.com/koffeinsource/go-klogger v0.1.1 // indirect
 	github.com/kr/text v0.2.0 // indirect
 	github.com/leodido/go-urn v1.2.4 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
@@ -45,10 +52,11 @@ require (
 	github.com/twitchyliquid64/golang-asm v0.15.1 // indirect
 	github.com/ugorji/go/codec v1.2.12 // indirect
 	golang.org/x/arch v0.6.0 // indirect
-	golang.org/x/crypto v0.32.0 // indirect
-	golang.org/x/net v0.34.0 // indirect
+	golang.org/x/crypto v0.37.0 // indirect
+	golang.org/x/net v0.39.0 // indirect
 	golang.org/x/oauth2 v0.21.0 // indirect
-	golang.org/x/sys v0.30.0 // indirect
+	golang.org/x/sys v0.32.0 // indirect
+	google.golang.org/appengine v1.6.5 // indirect
 	google.golang.org/protobuf v1.31.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )

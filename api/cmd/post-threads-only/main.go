@@ -15,7 +15,7 @@ import (
 )
 
 func main() {
-	idFlag := flag.Int("id", 0, "Tournament ID to post to Instagram (feed + story + threads)")
+	idFlag := flag.Int("id", 0, "Tournament ID to post to Threads only")
 	yesFlag := flag.Bool("yes", false, "Bypass confirmation prompt")
 	flag.Parse()
 
@@ -23,7 +23,7 @@ func main() {
 		log.Fatal("Please provide tournament ID via --id flag")
 	}
 
-	log.Printf("🏓 Posting tournament %d to Instagram (feed + story + threads)...\n", *idFlag)
+	log.Printf("🧵 Posting tournament %d to Threads only...\n", *idFlag)
 
 	// Load tournaments
 	tournaments, err := loadTournaments()
@@ -75,12 +75,10 @@ func main() {
 
 	if !*yesFlag {
 		fmt.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-		fmt.Println("⚠️  ABOUT TO POST TO INSTAGRAM (FEED + STORY + THREADS)")
+		fmt.Println("⚠️  ABOUT TO POST TO THREADS ONLY")
 		fmt.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
 		fmt.Println()
 		fmt.Println("This will post to:")
-		fmt.Println("  ✓ Instagram Feed (1080x1080)")
-		fmt.Println("  ✓ Instagram Story (1080x1920)")
 		if config.ThreadsEnabled {
 			fmt.Println("  ✓ Threads")
 		}
@@ -98,9 +96,9 @@ func main() {
 		}
 	}
 
-	// Post to Instagram (feed + story + threads)
-	log.Println("📸 Posting to Instagram...")
-	notification, err := client.PostTournament(tournamentImage)
+	// Post to Threads only
+	log.Println("🧵 Posting to Threads...")
+	notification, err := client.PostThreadOnly(tournamentImage)
 	if err != nil {
 		log.Fatalf("❌ Failed to post: %v", err)
 	}
@@ -111,7 +109,7 @@ func main() {
 
 	log.Println()
 	log.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-	log.Printf("✅ SUCCESS - Posted to Instagram!")
+	log.Printf("✅ SUCCESS - Posted to Threads!")
 	log.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
 	log.Println()
 	log.Printf("Post ID: %s", notification.MessageID)

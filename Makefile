@@ -144,7 +144,7 @@ post-full:
 	@echo ""
 	@echo "⚠️  This will post to Instagram Feed + Story + Threads"
 	@echo ""
-	cd api && go run cmd/post-instagram-full/main.go --id $(ID)
+	cd api && go run cmd/post-instagram-full/main.go --id $(ID) --yes
 
 # Post multiple tournaments
 post-multiple:
@@ -163,6 +163,18 @@ post-story:
 	@echo ""
 	cd api && go run cmd/post-instagram-story/main.go --id $(ID)
 
+# Post to Threads only
+post-threads:
+	@if [ -z "$(ID)" ]; then echo "Usage: make post-threads ID=<tournament_id>"; exit 1; fi
+	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+	@echo "  Post Tournament $(ID) to Threads ONLY"
+	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+	@echo ""
+	@echo "⚠️  This will post to Threads only"
+	@echo ""
+	cd api && go run cmd/post-threads-only/main.go --id $(ID) --yes
+
+
 # Cache management
 cache-stats:
 	@echo "📊 Instagram Posted Cache Statistics"
@@ -180,3 +192,8 @@ cache-sync:
 	@echo "   (This will detect and remove deleted posts from cache)"
 	@echo ""
 	cd api && go run cmd/sync-cache/main.go
+
+refresh-tournaments:
+	@echo "🔄 Refreshing tournaments..."
+	@echo ""
+	cd api && go run cmd/refresh-tournaments/main.go

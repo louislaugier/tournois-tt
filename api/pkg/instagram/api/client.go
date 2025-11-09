@@ -14,6 +14,7 @@ import (
     "strings"
     "time"
 
+    "github.com/PuerkitoBio/goquery"
     igimage "tournois-tt/api/pkg/image"
     "tournois-tt/api/pkg/instagram"
     "tournois-tt/api/pkg/utils"
@@ -46,6 +47,86 @@ func (c *Client) PostTournament(tournament igimage.TournamentImage) (*Tournament
 func (c *Client) PostTournamentStoryOnly(tournament igimage.TournamentImage) (*TournamentNotification, error) {
     return c.postTournament(tournament, true)
 }
+
+func (c *Client) PostThreadOnly(tournament igimage.TournamentImage) (*TournamentNotification, error) {
+	if !c.config.ThreadsEnabled {
+		return nil, fmt.Errorf("threads posting is disabled in configuration")
+	}
+
+	// Check cache first
+	cache := instagram.GetPostedCache()
+	if posted, record := cache.IsPosted(tournament.TournamentID); posted && record.Threads {
+		log.Printf("⚠️  Tournament %d already posted on Threads on %s - skipping", tournament.TournamentID, record.PostedAt.Format("2006-01-02 15:04:05"))
+		return nil, fmt.Errorf("tournament %d already posted on Threads (from cache)", tournament.TournamentID)
+	}
+
+	// Double-check with API
+	log.Printf("🔍 Checking Threads API for tournament %d...", tournament.TournamentID)
+	if c.config.ThreadsEnabled && c.config.ThreadsUserID != "" {
+        if posted, err := c.checkThreadsPosts(tournament); err != nil {
+            log.Printf("⚠️  Could not check Threads posts: %v", err)
+        } else if posted {
+			log.Printf("⚠️  Tournament %d found on Threads (updating cache) - skipping", tournament.TournamentID)
+			cache.MarkPosted(&instagram.PostedRecord{
+				TournamentID:   tournament.TournamentID,
+				TournamentName: tournament.Name,
+				PostedAt:       time.Now(),
+				InstagramFeed:  false,
+				InstagramStory: false,
+				Threads:        true,
+			})
+            return nil, fmt.Errorf("tournament %d already posted on Threads", tournament.TournamentID)
+        }
+    }
+	log.Printf("✅ Tournament %d not yet posted to Threads - proceeding", tournament.TournamentID)
+
+	notification := &TournamentNotification{Tournament: tournament, SentAt: time.Now(), Success: false}
+
+	// Generate feed image (1080x1080)
+	imagePath, err := igimage.GenerateTournamentImage(tournament)
+	if err != nil {
+		notification.Error = fmt.Sprintf("failed to generate feed image: %v", err)
+		return notification, err
+	}
+
+	// Post to Threads
+	threadID, err := c.postThread(imagePath, tournament)
+	if err != nil {
+		_ = os.Remove(imagePath)
+		notification.Error = fmt.Sprintf("failed to post to threads: %v", err)
+		return notification, err
+	}
+	log.Printf("✅ Posted to Threads - Thread ID: %s", threadID)
+
+	// Cleanup image
+	if err := os.Remove(imagePath); err != nil {
+		log.Printf("⚠️  Warning: failed to cleanup feed image %s: %v", imagePath, err)
+	} else {
+		log.Printf("🗑️  Cleaned up feed image: %s", imagePath)
+	}
+
+	notification.MessageID = threadID
+	notification.Success = true
+
+	// Save to cache
+	record := &instagram.PostedRecord{
+		TournamentID:   tournament.TournamentID,
+		TournamentName: tournament.Name,
+		PostedAt:       time.Now(),
+		InstagramFeed:  false,
+		InstagramStory: false,
+		Threads:        true,
+		ThreadsPostID:  threadID,
+	}
+
+	if err := cache.MarkPosted(record); err != nil {
+		log.Printf("⚠️  Warning: Failed to save to cache: %v", err)
+	}
+
+	log.Printf("✅ Successfully posted tournament %d (%s) to Threads", tournament.TournamentID, tournament.Name)
+	return notification, nil
+}
+
 
 func (c *Client) postTournament(tournament igimage.TournamentImage, storyOnly bool) (*TournamentNotification, error) {
     if !c.config.Enabled {
@@ -95,7 +176,7 @@ func (c *Client) postTournament(tournament igimage.TournamentImage, storyOnly bo
     notification := &TournamentNotification{Tournament: tournament, SentAt: time.Now(), Success: false}
 
     var imagePath, storyImagePath string
-    var postID string
+    var postID, storyID, threadID string
     var err error
 
     if !storyOnly {
@@ -148,10 +229,11 @@ func (c *Client) postTournament(tournament igimage.TournamentImage, storyOnly bo
 
     // Post to Threads only if not story-only
     if !storyOnly && c.config.ThreadsEnabled {
-        if threadID, err := c.postThread(imagePath, tournament); err != nil {
+        if tID, err := c.postThread(imagePath, tournament); err != nil {
             log.Printf("⚠️  Warning: Threads posting failed: %v", err)
         } else {
-            log.Printf("✅ Posted to Threads - Thread ID: %s", threadID)
+            log.Printf("✅ Posted to Threads - Thread ID: %s", tID)
+            threadID = tID
         }
     }
 
@@ -184,9 +266,10 @@ func (c *Client) postTournament(tournament igimage.TournamentImage, storyOnly bo
         PostedAt:         time.Now(),
         InstagramFeed:    !storyOnly && postID != "",
         InstagramStory:   storyErr == nil,
-        Threads:          !storyOnly && c.config.ThreadsEnabled,
+        Threads:          !storyOnly && c.config.ThreadsEnabled && threadID != "",
         InstagramPostID:  postID,
         InstagramStoryID: storyID,
+        ThreadsPostID:    threadID,
     }
     
     if err := cache.MarkPosted(record); err != nil {
@@ -215,177 +298,367 @@ func (c *Client) postImage(imagePath string, tournament igimage.TournamentImage)
 }
 
 func (c *Client) postStory(imagePath string, tournamentURL string) (string, error) {
+
     var imageURL string
+
     ginMode := os.Getenv("GIN_MODE")
+
     if ginMode == "release" {
+
         filename := filepath.Base(imagePath)
+
         imageURL = fmt.Sprintf("https://tournois-tt.fr/instagram-images/%s", filename)
+
     } else {
-        uploadedURL, err := uploadToImgBB(imagePath)
+
+        uploadedURL, err := uploadImage(imagePath)
+
         if err != nil { return "", fmt.Errorf("failed to upload image for story: %w", err) }
+
         imageURL = uploadedURL
+
     }
+
     log.Printf("📸 Story image URL: %s", imageURL)
+
     // Note: Swipe-up links require 10k+ followers or verified account
+
     // URL is displayed in the image itself instead
+
     createURL := fmt.Sprintf("%s/%s/media?image_url=%s&media_type=STORIES&access_token=%s", GraphAPIBaseURL, c.config.PageID, url.QueryEscape(imageURL), url.QueryEscape(c.config.AccessToken))
+
     resp, err := c.httpClient.Post(createURL, "application/json", nil)
+
     if err != nil { return "", fmt.Errorf("failed to create story container: %w", err) }
+
     defer resp.Body.Close()
+
     body, _ := io.ReadAll(resp.Body)
+
     if resp.StatusCode != http.StatusOK { var errResp ErrorResponse; if json.Unmarshal(body, &errResp) == nil { return "", fmt.Errorf("instagram API error: %s (code: %d)", errResp.Error.Message, errResp.Error.Code) }; return "", fmt.Errorf("create story container failed with status %d: %s", resp.StatusCode, string(body)) }
+
     var result struct{ ID string `json:"id"` }
+
     if err := json.Unmarshal(body, &result); err != nil { return "", fmt.Errorf("failed to parse story container response: %w", err) }
+
     containerID := result.ID
+
     log.Printf("✅ Story container created: %s", containerID)
+
     log.Printf("⏳ Waiting for Instagram to process the story image...")
+
     if err := c.waitForContainerReady(containerID); err != nil { return "", fmt.Errorf("failed waiting for story container: %w", err) }
+
     log.Printf("✅ Story container ready for publishing")
+
     storyID, err := c.publishMediaContainer(containerID)
+
     if err != nil { return "", fmt.Errorf("failed to publish story: %w", err) }
+
     return storyID, nil
+
 }
 
+
+
 func (c *Client) postThread(imagePath string, tournament igimage.TournamentImage) (string, error) {
+
     if !c.config.ThreadsEnabled { return "", fmt.Errorf("threads posting is disabled") }
+
     if c.config.ThreadsUserID == "" { return "", fmt.Errorf("threads user ID is not configured") }
+
     var imageURL string
+
     ginMode := os.Getenv("GIN_MODE")
+
     if ginMode == "release" {
+
         filename := filepath.Base(imagePath)
+
         imageURL = fmt.Sprintf("https://tournois-tt.fr/instagram-images/%s", filename)
+
     } else {
-        uploadedURL, err := uploadToImgBB(imagePath)
+
+        uploadedURL, err := uploadImage(imagePath)
+
         if err != nil { return "", fmt.Errorf("failed to upload image for thread: %w", err) }
+
         imageURL = uploadedURL
+
     }
+
     threadText := fmt.Sprintf(`🏓 %s
 
+
+
 🏆 Type: %s
+
 🏓 Club: %s
+
 💰 Dotation: %d €
+
 📅 %s
 
+
+
 📍 %s
+
+
 
 %s
 
+
+
 🗺️ Découvrez d'autres tournois sur la carte : https://tournois-tt.fr
 
+
+
 #TennisDeTable #PingPong #FFTT`,
+
         tournament.Name,
+
         utils.MapTournamentType(tournament.Type),
+
         tournament.Club,
+
         tournament.Endowment/100,
+
         formatDatesLocal(tournament.StartDate, tournament.EndDate),
+
         tournament.Address,
+
         tournament.TournamentURL,
+
     )
+
     if tournament.Page != "" { threadText = fmt.Sprintf(`%s
 
+
+
 ✍️ Inscription : %s`, threadText, tournament.Page) }
+
     log.Printf("📸 Thread image URL: %s", imageURL)
+
     log.Printf("📝 Thread text length: %d characters", len(threadText))
+
     createURL := fmt.Sprintf("%s/%s/threads?media_type=IMAGE&image_url=%s&text=%s&access_token=%s", ThreadsAPIBaseURL, c.config.ThreadsUserID, url.QueryEscape(imageURL), url.QueryEscape(threadText), url.QueryEscape(c.config.ThreadsAccessToken))
+
     resp, err := c.httpClient.Post(createURL, "application/json", nil)
+
     if err != nil { return "", fmt.Errorf("failed to create thread container: %w", err) }
+
     defer resp.Body.Close()
+
     body, _ := io.ReadAll(resp.Body)
+
     if resp.StatusCode != http.StatusOK { var errResp ErrorResponse; if json.Unmarshal(body, &errResp) == nil { return "", fmt.Errorf("threads API error: %s (code: %d)", errResp.Error.Message, errResp.Error.Code) }; return "", fmt.Errorf("create thread container failed with status %d: %s", resp.StatusCode, string(body)) }
+
     var result struct{ ID string `json:"id"` }
+
     if err := json.Unmarshal(body, &result); err != nil { return "", fmt.Errorf("failed to parse thread container response: %w", err) }
+
     containerID := result.ID
+
     log.Printf("✅ Thread container created: %s", containerID)
+
     log.Printf("⏳ Waiting for Threads to process the image...")
+
     if err := c.waitForThreadContainerReady(containerID); err != nil { return "", fmt.Errorf("failed waiting for thread container: %w", err) }
+
     log.Printf("✅ Thread container ready for publishing")
+
     publishURL := fmt.Sprintf("%s/%s/threads_publish?creation_id=%s&access_token=%s", ThreadsAPIBaseURL, c.config.ThreadsUserID, url.QueryEscape(containerID), url.QueryEscape(c.config.ThreadsAccessToken))
+
     resp2, err := c.httpClient.Post(publishURL, "application/json", nil)
+
     if err != nil { return "", fmt.Errorf("failed to publish thread: %w", err) }
+
     defer resp2.Body.Close()
+
     body2, _ := io.ReadAll(resp2.Body)
+
     if resp2.StatusCode != http.StatusOK { var errResp ErrorResponse; if json.Unmarshal(body2, &errResp) == nil { return "", fmt.Errorf("threads API error: %s (code: %d)", errResp.Error.Message, errResp.Error.Code) }; return "", fmt.Errorf("publish thread failed with status %d: %s", resp2.StatusCode, string(body2)) }
+
     var publishResult struct{ ID string `json:"id"` }
+
     if err := json.Unmarshal(body2, &publishResult); err != nil { return "", fmt.Errorf("failed to parse thread publish response: %w", err) }
+
     return publishResult.ID, nil
+
 }
+
+
 
 func (c *Client) waitForThreadContainerReady(containerID string) error {
+
     maxAttempts := 30
+
     for attempt := 1; attempt <= maxAttempts; attempt++ {
+
         statusURL := fmt.Sprintf("%s/%s?fields=status&access_token=%s", ThreadsAPIBaseURL, containerID, url.QueryEscape(c.config.ThreadsAccessToken))
+
         resp, err := c.httpClient.Get(statusURL)
+
         if err != nil { log.Printf("⚠️  Attempt %d/%d: Failed to check thread status: %v", attempt, maxAttempts, err); time.Sleep(2*time.Second); continue }
+
         body, _ := io.ReadAll(resp.Body)
+
         resp.Body.Close()
+
         if resp.StatusCode != http.StatusOK { log.Printf("⚠️  Attempt %d/%d: Thread status check returned %d: %s", attempt, maxAttempts, resp.StatusCode, string(body)); time.Sleep(2*time.Second); continue }
+
         var result struct{ Status string `json:"status"` }
+
         if err := json.Unmarshal(body, &result); err != nil { log.Printf("⚠️  Attempt %d/%d: Failed to parse thread status: %v", attempt, maxAttempts, err); time.Sleep(2*time.Second); continue }
+
         switch result.Status { case "FINISHED": return nil; case "ERROR": return fmt.Errorf("thread container processing failed with ERROR status"); case "EXPIRED": return fmt.Errorf("thread container expired before it could be published"); case "IN_PROGRESS": time.Sleep(2*time.Second); default: time.Sleep(2*time.Second) }
+
     }
+
     return fmt.Errorf("timeout waiting for thread container to be ready after %d attempts", maxAttempts)
+
 }
 
+
+
 func (c *Client) createMediaContainer(imagePath string, tournament igimage.TournamentImage) (string, error) {
+
     caption := fmt.Sprintf(`🏓 %s
 
+
+
 🏆 Type: %s
+
 🏓 Club: %s
+
 💰 Dotation: %d €
+
 📅 %s
+
 📍 %s
+
+
 
 🔗 Règlement: %s
 
+
+
 #TennisDeTable #PingPong #FFTT #Tournoi`,
+
         tournament.Name,
+
         utils.MapTournamentType(tournament.Type),
+
         tournament.Club,
+
         tournament.Endowment/100,
+
         formatDatesLocal(tournament.StartDate, tournament.EndDate),
+
         tournament.Address,
+
         tournament.TournamentURL,
+
     )
+
     var imageURL string
+
     ginMode := os.Getenv("GIN_MODE")
-    if ginMode == "release" { filename := filepath.Base(imagePath); imageURL = fmt.Sprintf("https://tournois-tt.fr/instagram-images/%s", filename) } else { log.Println("📸 [DEV] Uploading image to Catbox.moe for testing..."); uploadedURL, err := uploadToImgBB(imagePath); if err != nil { return "", fmt.Errorf("failed to upload image to Catbox.moe: %w", err) }; imageURL = uploadedURL }
+
+    if ginMode == "release" { filename := filepath.Base(imagePath); imageURL = fmt.Sprintf("https://tournois-tt.fr/instagram-images/%s", filename) } else { log.Println("📸 [DEV] Uploading image to Catbox.moe for testing..."); uploadedURL, err := uploadImage(imagePath); if err != nil { return "", fmt.Errorf("failed to upload image to Catbox.moe: %w", err) }; imageURL = uploadedURL }
+
     createURL := fmt.Sprintf("%s/%s/media?image_url=%s&caption=%s&access_token=%s", GraphAPIBaseURL, c.config.PageID, url.QueryEscape(imageURL), url.QueryEscape(caption), url.QueryEscape(c.config.AccessToken))
+
     resp, err := c.httpClient.Post(createURL, "application/json", nil); if err != nil { return "", fmt.Errorf("failed to create container: %w", err) }
+
     defer resp.Body.Close()
+
     body, _ := io.ReadAll(resp.Body)
+
     if resp.StatusCode != http.StatusOK { var errResp ErrorResponse; if json.Unmarshal(body, &errResp) == nil { return "", fmt.Errorf("instagram API error: %s (code: %d)", errResp.Error.Message, errResp.Error.Code) }; return "", fmt.Errorf("create container failed with status %d: %s", resp.StatusCode, string(body)) }
+
     var result struct{ ID string `json:"id"` }
+
     if err := json.Unmarshal(body, &result); err != nil { return "", fmt.Errorf("failed to parse container response: %w", err) }
+
     return result.ID, nil
+
 }
+
+
 
 func (c *Client) publishMediaContainer(containerID string) (string, error) {
+
     publishURL := fmt.Sprintf("%s/%s/media_publish?creation_id=%s&access_token=%s", GraphAPIBaseURL, c.config.PageID, url.QueryEscape(containerID), url.QueryEscape(c.config.AccessToken))
+
     resp, err := c.httpClient.Post(publishURL, "application/json", nil); if err != nil { return "", fmt.Errorf("failed to publish: %w", err) }
+
     defer resp.Body.Close()
+
     body, _ := io.ReadAll(resp.Body)
+
     if resp.StatusCode != http.StatusOK { var errResp ErrorResponse; if json.Unmarshal(body, &errResp) == nil { return "", fmt.Errorf("instagram API error: %s (code: %d)", errResp.Error.Message, errResp.Error.Code) }; return "", fmt.Errorf("publish failed with status %d: %s", resp.StatusCode, string(body)) }
+
     var result struct{ ID string `json:"id"` }
+
     if err := json.Unmarshal(body, &result); err != nil { return "", fmt.Errorf("failed to parse publish response: %w", err) }
+
     return result.ID, nil
+
 }
+
+
 
 func (c *Client) waitForContainerReady(containerID string) error {
+
     maxAttempts := 30
+
     for attempt := 1; attempt <= maxAttempts; attempt++ {
+
         statusURL := fmt.Sprintf("%s/%s?fields=status_code&access_token=%s", GraphAPIBaseURL, containerID, url.QueryEscape(c.config.AccessToken))
+
         resp, err := c.httpClient.Get(statusURL)
+
         if err != nil { log.Printf("⚠️  Attempt %d/%d: Failed to check status: %v", attempt, maxAttempts, err); time.Sleep(2*time.Second); continue }
+
         body, _ := io.ReadAll(resp.Body); resp.Body.Close()
+
         if resp.StatusCode != http.StatusOK { log.Printf("⚠️  Attempt %d/%d: Status check returned %d: %s", attempt, maxAttempts, resp.StatusCode, string(body)); time.Sleep(2*time.Second); continue }
+
         var result struct{ StatusCode string `json:"status_code"` }
+
         if err := json.Unmarshal(body, &result); err != nil { log.Printf("⚠️  Attempt %d/%d: Failed to parse status: %v", attempt, maxAttempts, err); time.Sleep(2*time.Second); continue }
+
         switch result.StatusCode { case "FINISHED": return nil; case "ERROR": return fmt.Errorf("container processing failed with ERROR status"); case "EXPIRED": return fmt.Errorf("container expired before it could be published"); case "IN_PROGRESS": time.Sleep(2*time.Second); default: time.Sleep(2*time.Second) }
+
     }
+
     return fmt.Errorf("timeout waiting for container to be ready after %d attempts", maxAttempts)
+
 }
 
-func uploadToImgBB(imagePath string) (string, error) {
+
+
+func uploadImage(imagePath string) (string, error) {
+	// First attempt: catbox.moe
+	imageURL, err := uploadToCatbox(imagePath)
+	if err == nil {
+		return imageURL, nil
+	}
+
+	log.Printf("⚠️  catbox.moe upload failed: %v", err)
+	log.Printf("Retrying with tmpfiles.org...")
+
+	// Fallback: tmpfiles.org
+	imageURL, err = uploadToTmpfiles(imagePath)
+	if err != nil {
+		return "", fmt.Errorf("catbox.moe and tmpfiles.org uploads failed: %w", err)
+	}
+
+	return imageURL, nil
+}
+
+func uploadToCatbox(imagePath string) (string, error) {
     file, err := os.Open(imagePath); if err != nil { return "", fmt.Errorf("failed to open image: %w", err) }
     defer file.Close()
     var requestBody bytes.Buffer
@@ -404,6 +677,77 @@ func uploadToImgBB(imagePath string) (string, error) {
     if resp.StatusCode != http.StatusOK { return "", fmt.Errorf("upload failed with status %d: %s", resp.StatusCode, string(body)) }
     imageURL := string(bytes.TrimSpace(body))
     if imageURL == "" { return "", fmt.Errorf("upload succeeded but no URL returned") }
+    return imageURL, nil
+}
+
+func uploadToTmpfiles(imagePath string) (string, error) {
+    file, err := os.Open(imagePath)
+    if err != nil {
+        return "", fmt.Errorf("failed to open image: %w", err)
+    }
+    defer file.Close()
+
+    var requestBody bytes.Buffer
+    writer := multipart.NewWriter(&requestBody)
+
+    part, err := writer.CreateFormFile("file", filepath.Base(imagePath))
+    if err != nil {
+        return "", fmt.Errorf("failed to create form file: %w", err)
+    }
+    if _, err := io.Copy(part, file); err != nil {
+        return "", fmt.Errorf("failed to copy file: %w", err)
+    }
+
+    if err := writer.Close(); err != nil {
+        return "", fmt.Errorf("failed to close writer: %w", err)
+    }
+
+    uploadURL := "https://tmpfiles.org/api/v1/upload"
+    req, err := http.NewRequest("POST", uploadURL, &requestBody)
+    if err != nil {
+        return "", fmt.Errorf("failed to create request: %w", err)
+    }
+    req.Header.Set("Content-Type", writer.FormDataContentType())
+
+    client := &http.Client{Timeout: 60 * time.Second}
+    resp, err := client.Do(req)
+    if err != nil {
+        return "", fmt.Errorf("failed to upload: %w", err)
+    }
+    defer resp.Body.Close()
+
+    body, err := io.ReadAll(resp.Body)
+    if err != nil {
+        return "", fmt.Errorf("failed to read response: %w", err)
+    }
+
+    if resp.StatusCode != http.StatusOK {
+        return "", fmt.Errorf("upload failed with status %d: %s", resp.StatusCode, string(body))
+    }
+
+    var result struct {
+        Data struct {
+            URL string `json:"url"`
+        } `json:"data"`
+    }
+    if err := json.Unmarshal(body, &result); err != nil {
+        return "", fmt.Errorf("failed to parse response '%s': %w", string(body), err)
+    }
+
+    if result.Data.URL == "" {
+        return "", fmt.Errorf("upload succeeded but no URL returned")
+    }
+
+    doc, err := goquery.NewDocument(result.Data.URL)
+    if err != nil {
+        return "", fmt.Errorf("failed to parse html from tmpfiles.org: %w", err)
+    }
+
+    imageURL, exists := doc.Find("#img_preview").Attr("src")
+    if !exists {
+        return "", fmt.Errorf("could not find image url in tmpfiles.org page")
+    }
+
     return imageURL, nil
 }
 

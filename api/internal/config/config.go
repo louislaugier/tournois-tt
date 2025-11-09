@@ -18,6 +18,11 @@ var (
 	InstagramAppSecret   string
 )
 
+// Imgur configuration
+var (
+	ImgurClientID string
+)
+
 // Threads configuration
 var (
 	ThreadsEnabled     bool
@@ -41,6 +46,9 @@ func init() {
 	InstagramPageID = os.Getenv("INSTAGRAM_PAGE_ID")
 	InstagramAppID = os.Getenv("INSTAGRAM_APP_ID")
 	InstagramAppSecret = os.Getenv("INSTAGRAM_APP_SECRET")
+
+	// Load Imgur configuration
+	ImgurClientID = os.Getenv("IMGUR_CLIENT_ID")
 
 	// Load Threads configuration
 	ThreadsEnabled, _ = strconv.ParseBool(os.Getenv("THREADS_ENABLED"))
