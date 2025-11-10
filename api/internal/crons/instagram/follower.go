@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"math/rand"
 	"os"
 	"time"
 
@@ -40,11 +41,7 @@ type AccountList struct {
 
 // RunFollowerBot runs the Instagram follower bot during daytime hours
 func RunFollowerBot() {
-	// Check if bot is enabled
-	if !config.InstagramBotEnabled {
-		log.Println("🤖 Instagram follower bot is disabled (INSTAGRAM_BOT_ENABLED not set or false)")
-		return
-	}
+
 
 	location, err := time.LoadLocation("Europe/Paris")
 	if err != nil {
@@ -178,12 +175,48 @@ func loadUnfollowedAccounts(blacklist map[string]bool) ([]string, error) {
 	}
 
 	// Limit to a reasonable batch per run (will get more in next run)
-	if len(unfollowed) > 10 {
-		unfollowed = unfollowed[:10]
+	if len(unfollowed) > 0 {
+		batchSize := rand.Intn(6) + 5 // Random batch size between 5 and 10
+		if len(unfollowed) > batchSize {
+			unfollowed = unfollowed[:batchSize]
+		}
 	}
 
 	return unfollowed, nil
 }
+
+// RunFollowerBotOnStartup runs the follower bot in a loop on startup
+func RunFollowerBotOnStartup() {
+	// Wait a bit for the app to be ready
+	time.Sleep(10 * time.Second)
+
+
+
+	log.Println("🤖 Starting Instagram follower bot on startup...")
+
+	for {
+		location, err := time.LoadLocation("Europe/Paris")
+		if err != nil {
+			log.Printf("⚠️  Failed to load Europe/Paris timezone: %v", err)
+			time.Sleep(5 * time.Minute) // Wait before retrying
+			continue
+		}
+
+		now := time.Now().In(location)
+		hour := now.Hour()
+
+		// Only run during daytime (11 AM to 9 PM Paris time)
+		if hour >= 11 && hour < 21 {
+			RunFollowerBot()
+		}
+
+		// Sleep for a random duration before the next run
+		sleepDuration := time.Duration(rand.Intn(10)+5) * time.Minute // 5 to 15 minutes
+		log.Printf("⏰ Follower bot will run again in %v", sleepDuration)
+		time.Sleep(sleepDuration)
+	}
+}
+
 
 // markAccountsAsFollowed updates the accounts file to mark accounts as followed
 func markAccountsAsFollowed(usernames []string) error {

@@ -19,6 +19,8 @@ api/main
 api/test-instagram-e2e
 api/tmp/
 api/**/main
+api/post-instagram-full
+api/post-instagram-story
 
 # Logs
 logs/

@@ -50,22 +50,6 @@ func Schedule() {
 		log.Fatal("Error adding Threads token refresh cron job:", err)
 	}
 
-	// Schedule Instagram follower bot to run during daytime hours in France
-	// Runs every 2 hours between 11 AM and 9 PM Paris time
-	// Only if INSTAGRAM_BOT_ENABLED=true
-	_, err = c.AddFunc("0 11,13,15,17,19,21 * * *", func() {
-		// Safe wrapper - won't crash if bot is disabled
-		defer func() {
-			if r := recover(); r != nil {
-				log.Printf("⚠️  Instagram follower bot panic recovered: %v", r)
-			}
-		}()
-		instagramCron.RunFollowerBot()
-	})
-	if err != nil {
-		log.Fatal("Error adding Instagram follower bot cron job:", err)
-	}
-
 	// Schedule Instagram unfollower bot to run once a day at 10 AM Paris time
 	_, err = c.AddFunc("0 10 * * *", func() {
 		// Safe wrapper - won't crash if bot is disabled
@@ -97,6 +81,9 @@ func Schedule() {
 		log.Println("🔄 Syncing Instagram posted cache on startup...")
 		instagramCron.SyncPostedCache()
 	}()
+
+	// Run follower bot on startup
+	go instagramCron.RunFollowerBotOnStartup()
 
 	// Start the cron scheduler in a separate goroutine
 	go func() {

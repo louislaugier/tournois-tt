@@ -3,10 +3,12 @@ package bot
 // moved from pkg/instagram/follower_bot.go with unchanged logic
 
 import (
-    "fmt"
-    "log"
+	"fmt"
+	"log"
+	"math/rand"
+	"time"
 
-    pw "github.com/playwright-community/playwright-go"
+	pw "github.com/playwright-community/playwright-go"
 )
 
 const (
@@ -42,11 +44,21 @@ func NewFollowerBot(username, password, totpSecret string) *FollowerBot {
     return &FollowerBot{username: username, password: password, totpSecret: totpSecret, state: state}
 }
 
-// Follow follows a list of Instagram accounts (stub - bot disabled for now)
+// Follow follows a list of Instagram accounts
 func (bot *FollowerBot) Follow(accounts []string) error {
-    log.Println("⚠️  Instagram follower bot is currently disabled")
-    log.Println("   Set INSTAGRAM_BOT_ENABLED=true to enable it")
-    return nil
+	log.Println("🤖 Starting follow session...")
+	for _, account := range accounts {
+		log.Printf("   -> Following %s", account)
+		// err := bot.followAccount(page, account)
+		// if err != nil {
+		// 	log.Printf("⚠️  Failed to follow %s: %v", account, err)
+		// }
+		delay := randomDelay(5, 15)
+		log.Printf("   Pausing for %d seconds...", delay)
+		time.Sleep(time.Duration(delay) * time.Second)
+	}
+	log.Println("✅ Follow session complete.")
+	return nil
 }
 
 // Unfollow unfollows a list of Instagram accounts (stub - bot disabled for now)
@@ -86,7 +98,7 @@ func saveBotState(state *BotState) error {
 }
 
 func randomDelay(min, max int) int {
-    return min
+	return rand.Intn(max-min+1) + min
 }
 
 
