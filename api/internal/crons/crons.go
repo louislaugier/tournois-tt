@@ -66,6 +66,20 @@ func Schedule() {
 		log.Fatal("Error adding Instagram follower bot cron job:", err)
 	}
 
+	// Schedule Instagram unfollower bot to run once a day at 10 AM Paris time
+	_, err = c.AddFunc("0 10 * * *", func() {
+		// Safe wrapper - won't crash if bot is disabled
+		defer func() {
+			if r := recover(); r != nil {
+				log.Printf("⚠️  Instagram unfollower bot panic recovered: %v", r)
+			}
+		}()
+		instagramCron.RunUnfollowerBot()
+	})
+	if err != nil {
+		log.Fatal("Error adding Instagram unfollower bot cron job:", err)
+	}
+
 	// Schedule cache sync to run every hour
 	_, err = c.AddFunc("0 * * * *", instagramCron.SyncPostedCache)
 	if err != nil {

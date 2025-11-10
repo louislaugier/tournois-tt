@@ -49,6 +49,13 @@ func (bot *FollowerBot) Follow(accounts []string) error {
     return nil
 }
 
+// Unfollow unfollows a list of Instagram accounts (stub - bot disabled for now)
+func (bot *FollowerBot) Unfollow(accounts []string) error {
+	log.Println("⚠️  Instagram unfollower bot is currently disabled")
+	log.Println("   Set INSTAGRAM_BOT_ENABLED=true to enable it")
+	return nil
+}
+
 // Helper stubs
 func (bot *FollowerBot) loadSession(context pw.BrowserContext) error {
     return fmt.Errorf("not implemented")
