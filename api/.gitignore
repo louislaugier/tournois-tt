@@ -5,4 +5,4 @@ instagram-images/*
 # Ignore compiled binaries
 main
 post-instagram-full
-post-instagram-story
+post-instagram-storycache/data.json
