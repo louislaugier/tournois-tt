@@ -58,7 +58,6 @@ func Schedule() {
 				log.Printf("⚠️  Instagram unfollower bot panic recovered: %v", r)
 			}
 		}()
-		instagramCron.RunUnfollowerBot()
 	})
 	if err != nil {
 		log.Fatal("Error adding Instagram unfollower bot cron job:", err)

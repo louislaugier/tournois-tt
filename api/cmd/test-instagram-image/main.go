@@ -49,7 +49,7 @@ func main() {
 
 	log.Printf("Selected tournament: %s - %s", tournamentID, tournament.Name)
 	log.Printf("Type: %s", tournament.Type)
-	log.Printf("Club: %s", tournament.Club)
+	log.Printf("Club: %+v", tournament.Club)
 	log.Printf("Start: %s", tournament.StartDate)
 	log.Printf("End: %s", tournament.EndDate)
 

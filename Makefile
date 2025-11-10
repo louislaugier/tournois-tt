@@ -12,6 +12,8 @@ help:
 	@echo "  make logs-api           - Show logs from API service"
 	@echo "  make test               - Run all tests in API container"
 	@echo "  make test-instagram     - Run Instagram unit tests in API container"
+	@echo "  make test-instagram-follow - Run Instagram follow/unfollow bot test"
+	@echo "  make test-instagram-follow-vet - Run go vet + Instagram follow/unfollow bot test"
 	@echo "  make e2e-meta      	 - Run Meta E2E test in API container (posts REAL image post, story, thread & FB post!)"
 	@echo "  make post-full ID=1234  - Post tournament to Instagram FEED + STORY + THREADS"
 	@echo "  make post-story ID=1234 - Post tournament to Instagram STORY ONLY (no feed, no threads)"
@@ -56,6 +58,19 @@ test:
 test-instagram:
 	@echo "Running Instagram unit tests..."
 	docker-compose exec api go test -v ./pkg/instagram/
+
+test-instagram-follow:
+	@echo "Running Instagram follow/unfollow test..."
+	docker-compose exec api go run cmd/test-instagram-follow/main.go
+
+test-instagram-follow-vet:
+	@echo "Running go vet on Instagram bot code..."
+	docker-compose exec api go vet ./pkg/instagram/bot/
+	@echo "✅ No linting issues found!"
+	@echo ""
+	@echo "Running Instagram follow/unfollow test..."
+	docker-compose exec api go run cmd/test-instagram-follow/main.go
+
 
 # E2E Meta test
 e2e-meta:
