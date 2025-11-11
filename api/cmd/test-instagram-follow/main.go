@@ -158,10 +158,27 @@ func main() {
 }
 
 func getSourceAccounts() (*SourceAccounts, error) {
-	jsonFile, err := os.Open("fftt-instagram-accounts.json")
+	// Try multiple possible paths for the JSON file
+	possiblePaths := []string{
+		"fftt-instagram-accounts.json",
+		"/go/src/tournois-tt/api/fftt-instagram-accounts.json",
+		"./api/fftt-instagram-accounts.json",
+	}
+	
+	var jsonFile *os.File
+	var err error
+	var foundPath string
+	for _, path := range possiblePaths {
+		jsonFile, err = os.Open(path)
+		if err == nil {
+			foundPath = path
+			break
+		}
+	}
 	if err != nil {
 		return nil, err
 	}
+	log.Printf("✅ Loaded source accounts from: %s", foundPath)
 	defer jsonFile.Close()
 
 	byteValue, err := io.ReadAll(jsonFile)
@@ -178,10 +195,27 @@ func getSourceAccounts() (*SourceAccounts, error) {
 }
 
 func getAccountsToUnfollow() (*BlacklistAccounts, error) {
-	jsonFile, err := os.Open("instagram_blacklist.json")
+	// Try multiple possible paths for the JSON file
+	possiblePaths := []string{
+		"instagram_blacklist.json",
+		"/go/src/tournois-tt/api/instagram_blacklist.json",
+		"./api/instagram_blacklist.json",
+	}
+	
+	var jsonFile *os.File
+	var err error
+	var foundPath string
+	for _, path := range possiblePaths {
+		jsonFile, err = os.Open(path)
+		if err == nil {
+			foundPath = path
+			break
+		}
+	}
 	if err != nil {
 		return nil, err
 	}
+	log.Printf("✅ Loaded blacklist from: %s", foundPath)
 	defer jsonFile.Close()
 
 	byteValue, err := io.ReadAll(jsonFile)

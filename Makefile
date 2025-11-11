@@ -61,7 +61,7 @@ test-instagram:
 
 test-instagram-follow:
 	@echo "Running Instagram follow/unfollow test..."
-	docker-compose exec api go run cmd/test-instagram-follow/main.go
+	docker-compose exec -e GIN_MODE=release -w /go/src/tournois-tt/api api go run cmd/test-instagram-follow/main.go
 
 test-instagram-follow-vet:
 	@echo "Running go vet on Instagram bot code..."

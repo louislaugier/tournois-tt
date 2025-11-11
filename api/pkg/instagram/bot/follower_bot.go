@@ -7,6 +7,7 @@ import (
 	"math/rand"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/playwright-community/playwright-go"
@@ -23,9 +24,10 @@ type BotConfig struct {
 }
 
 type BotState struct {
-	LastRunDate    string `json:"last_run_date"`
-	FollowsToday   int    `json:"follows_today"`
-	UnfollowsToday int    `json:"unfollows_today"`
+	LastRunDate       string    `json:"last_run_date"`
+	FollowsToday      int       `json:"follows_today"`
+	UnfollowsToday    int       `json:"unfollows_today"`
+	RateLimitedUntil  time.Time `json:"rate_limited_until,omitempty"`
 }
 
 type FollowerBot struct {
@@ -60,7 +62,7 @@ func NewFollowerBot(username, password, totpSecret string, config BotConfig, hea
 	}
 
 	context, err := browser.NewContext(playwright.BrowserNewContextOptions{
-		UserAgent: playwright.String("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"),
+		UserAgent: playwright.String("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"),
 	})
 	if err != nil {
 		return nil, fmt.Errorf("could not create context: %w", err)
@@ -132,7 +134,7 @@ func (bot *FollowerBot) ensureLoggedIn() error {
 			return fmt.Errorf("failed to navigate to instagram: %w", err)
 		}
 		// More robust check for login status
-		if _, err := bot.page.WaitForSelector("a[aria-label='Home']", playwright.PageWaitForSelectorOptions{Timeout: playwright.Float(5000)}); err == nil {
+		if _, err := bot.page.WaitForSelector("a[href='/'] > svg[aria-label='Home']", playwright.PageWaitForSelectorOptions{Timeout: playwright.Float(5000)}); err == nil {
 			log.Println("✅ Session is valid.")
 			return nil
 		}
@@ -147,19 +149,22 @@ func (bot *FollowerBot) ensureLoggedIn() error {
 	}
 
 	// Handle cookie consent dialog
-	cookieButton, err := bot.page.QuerySelector("button:has-text('Allow all cookies')")
-	if err != nil {
-		log.Printf("⚠️ Error checking for cookie button: %v", err)
-	} else if cookieButton != nil {
+	cookieButtonSelector := "button:has-text('Allow all cookies')"
+	cookieButton, err := bot.page.QuerySelector(cookieButtonSelector)
+	if err == nil && cookieButton != nil {
 		log.Println("🍪 Cookie consent dialog found. Clicking 'Allow all cookies'.")
 		if err := cookieButton.Click(); err != nil {
 			log.Println("⚠️ Could not click 'Allow all cookies' button, but continuing.")
 		}
-		// Wait for the dialog to disappear
-		time.Sleep(time.Duration(randomDelay(2, 4)) * time.Second)
+		// Wait for the dialog to disappear by waiting for the selector to be hidden
+		if _, err := bot.page.WaitForSelector(cookieButtonSelector, playwright.PageWaitForSelectorOptions{State: playwright.WaitForSelectorStateHidden, Timeout: playwright.Float(5000)}); err != nil {
+			log.Println("⚠️ Cookie dialog did not disappear as expected.")
+		}
+	} else {
+		log.Println("ℹ️ No cookie consent dialog found, or it timed out.")
 	}
 
-	if _, err := bot.page.WaitForSelector("input[name='username']", playwright.PageWaitForSelectorOptions{Timeout: playwright.Float(60000)}); err != nil {
+	if _, err := bot.page.WaitForSelector("input[name='username']"); err != nil {
 		return fmt.Errorf("login form not found: %w", err)
 	}
 
@@ -173,17 +178,41 @@ func (bot *FollowerBot) ensureLoggedIn() error {
 	}
 	time.Sleep(time.Duration(randomDelay(1, 3)) * time.Second)
 
-	if err := bot.page.Click("button[type='submit']", playwright.PageClickOptions{Timeout: playwright.Float(60000)}); err != nil {
+	if err := bot.page.Click("button[type='submit']"); err != nil {
 		return fmt.Errorf("failed to click login button: %w", err)
 	}
 
-	// Wait for 2FA or home page
-	time.Sleep(time.Duration(randomDelay(3, 5)) * time.Second)
-	
-	twoFactorInput, err := bot.page.QuerySelector("input[name='verificationCode']")
+	// Wait for 2FA, home page, or an error message
+	if err := bot.page.WaitForLoadState(playwright.PageWaitForLoadStateOptions{State: playwright.LoadStateNetworkidle}); err != nil {
+		log.Printf("⚠️ Error waiting for network idle after login click: %v", err)
+	}
+
+	// Check for multiple possible outcomes after login attempt
+	homeNavSelector := "a[aria-label='Home']"
+	twoFactorSelector := "input[name='verificationCode']"
+	loginErrorSelector := "[data-testid='login-error-message']"
+
+	// Wait for any of the selectors to appear
+	_, err = bot.page.WaitForSelector(
+		fmt.Sprintf("%s, %s, %s", homeNavSelector, twoFactorSelector, loginErrorSelector),
+		playwright.PageWaitForSelectorOptions{Timeout: playwright.Float(120000)},
+	)
 	if err != nil {
-		log.Printf("⚠️ Error checking for 2FA: %v", err)
-	} else if twoFactorInput != nil {
+		return fmt.Errorf("timed out waiting for login result (home, 2FA, or error): %w", err)
+	}
+
+	// Outcome 1: Login Error
+	errorMessage, _ := bot.page.QuerySelector(loginErrorSelector)
+	if errorMessage != nil {
+		text, _ := errorMessage.InnerText()
+		return fmt.Errorf("login failed with message: %s", text)
+	}
+
+	// Outcome 2: Two-Factor Authentication
+	twoFactorInput, _ := bot.page.QuerySelector(twoFactorSelector)
+	if twoFactorInput != nil {
+		html, _ := bot.page.Content()
+		log.Printf("HTML content at 2FA stage: %s", html)
 		if bot.totpSecret == "" {
 			return fmt.Errorf("2FA required, but TOTP secret not provided")
 		}
@@ -195,39 +224,40 @@ func (bot *FollowerBot) ensureLoggedIn() error {
 		if err := twoFactorInput.Fill(otp); err != nil {
 			return fmt.Errorf("failed to fill 2FA code: %w", err)
 		}
-		if err := bot.page.Click("button:has-text('Confirm')"); err != nil {
+		log.Println("Attempting to click 2FA confirm button")
+		time.Sleep(2 * time.Second) // Add a small delay
+		confirmButton, err := bot.page.QuerySelector("form div[role='button']:has-text('Confirm')")
+		if err != nil || confirmButton == nil {
+			// Fallback to the old selector just in case
+			confirmButton, err = bot.page.QuerySelector("button:has-text('Confirm')")
+			if err != nil || confirmButton == nil {
+				return fmt.Errorf("2FA confirm button not found: %w", err)
+			}
+		}
+		if err := confirmButton.DispatchEvent("click"); err != nil {
 			return fmt.Errorf("failed to click 2FA confirm button: %w", err)
 		}
 	}
 
-	if _, err := bot.page.WaitForSelector("a[aria-label='Home']", playwright.PageWaitForSelectorOptions{Timeout: playwright.Float(60000)}); err != nil {
-		errorMessage, errQuery := bot.page.QuerySelector("[data-testid='login-error-message']")
-		if errQuery == nil && errorMessage != nil {
-			text, _ := errorMessage.InnerText()
-			return fmt.Errorf("login failed: %s", text)
-		}
-		return fmt.Errorf("login failed, home icon not found: %w", err)
+	// Wait for final navigation to home page
+	if _, err := bot.page.WaitForSelector(homeNavSelector, playwright.PageWaitForSelectorOptions{Timeout: playwright.Float(60000)}); err != nil {
+		return fmt.Errorf("login failed, home icon not found after potential 2FA: %w", err)
 	}
 
 	log.Println("✅ Login successful.")
 
 	// Handle "Save your login info?" dialog
-	time.Sleep(time.Duration(randomDelay(2, 4)) * time.Second)
-	saveInfoButton, err := bot.page.QuerySelector("button:has-text('Save info')")
-	if err != nil {
-		log.Printf("⚠️ Error checking for save info button: %v", err)
-	} else if saveInfoButton != nil {
+	var saveInfoButton playwright.ElementHandle
+	saveInfoButton, err = bot.page.QuerySelector("button:has-text('Save Login Info')")
+	if err == nil && saveInfoButton != nil {
 		if err := saveInfoButton.Click(); err != nil {
 			log.Println("⚠️ Could not click 'Save info' button, but continuing.")
 		}
 	}
 
 	// Handle "Turn on Notifications" dialog
-	time.Sleep(time.Duration(randomDelay(2, 4)) * time.Second)
-	notNowButton, err := bot.page.QuerySelector("button:has-text('Not Now')")
-	if err != nil {
-		log.Printf("⚠️ Error checking for notifications button: %v", err)
-	} else if notNowButton != nil {
+	notNowButton, err := bot.page.QuerySelector("button:has-text('Not Now'), button:has-text('Turn on notifications')")
+	if err == nil && notNowButton != nil {
 		if err := notNowButton.Click(); err != nil {
 			log.Println("⚠️ Could not click 'Not Now' button, but continuing.")
 		}
@@ -239,6 +269,7 @@ func (bot *FollowerBot) ensureLoggedIn() error {
 
 	return nil
 }
+
 
 func (bot *FollowerBot) sessionFilePath() string {
 	return filepath.Join(bot.config.DataDir, "session.json")
@@ -328,15 +359,25 @@ func (bot *FollowerBot) scrapeList(username string, listType string) ([]string, 
 	consecutiveNoChange := 0
 
 	for {
-		handles, err := bot.page.QuerySelectorAll(listSelector + " a[role='link']")
+		// Get all links in the list dialog that are not the user's own profile link
+		handles, err := bot.page.QuerySelectorAll(listSelector + " a[role='link']:not([href*='/?next='])")
 		if err != nil {
 			log.Printf("⚠️ Failed to get user handles, but continuing: %v", err)
 		}
 
 		for _, handle := range handles {
-			username, err := handle.InnerText()
-			if err == nil && username != "" {
-				usernames[username] = true
+			// Extract username from the href attribute for reliability
+			href, err := handle.GetAttribute("href")
+			if err != nil || href == "" {
+				continue
+			}
+			// Expected href format: /username/
+			parts := strings.Split(strings.Trim(href, "/"), "/")
+			if len(parts) > 0 {
+				username := parts[0]
+				if username != "" {
+					usernames[username] = true
+				}
 			}
 		}
 
@@ -345,7 +386,8 @@ func (bot *FollowerBot) scrapeList(username string, listType string) ([]string, 
 			log.Printf("⚠️ Failed to scroll, but continuing: %v", err)
 		}
 
-		time.Sleep(time.Duration(randomDelay(1, 3)) * time.Second)
+		// Wait for a moment to let new content load
+		time.Sleep(time.Duration(randomDelay(1, 2)) * time.Second)
 
 		newHeight, err := bot.page.Evaluate(fmt.Sprintf("() => document.querySelector('%s').scrollHeight", listSelector))
 		if err != nil {
@@ -360,15 +402,15 @@ func (bot *FollowerBot) scrapeList(username string, listType string) ([]string, 
 			consecutiveNoChange = 0
 		}
 
-		if consecutiveNoChange > 5 {
+		if consecutiveNoChange > 3 { // Reduced threshold for faster completion
 			log.Println("   -> List seems to have reached the end.")
 			break
 		}
 		lastHeight = currentHeight
 
 		// Safety break
-		if len(usernames) > 2500 {
-			log.Println("   -> Reached 2500 usernames, stopping scrape.")
+		if len(usernames) > 3000 { // Increased limit slightly
+			log.Println("   -> Reached 3000 usernames, stopping scrape.")
 			break
 		}
 	}
@@ -379,6 +421,12 @@ func (bot *FollowerBot) scrapeList(username string, listType string) ([]string, 
 	}
 
 	log.Printf("✅ Scraped %d usernames.", len(result))
+	// Close the dialog
+	if err := bot.page.Click("div[role='dialog'] button[aria-label='Close']"); err != nil {
+		log.Printf("⚠️ Could not close the %s list dialog, but continuing.", listType)
+		// As a fallback, we can try to navigate away
+		bot.page.Goto(fmt.Sprintf("https://www.instagram.com/%s/", bot.username))
+	}
 	return result, nil
 }
 
@@ -387,6 +435,24 @@ func (bot *FollowerBot) FollowUsers(accounts []string) error {
 		log.Println("🚫 Outside of allowed time window. Skipping follow session.")
 		return nil
 	}
+	
+	// Check if we're currently rate limited
+	if !bot.state.RateLimitedUntil.IsZero() && time.Now().Before(bot.state.RateLimitedUntil) {
+		waitDuration := time.Until(bot.state.RateLimitedUntil)
+		log.Printf("🚫 Rate limited until %s (%.0f minutes remaining). Skipping follow session.", 
+			bot.state.RateLimitedUntil.Format("15:04"), waitDuration.Minutes())
+		return nil
+	}
+	
+	// Clear rate limit if we've passed the time
+	if !bot.state.RateLimitedUntil.IsZero() && time.Now().After(bot.state.RateLimitedUntil) {
+		log.Println("✅ Rate limit period has passed. Resuming normal operation.")
+		bot.state.RateLimitedUntil = time.Time{}
+		if err := saveBotState(bot.state, bot.config.DataDir); err != nil {
+			log.Printf("⚠️ Failed to save state after clearing rate limit: %v", err)
+		}
+	}
+	
 	log.Println("🤖 Starting follow session...")
 
 	// Shuffle accounts randomly
@@ -415,6 +481,11 @@ func (bot *FollowerBot) FollowUsers(accounts []string) error {
 					log.Println("🚫 Daily follow limit reached. Stopping for today.")
 					return saveBotState(bot.state, bot.config.DataDir)
 				}
+				if err.Error() == "rate limit detected" {
+					log.Println("⏳ Rate limit detected. Pausing for 2 hours.")
+					bot.state.RateLimitedUntil = time.Now().Add(2 * time.Hour)
+					return saveBotState(bot.state, bot.config.DataDir)
+				}
 			}
 			delay := randomDelay(5, 15)
 			log.Printf("   ⏸️  Pausing for %d seconds... (%d/%d processed)", delay, accountsProcessed, len(accounts))
@@ -439,32 +510,59 @@ func (bot *FollowerBot) followAccount(username string) error {
 	}
 
 	url := fmt.Sprintf("https://www.instagram.com/%s/", username)
-	if _, err := bot.page.Goto(url); err != nil {
+	if _, err := bot.page.Goto(url, playwright.PageGotoOptions{WaitUntil: playwright.WaitUntilStateNetworkidle}); err != nil {
 		return fmt.Errorf("failed to navigate to profile page: %w", err)
 	}
 
-	// More robust selector for the follow button
-	followButton, err := bot.page.QuerySelector("div[role='main'] button:has-text('Follow'), div[role='main'] button:has-text('Follow back')")
+	// More robust selector for the follow button, targeting the header area
+	followButtonSelector := "header button:has-text('Follow'), header button:has-text('Follow back')"
+	followButton, err := bot.page.QuerySelector(followButtonSelector)
 	if err != nil {
 		return fmt.Errorf("could not query for follow button: %w", err)
 	}
 
 	if followButton == nil {
-		// Check if already following or requested
-		alreadyFollowing, _ := bot.page.QuerySelector("div[role='main'] button:has-text('Following'), div[role='main'] button:has-text('Requested')")
+		// Check if already following, requested, or if it's our own profile
+		alreadyFollowingSelector := "header button:has-text('Following'), header button:has-text('Requested'), a[href='/accounts/edit/']"
+		alreadyFollowing, _ := bot.page.QuerySelector(alreadyFollowingSelector)
 		if alreadyFollowing != nil {
-			log.Printf("   ℹ️  Already following or requested %s", username)
+			log.Printf("   ℹ️  Already following, requested, or own profile: %s", username)
 			return nil
 		}
 		return fmt.Errorf("follow button not found for %s", username)
 	}
 
-	time.Sleep(time.Duration(randomDelay(2, 5)) * time.Second)
+	// Wait for the button to be enabled
+	if err := followButton.WaitForElementState("visible"); err != nil {
+		return fmt.Errorf("follow button not visible: %w", err)
+	}
+	time.Sleep(time.Duration(randomDelay(1, 2)) * time.Second) // Small random delay before click
+
 	if err := followButton.Click(); err != nil {
 		// Handle cases where the button might be obscured
 		if _, err := bot.page.Evaluate("el => el.click()", followButton); err != nil {
 			return fmt.Errorf("failed to click follow button with JS: %w", err)
 		}
+	}
+
+	// Check for rate limit alert modal
+	time.Sleep(2 * time.Second) // Wait for potential modal to appear
+	alertModalSelector := "div[role='dialog']:has-text('Try Again Later'), div[role='dialog']:has-text('Action Blocked'), div[role='dialog']:has-text('temporarily blocked')"
+	alertModal, err := bot.page.QuerySelector(alertModalSelector)
+	if err == nil && alertModal != nil {
+		log.Printf("🚫 Rate limit alert detected for %s. Closing modal and setting 2-hour wait.", username)
+		// Try to close the modal by clicking OK or Close button
+		closeButton, _ := bot.page.QuerySelector("div[role='dialog'] button:has-text('OK'), div[role='dialog'] button:has-text('Close')")
+		if closeButton != nil {
+			closeButton.Click()
+			time.Sleep(1 * time.Second)
+		}
+		return fmt.Errorf("rate limit detected")
+	}
+
+	// Verify the button text changes to 'Following' or 'Requested'
+	if _, err := bot.page.WaitForSelector("header button:has-text('Following'), header button:has-text('Requested')", playwright.PageWaitForSelectorOptions{Timeout: playwright.Float(5000)}); err != nil {
+		log.Printf("⚠️  Follow confirmation for %s not found, but proceeding.", username)
 	}
 
 	bot.state.FollowsToday++
@@ -529,42 +627,63 @@ func (bot *FollowerBot) unfollowAccount(username string) error {
 	}
 
 	url := fmt.Sprintf("https://www.instagram.com/%s/", username)
-	if _, err := bot.page.Goto(url); err != nil {
+	if _, err := bot.page.Goto(url, playwright.PageGotoOptions{WaitUntil: playwright.WaitUntilStateNetworkidle}); err != nil {
 		return fmt.Errorf("failed to navigate to profile page: %w", err)
 	}
 
-	// More robust selector for the unfollow button
-	unfollowButton, err := bot.page.QuerySelector("div[role='main'] button:has-text('Following')")
+	// More robust selector for the unfollow button in the header
+	unfollowButtonSelector := "header button:has-text('Following'), header button:has-text('Requested')"
+	unfollowButton, err := bot.page.QuerySelector(unfollowButtonSelector)
 	if err != nil {
 		return fmt.Errorf("could not query for unfollow button: %w", err)
 	}
 
 	if unfollowButton == nil {
-		log.Printf("   ℹ️  Not following %s", username)
+		log.Printf("   ℹ️  Not following %s (or button not found)", username)
 		return nil
 	}
 
-	time.Sleep(time.Duration(randomDelay(2, 5)) * time.Second)
+	// Wait for the button to be visible and then click
+	if err := unfollowButton.WaitForElementState("visible"); err != nil {
+		return fmt.Errorf("unfollow button not visible: %w", err)
+	}
+	time.Sleep(time.Duration(randomDelay(1, 2)) * time.Second)
 	if err := unfollowButton.Click(); err != nil {
 		return fmt.Errorf("failed to click unfollow button: %w", err)
 	}
 
-	// Confirm unfollow
-	confirmButton, err := bot.page.QuerySelector("button:has-text('Unfollow')")
+	// Confirm unfollow in the dialog
+	confirmButtonSelector := "div[role='dialog'] button:has-text('Unfollow')"
+	confirmButton, err := bot.page.QuerySelector(confirmButtonSelector)
 	if err != nil {
 		return fmt.Errorf("could not query for confirm unfollow button: %w", err)
 	}
 	if confirmButton == nil {
-		return fmt.Errorf("confirm unfollow button not found")
+		return fmt.Errorf("confirm unfollow button not found in dialog")
 	}
 
-	time.Sleep(time.Duration(randomDelay(2, 5)) * time.Second)
+	// Wait for the confirm button to be visible and then click
+	if err := confirmButton.WaitForElementState("visible"); err != nil {
+		return fmt.Errorf("confirm unfollow button not visible: %w", err)
+	}
+	time.Sleep(time.Duration(randomDelay(1, 2)) * time.Second)
 	if err := confirmButton.Click(); err != nil {
 		return fmt.Errorf("failed to click confirm unfollow button: %w", err)
 	}
 
-	bot.state.UnfollowsToday++
-	log.Printf("   ✅ Successfully unfollowed %s (%d unfollows today)", username, bot.state.UnfollowsToday)
+	// Wait a moment and check if the unfollow actually succeeded
+	time.Sleep(2 * time.Second)
+	
+	// Check if button changed back to 'Follow' to confirm unfollow succeeded
+	followButton, err := bot.page.QuerySelector("header button:has-text('Follow')")
+	if err == nil && followButton != nil {
+		bot.state.UnfollowsToday++
+		log.Printf("   ✅ Successfully unfollowed %s (%d unfollows today)", username, bot.state.UnfollowsToday)
+		return nil
+	}
+	
+	// If button didn't change, unfollow likely didn't work (rate limited silently)
+	log.Printf("   ⚠️  Unfollow button didn't change for %s - likely rate limited. Continuing without incrementing counter.", username)
 	return nil
 }
 

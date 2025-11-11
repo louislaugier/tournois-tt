@@ -102,22 +102,29 @@ func RunFollowerBot() error {
 	myFollowingMap := listToMap(myFollowing)
 	log.Printf("📋 Currently following %d users.", len(myFollowing))
 
-	// Get users from blacklist that we are actually following
-	var accountsToUnfollow []string
-	for username := range blacklist {
-		if myFollowingMap[username] {
-			accountsToUnfollow = append(accountsToUnfollow, username)
+	// Check if unfollowing is enabled
+	unfollowEnabled := getEnvAsBool("INSTAGRAM_BOT_UNFOLLOW_ENABLED", true)
+	
+	if unfollowEnabled {
+		// Get users from blacklist that we are actually following
+		var accountsToUnfollow []string
+		for username := range blacklist {
+			if myFollowingMap[username] {
+				accountsToUnfollow = append(accountsToUnfollow, username)
+			}
 		}
-	}
 
-	// Unfollow blacklisted users first
-	if len(accountsToUnfollow) > 0 {
-		log.Printf("🚫 Found %d blacklisted users to unfollow.", len(accountsToUnfollow))
-		if err := followerBot.UnfollowUsers(accountsToUnfollow); err != nil {
-			log.Printf("⚠️  Unfollow session failed: %v", err)
+		// Unfollow blacklisted users first
+		if len(accountsToUnfollow) > 0 {
+			log.Printf("🚫 Found %d blacklisted users to unfollow.", len(accountsToUnfollow))
+			if err := followerBot.UnfollowUsers(accountsToUnfollow); err != nil {
+				log.Printf("⚠️  Unfollow session failed: %v", err)
+			}
+		} else {
+			log.Println("✅ No blacklisted users to unfollow.")
 		}
 	} else {
-		log.Println("✅ No blacklisted users to unfollow.")
+		log.Println("⚠️  Unfollowing is disabled via INSTAGRAM_BOT_UNFOLLOW_ENABLED.")
 	}
 
 	// Load source accounts
@@ -127,20 +134,25 @@ func RunFollowerBot() error {
 	}
 	log.Printf("📋 Loaded %d source accounts.", len(sourceAccounts))
 
-	// Get followers from source accounts
-	var accountsToFollow []string
-	for _, sourceAccount := range sourceAccounts {
-		followers, err := followerBot.GetFollowers(sourceAccount)
-		if err != nil {
-			log.Printf("⚠️  Failed to get followers for %s: %v", sourceAccount, err)
-			continue
-		}
+	// Randomly select one source account for this iteration
+	if len(sourceAccounts) == 0 {
+		return fmt.Errorf("no source accounts available")
+	}
+	randomIndex := rand.Intn(len(sourceAccounts))
+	selectedSource := sourceAccounts[randomIndex]
+	log.Printf("🎲 Randomly selected source account: %s", selectedSource)
 
-		for _, follower := range followers {
-			// Don't follow if already following or in blacklist
-			if !myFollowingMap[follower] && !blacklist[follower] {
-				accountsToFollow = append(accountsToFollow, follower)
-			}
+	// Get followers from the selected source account
+	var accountsToFollow []string
+	followers, err := followerBot.GetFollowers(selectedSource)
+	if err != nil {
+		return fmt.Errorf("failed to get followers for %s: %w", selectedSource, err)
+	}
+
+	for _, follower := range followers {
+		// Don't follow if already following or in blacklist
+		if !myFollowingMap[follower] && !blacklist[follower] {
+			accountsToFollow = append(accountsToFollow, follower)
 		}
 	}
 
@@ -161,10 +173,27 @@ func RunFollowerBot() error {
 }
 
 func loadSourceAccounts() ([]string, error) {
-	data, err := os.ReadFile(ffttAccountsFile)
+	// Try multiple possible paths for the JSON file
+	possiblePaths := []string{
+		ffttAccountsFile,
+		"/go/src/tournois-tt/api/fftt-instagram-accounts.json",
+		"./api/fftt-instagram-accounts.json",
+	}
+	
+	var data []byte
+	var err error
+	var foundPath string
+	for _, path := range possiblePaths {
+		data, err = os.ReadFile(path)
+		if err == nil {
+			foundPath = path
+			break
+		}
+	}
 	if err != nil {
 		return nil, fmt.Errorf("failed to read source accounts file: %w", err)
 	}
+	log.Printf("✅ Loaded source accounts from: %s", foundPath)
 	var sources SourceAccounts
 	if err := json.Unmarshal(data, &sources); err != nil {
 		return nil, fmt.Errorf("failed to parse source accounts file: %w", err)
@@ -174,7 +203,24 @@ func loadSourceAccounts() ([]string, error) {
 
 func loadBlacklist() (map[string]bool, error) {
 	blacklist := make(map[string]bool)
-	data, err := os.ReadFile(instagramBlacklistFile)
+	
+	// Try multiple possible paths for the JSON file
+	possiblePaths := []string{
+		instagramBlacklistFile,
+		"/go/src/tournois-tt/api/instagram_blacklist.json",
+		"./api/instagram_blacklist.json",
+	}
+	
+	var data []byte
+	var err error
+	var foundPath string
+	for _, path := range possiblePaths {
+		data, err = os.ReadFile(path)
+		if err == nil {
+			foundPath = path
+			break
+		}
+	}
 	if err != nil {
 		if os.IsNotExist(err) {
 			log.Println("ℹ️  No blacklist file found, starting with empty blacklist.")
@@ -182,6 +228,7 @@ func loadBlacklist() (map[string]bool, error) {
 		}
 		return nil, fmt.Errorf("failed to read blacklist file: %w", err)
 	}
+	log.Printf("✅ Loaded blacklist from: %s", foundPath)
 	var bl Blacklist
 	if err := json.Unmarshal(data, &bl); err != nil {
 		return nil, fmt.Errorf("failed to parse blacklist file: %w", err)
