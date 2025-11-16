@@ -1,1 +1,9 @@
-rules: []
+rules:
+  - On host machine, never run playwright, only browser mcp (to debug HTML structure for crawling for example).
+  - When running playwright, whether it's for testing cronjobs or running tests, it should always be in docker containers.
+  - Use the credentials in .env.
+  - ./Dockerfile is for prod (all services).
+  - ./api/Dockerfile.dev is for dev (api only).
+  - ./frontend/Dockerfile.dev is for dev (frontend only).
+  - host machine runs arch linux.
+  - logged OS user can run docker commands without sudo.

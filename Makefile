@@ -61,7 +61,12 @@ test-instagram:
 
 test-instagram-follow:
 	@echo "Running Instagram follow/unfollow test..."
-	docker-compose exec -e GIN_MODE=release -w /go/src/tournois-tt/api api go run cmd/test-instagram-follow/main.go
+	@echo "Copying package.json to api directory..."
+	cp package.json package-lock.json api/
+	docker-compose -f docker-compose.test.yml build
+	docker-compose -f docker-compose.test.yml run -e GIN_MODE=release -w /go/src/tournois-tt/api api go run cmd/test-instagram-follow/main.go
+	@echo "Cleaning up package.json from api directory..."
+	rm api/package.json api/package-lock.json
 
 test-instagram-follow-vet:
 	@echo "Running go vet on Instagram bot code..."

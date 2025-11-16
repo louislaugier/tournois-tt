@@ -11,9 +11,7 @@ import (
 	"sync"
 	"time"
 
-	"tournois-tt/api/internal/config"
-instagramapi "tournois-tt/api/pkg/instagram/api"
-igimage "tournois-tt/api/pkg/image"
+	igimage "tournois-tt/api/pkg/image"
 )
 
 // GenericCache is a thread-safe in-memory cache with JSON persistence capabilities
@@ -307,38 +305,6 @@ func SaveTournamentsToCache(tournaments []TournamentCache) error {
 	// Update sitemap automatically after saving tournaments
 	go updateSitemap()
 
-	// Filter out past tournaments before posting to Instagram
-	var futureTournaments []TournamentCache
-	var pastTournaments []TournamentCache
-	for _, tournament := range newTournaments {
-		if isTournamentInPast(tournament.EndDate) {
-			pastTournaments = append(pastTournaments, tournament)
-			log.Printf("Skipping Instagram post for past tournament: %s (ID: %d, ended: %s)",
-				tournament.Name, tournament.ID, tournament.EndDate)
-		} else {
-			futureTournaments = append(futureTournaments, tournament)
-		}
-	}
-
-	// Send Instagram DM for new future tournaments only
-	if len(futureTournaments) > 0 {
-		log.Printf("Posting %d new future tournament(s) to Instagram", len(futureTournaments))
-		go func() {
-			// Recover from any panics to prevent goroutine crashes
-			defer func() {
-				if r := recover(); r != nil {
-					log.Printf("ERROR: Panic in Instagram notifications: %v", r)
-				}
-			}()
-			sendInstagramNotifications(futureTournaments)
-		}()
-	}
-
-	// Log summary if any tournaments were filtered
-	if len(pastTournaments) > 0 {
-		log.Printf("Filtered out %d past tournament(s) from Instagram posting", len(pastTournaments))
-	}
-
 	return nil
 }
 
@@ -581,68 +547,6 @@ func updateSitemap() {
 			} else {
 				log.Printf("Successfully ran npm run %s", cmdName)
 			}
-		}
-	}
-}
-
-// sendInstagramNotifications sends Instagram DM notifications for new tournaments
-func sendInstagramNotifications(tournaments []TournamentCache) {
-	// Check if Instagram is enabled
-	if !config.InstagramEnabled {
-		log.Println("Instagram DM notifications disabled - skipping")
-		return
-	}
-
-	// Validate required credentials are present
-	if config.InstagramAccessToken == "" {
-		log.Println("Warning: Instagram is enabled but INSTAGRAM_ACCESS_TOKEN is not set - skipping Instagram notifications")
-		return
-	}
-	if config.InstagramPageID == "" {
-		log.Println("Warning: Instagram is enabled but INSTAGRAM_PAGE_ID is not set - skipping Instagram notifications")
-		return
-	}
-
-	// Create Instagram client
-	instagramConfig := instagramapi.Config{
-		AccessToken:        config.InstagramAccessToken,
-		PageID:             config.InstagramPageID,
-		ThreadsAccessToken: config.ThreadsAccessToken,
-		ThreadsUserID:      config.ThreadsUserID,
-		Enabled:            config.InstagramEnabled,
-		ThreadsEnabled:     config.ThreadsEnabled,
-	}
-
-	client := instagramapi.NewClient(instagramConfig)
-
-	// Test connection first
-	if err := client.TestConnection(); err != nil {
-		log.Printf("Warning: Instagram API connection test failed: %v", err)
-		log.Println("Skipping Instagram notifications")
-		return
-	}
-
-	log.Printf("Posting to Instagram for %d new tournament(s)", len(tournaments))
-
-	// Send notification for each new tournament
-	for _, tournament := range tournaments {
-		// Convert tournament to image data
-		imageData := convertTournamentToImageData(tournament)
-
-		// Post to Instagram
-		notification, err := client.PostTournament(imageData)
-		if err != nil {
-			log.Printf("Error posting to Instagram for tournament %d (%s): %v",
-				tournament.ID, tournament.Name, err)
-			continue
-		}
-
-		if notification.Success {
-			log.Printf("Successfully posted to Instagram for tournament %d (%s) - Post ID: %s",
-				tournament.ID, tournament.Name, notification.MessageID)
-		} else {
-			log.Printf("Failed to post to Instagram for tournament %d (%s): %s",
-				tournament.ID, tournament.Name, notification.Error)
 		}
 	}
 }

@@ -1,0 +1,43 @@
+services:
+  api:
+    build:
+      context: ./api
+      dockerfile: Dockerfile.dev
+    volumes:
+      - ./api/:/go/src/tournois-tt/api
+      - /dev/shm:/dev/shm
+    expose:
+      - 8080
+    environment:
+      - GIN_MODE=${GIN_MODE}
+      - GOOGLE_GEOCODING_API_KEY=${GOOGLE_GEOCODING_API_KEY}
+      - BREVO_API_KEY=${BREVO_API_KEY}
+      - BREVO_CAMPAIGN_ID=${BREVO_CAMPAIGN_ID}
+      - PLAYWRIGHT_BROWSERS_PATH=/root/.cache/ms-playwright
+      - CONTAINER_RUNTIME=1
+      - DISPLAY=:99
+      - XDG_RUNTIME_DIR=/tmp/runtime-dir
+      - GA_MEASUREMENT_ID=${GA_MEASUREMENT_ID}
+      - GA_API_SECRET=${GA_API_SECRET}
+      - INSTAGRAM_ENABLED=${INSTAGRAM_ENABLED}
+      - INSTAGRAM_ACCESS_TOKEN=${INSTAGRAM_ACCESS_TOKEN}
+      - INSTAGRAM_PAGE_ID=${INSTAGRAM_PAGE_ID}
+      - THREADS_ENABLED=${THREADS_ENABLED}
+      - THREADS_ACCESS_TOKEN=${THREADS_ACCESS_TOKEN}
+      - THREADS_USER_ID=${THREADS_USER_ID}
+      - INSTAGRAM_BOT_ENABLED=${INSTAGRAM_BOT_ENABLED}
+      - INSTAGRAM_BOT_UNFOLLOW_ENABLED=${INSTAGRAM_BOT_UNFOLLOW_ENABLED:-true}
+      - INSTAGRAM_BOT_USERNAME=${INSTAGRAM_BOT_USERNAME}
+      - INSTAGRAM_BOT_PASSWORD=${INSTAGRAM_BOT_PASSWORD}
+      - INSTAGRAM_BOT_TOTP_SECRET=${INSTAGRAM_BOT_TOTP_SECRET}
+      - INSTAGRAM_BOT_HEADLESS=${INSTAGRAM_BOT_HEADLESS:-true}
+    networks:
+      - vpc_local
+    cap_add:
+      - SYS_ADMIN
+    shm_size: 2gb
+    command: ["tail", "-f", "/dev/null"]
+
+networks:
+  vpc_local:
+    driver: bridge

@@ -1,119 +1,25 @@
-FROM --platform=linux/amd64 golang:1.24
+FROM mcr.microsoft.com/playwright:v1.52.0-jammy
+
+# Install Go
+RUN apt-get update && apt-get install -y wget
+RUN wget https://go.dev/dl/go1.24.3.linux-amd64.tar.gz && \
+    tar -C /usr/local -xzf go1.24.3.linux-amd64.tar.gz && \
+    rm go1.24.3.linux-amd64.tar.gz
+ENV PATH=$PATH:/usr/local/go/bin:/go/bin:/root/go/bin
 
 WORKDIR /go/src/tournois-tt/api
 
-# Install system dependencies for Playwright and poppler-utils for pdftotext
-RUN apt-get update && apt-get install -y \
-    ca-certificates \
-    fonts-liberation \
-    fonts-noto-color-emoji \
-    libasound2 \
-    libatk-bridge2.0-0 \
-    libatk1.0-0 \
-    libatspi2.0-0 \
-    libc6 \
-    libcairo2 \
-    libcups2 \
-    libdbus-1-3 \
-    libdrm2 \
-    libexpat1 \
-    libfontconfig1 \
-    libgbm1 \
-    libgcc1 \
-    libglib2.0-0 \
-    libgtk-3-0 \
-    libnspr4 \
-    libnss3 \
-    libpango-1.0-0 \
-    libpangocairo-1.0-0 \
-    libpulse0 \
-    libsoup2.4-1 \
-    libwayland-client0 \
-    libwayland-cursor0 \
-    libwayland-egl1 \
-    libx11-6 \
-    libx11-xcb1 \
-    libxcb1 \
-    libxcomposite1 \
-    libxdamage1 \
-    libxext6 \
-    libxfixes3 \
-    libxi6 \
-    libxkbcommon0 \
-    libxrandr2 \
-    libxrender1 \
-    libxshmfence1 \
-    libxss1 \
-    libxtst6 \
-    lsb-release \
-    procps \
-    xdg-utils \
-    # Additional packages for browser stability
-    libxcursor1 \
-    libcairo-gobject2 \
-    libgdk-pixbuf-2.0-0 \
-    libgstreamer1.0-0 \
-    libgraphene-1.0-0 \
-    libxslt1.1 \
-    libwoff1 \
-    libevent-2.1-7 \
-    libopus0 \
-    gstreamer1.0-plugins-base \
-    gstreamer1.0-plugins-good \
-    libwebpdemux2 \
-    libharfbuzz-icu0 \
-    libwebpmux3 \
-    libenchant-2-2 \
-    libsecret-1-0 \
-    libhyphen0 \
-    libgles2 \
-    poppler-utils \
-    # Include X virtual framebuffer for headless display
-    xvfb \
-    # Additional tools for debugging
-    curl \
-    wget \
-    iputils-ping \
-    net-tools \
-    && rm -rf /var/lib/apt/lists/*
-
-# Configure environment for stable browser operation
-ENV PLAYWRIGHT_BROWSERS_PATH=/usr/local/ms-playwright \
-    PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=0 \
-    DEBIAN_FRONTEND=noninteractive \
-    DISPLAY=:99 \
-    XDG_RUNTIME_DIR=/tmp/runtime-dir \
-    CHROME_DEVEL_SANDBOX=/usr/local/sbin/chrome-devel-sandbox \
-    CONTAINER_RUNTIME=1
-
-# Setup directories for Playwright
-RUN mkdir -p /usr/local/ms-playwright \
-    && mkdir -p ${XDG_RUNTIME_DIR} \
-    && chmod 0700 ${XDG_RUNTIME_DIR} \
-    && mkdir -p /dev/shm \
-    && chmod 1777 /dev/shm \
-    && chmod 1777 /tmp
-
 COPY . .
 
-RUN go install github.com/air-verse/air@v1.61.0
+RUN go mod tidy
 
-# Install Playwright browsers without deps (we already installed them manually)
-RUN go run github.com/playwright-community/playwright-go/cmd/playwright install chromium
+ENV PLAYWRIGHT_BROWSERS_PATH=/usr/local/ms-playwright
+RUN go run github.com/playwright-community/playwright-go/cmd/playwright@v0.5200.1 install
 
-# Prepare browser sandbox configuration
-RUN echo '#!/bin/bash\nexec "$@"' > /usr/local/sbin/chrome-devel-sandbox \
-    && chmod 4755 /usr/local/sbin/chrome-devel-sandbox
+RUN go install github.com/air-verse/air@latest
 
-# Create a simple test script to verify Playwright installation
-RUN echo '#!/bin/bash\necho "Verifying Playwright installation..."\nls -la $PLAYWRIGHT_BROWSERS_PATH\necho "Directory structure looks good."\n' > /usr/local/bin/verify-playwright.sh \
-    && chmod +x /usr/local/bin/verify-playwright.sh \
-    && /usr/local/bin/verify-playwright.sh
-
-# Set entrypoint script to ensure proper environment setup
 COPY entrypoint-dev.sh /entrypoint-dev.sh
 RUN chmod +x /entrypoint-dev.sh
 
-# Start Xvfb before running any browser commands
 ENTRYPOINT ["/entrypoint-dev.sh"]
 CMD ["air", "-c", "air.toml"]

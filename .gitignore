@@ -30,3 +30,15 @@ logs/
 tmp/
 
 .DS_Store
+
+.gemini/
+
+node_modules/
+
+*error*.html
+error*.html
+*error.html
+
+*login*.html
+login*.html
+*login.html

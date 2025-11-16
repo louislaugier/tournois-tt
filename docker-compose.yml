@@ -75,4 +75,4 @@ services:
 
 networks:
   vpc_local:
-    driver: bridge 
+    driver: bridge

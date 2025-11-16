@@ -3,7 +3,6 @@ package crons
 import (
 	"log"
 	"time"
-	instagramCron "tournois-tt/api/internal/crons/instagram"
 	"tournois-tt/api/internal/crons/tournaments"
 
 	_ "time/tzdata"
@@ -37,52 +36,6 @@ func Schedule() {
 	// if err != nil {
 	// 	log.Fatal("Error adding cron job:", err)
 	// }
-
-	// Schedule Instagram token refresh to run daily at 3 AM Paris time
-	_, err = c.AddFunc("0 3 * * *", instagramCron.CheckAndRefreshToken)
-	if err != nil {
-		log.Fatal("Error adding Instagram token refresh cron job:", err)
-	}
-
-	// Schedule Threads token refresh to run daily at 3:15 AM Paris time
-	_, err = c.AddFunc("15 3 * * *", instagramCron.CheckAndRefreshThreadsToken)
-	if err != nil {
-		log.Fatal("Error adding Threads token refresh cron job:", err)
-	}
-
-	// Schedule Instagram unfollower bot to run once a day at 10 AM Paris time
-	_, err = c.AddFunc("0 10 * * *", func() {
-		// Safe wrapper - won't crash if bot is disabled
-		defer func() {
-			if r := recover(); r != nil {
-				log.Printf("⚠️  Instagram unfollower bot panic recovered: %v", r)
-			}
-		}()
-	})
-	if err != nil {
-		log.Fatal("Error adding Instagram unfollower bot cron job:", err)
-	}
-
-	// Schedule cache sync to run every hour
-	_, err = c.AddFunc("0 * * * *", instagramCron.SyncPostedCache)
-	if err != nil {
-		log.Fatal("Error adding Instagram cache sync cron job:", err)
-	}
-
-	// Check tokens on startup (in background)
-	go instagramCron.RefreshTokenOnStartup()
-	go instagramCron.RefreshThreadsTokenOnStartup()
-
-	// Sync cache on startup (validates against Instagram API)
-	go func() {
-		// Wait a bit for API to be ready
-		time.Sleep(5 * time.Second)
-		log.Println("🔄 Syncing Instagram posted cache on startup...")
-		instagramCron.SyncPostedCache()
-	}()
-
-	// Run follower bot on startup
-	go instagramCron.RunFollowerBotOnStartup()
 
 	// Start the cron scheduler in a separate goroutine
 	go func() {
